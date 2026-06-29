@@ -5,7 +5,6 @@ export default function SystemHome() {
   const [limits, setLimits] = useState([
     { id: 'token', name: 'Token', remaining: 8153956, used: 6846044, isLimited: true, maxLimit: 5000000 },
     { id: 'ai-ppt', name: 'AI-PPT', remaining: 4, used: 1, isLimited: true, maxLimit: 5 },
-    { id: 'exp-time', name: '实验时长(分钟)', remaining: 1200, used: 300, isLimited: true, maxLimit: 600 },
   ]);
 
   const handleLimitChange = (id: string, value: number) => {
@@ -25,7 +24,7 @@ export default function SystemHome() {
 
       <div className="flex mb-10 relative">
         {/* Cards */}
-        <div className="grid grid-cols-4 gap-4 flex-1">
+        <div className="grid grid-cols-3 gap-4 flex-1">
           {/* Card 1 */}
           <div className="bg-gradient-to-r from-[#2190ff] to-[#0477fe] rounded-lg p-5 text-white relative overflow-hidden h-36 flex flex-col justify-between shadow-sm">
             <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-12 translate-y-8">
@@ -34,10 +33,10 @@ export default function SystemHome() {
             <div className="absolute right-0 bottom-0 opacity-10 transform -translate-x-2 -translate-y-2">
               <div className="w-48 h-48 rounded-full border-[12px] border-white"></div>
             </div>
-            <div className="text-sm font-medium opacity-90 z-10">账户总余额</div>
+            <div className="text-sm font-medium opacity-90 z-10">账户总积分</div>
             <div className="flex items-baseline space-x-2 z-10 mb-2">
               <span className="text-[32px] font-bold leading-none">0</span>
-              <span className="text-sm">元</span>
+              <span className="text-sm">积分</span>
             </div>
             <div className="absolute right-4 bottom-4 z-10 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
               <Wallet className="w-4 h-4 opacity-100" />
@@ -52,10 +51,10 @@ export default function SystemHome() {
             <div className="absolute right-0 bottom-0 opacity-10 transform -translate-x-2 -translate-y-2">
               <div className="w-48 h-48 rounded-full border-[12px] border-white"></div>
             </div>
-            <div className="text-sm font-medium opacity-90 z-10">充值余额</div>
+            <div className="text-sm font-medium opacity-90 z-10">充值积分</div>
             <div className="flex items-baseline space-x-2 z-10 mb-2">
               <span className="text-[32px] font-bold leading-none">0</span>
-              <span className="text-sm">元</span>
+              <span className="text-sm">积分</span>
             </div>
             <div className="absolute right-4 bottom-4 z-10 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
               <CreditCard className="w-4 h-4 opacity-100" />
@@ -70,31 +69,13 @@ export default function SystemHome() {
             <div className="absolute right-0 bottom-0 opacity-10 transform -translate-x-2 -translate-y-2">
               <div className="w-48 h-48 rounded-full border-[12px] border-white"></div>
             </div>
-            <div className="text-sm font-medium opacity-90 z-10">赠送余额</div>
+            <div className="text-sm font-medium opacity-90 z-10">赠送积分</div>
             <div className="flex items-baseline space-x-2 z-10 mb-2">
               <span className="text-[32px] font-bold leading-none">0</span>
-              <span className="text-sm">元</span>
+              <span className="text-sm">积分</span>
             </div>
             <div className="absolute right-4 bottom-4 z-10 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
               <Gift className="w-4 h-4 opacity-100" />
-            </div>
-          </div>
-
-          {/* Card 4 */}
-          <div className="bg-gradient-to-r from-[#9b49ff] to-[#7f26f6] rounded-lg p-5 text-white relative overflow-hidden h-36 flex flex-col justify-between shadow-sm">
-            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-12 translate-y-8">
-              <div className="w-32 h-32 rounded-full border-[12px] border-white"></div>
-            </div>
-            <div className="absolute right-0 bottom-0 opacity-10 transform -translate-x-2 -translate-y-2">
-              <div className="w-48 h-48 rounded-full border-[12px] border-white"></div>
-            </div>
-            <div className="text-sm font-medium opacity-90 z-10">剩余账号数</div>
-            <div className="flex items-baseline space-x-2 z-10 mb-2">
-              <span className="text-[32px] font-bold leading-none">-4</span>
-              <span className="text-sm">个</span>
-            </div>
-            <div className="absolute right-4 bottom-4 z-10 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <Users className="w-4 h-4 opacity-100" />
             </div>
           </div>
         </div>
