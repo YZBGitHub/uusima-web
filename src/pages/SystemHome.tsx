@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { GraduationCap, Wallet, CreditCard, Gift, Users } from 'lucide-react';
+import { GraduationCap, Wallet, CreditCard, Gift, Users, Activity, Clock, FileText } from 'lucide-react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+} from "recharts";
 
 export default function SystemHome() {
   const [limits, setLimits] = useState([
     { id: 'token', name: 'Token', remaining: 8153956, used: 6846044, isLimited: true, maxLimit: 5000000 },
+    { id: 'duration', name: '实验时长', remaining: 4500, used: 1500, isLimited: true, maxLimit: 6000 },
     { id: 'ai-ppt', name: 'AI-PPT', remaining: 4, used: 1, isLimited: true, maxLimit: 5 },
   ]);
 
@@ -23,67 +31,254 @@ export default function SystemHome() {
       </div>
 
       <div className="flex mb-10 relative">
-        {/* Cards */}
-        <div className="grid grid-cols-3 gap-4 flex-1">
-          {/* Card 1 */}
-          <div className="bg-gradient-to-r from-[#2190ff] to-[#0477fe] rounded-lg p-5 text-white relative overflow-hidden h-36 flex flex-col justify-between shadow-sm">
-            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-12 translate-y-8">
-              <div className="w-32 h-32 rounded-full border-[12px] border-white"></div>
-            </div>
-            <div className="absolute right-0 bottom-0 opacity-10 transform -translate-x-2 -translate-y-2">
-              <div className="w-48 h-48 rounded-full border-[12px] border-white"></div>
-            </div>
-            <div className="text-sm font-medium opacity-90 z-10">账户总积分</div>
-            <div className="flex items-baseline space-x-2 z-10 mb-2">
-              <span className="text-[32px] font-bold leading-none">0</span>
-              <span className="text-sm">积分</span>
-            </div>
-            <div className="absolute right-4 bottom-4 z-10 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <Wallet className="w-4 h-4 opacity-100" />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 w-full">
+          {/* 账号数量 */}
+          <div className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow relative h-[180px]">
+            <div className="p-6 flex items-center h-full">
+              <div className="flex-1">
+                <div className="flex flex-row items-center space-x-2 pb-2">
+                  <h3 className="tracking-tight text-sm font-medium text-slate-500">
+                    账号数量
+                  </h3>
+                  <Users className="h-4 w-4 text-blue-500" />
+                </div>
+                <div className="flex items-baseline space-x-2 mt-2">
+                  <div className="text-3xl font-bold text-slate-800">
+                    120
+                  </div>
+                  <span className="text-sm font-bold text-slate-600">
+                    个 剩余
+                  </span>
+                </div>
+                <div className="text-xs mt-4 space-y-1">
+                  <div className="text-slate-500">
+                    总计: 200 个
+                  </div>
+                  <div className="text-slate-500 flex items-center gap-1">
+                    已使用:{" "}
+                    <span className="w-2.5 h-2.5 bg-[#cbd5e1] rounded-sm inline-block"></span>{" "}
+                    80 个
+                  </div>
+                </div>
+              </div>
+              <div className="w-32 h-32 relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: "剩余", value: 120 },
+                        { name: "已使用", value: 80 },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={50}
+                      paddingAngle={0}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      <Cell key="cell-0" fill="#3b82f6" />
+                      <Cell key="cell-1" fill="#cbd5e1" />
+                    </Pie>
+                    <RechartsTooltip
+                      formatter={(value: number) =>
+                        value.toLocaleString() + " 个"
+                      }
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-0.5">
+                  <span className="text-xs text-blue-600 font-bold">
+                    40%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Card 2 */}
-          <div className="bg-gradient-to-r from-[#4d6dfd] to-[#3651fa] rounded-lg p-5 text-white relative overflow-hidden h-36 flex flex-col justify-between shadow-sm">
-             <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-12 translate-y-8">
-              <div className="w-32 h-32 rounded-full border-[12px] border-white"></div>
-            </div>
-            <div className="absolute right-0 bottom-0 opacity-10 transform -translate-x-2 -translate-y-2">
-              <div className="w-48 h-48 rounded-full border-[12px] border-white"></div>
-            </div>
-            <div className="text-sm font-medium opacity-90 z-10">充值积分</div>
-            <div className="flex items-baseline space-x-2 z-10 mb-2">
-              <span className="text-[32px] font-bold leading-none">0</span>
-              <span className="text-sm">积分</span>
-            </div>
-            <div className="absolute right-4 bottom-4 z-10 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <CreditCard className="w-4 h-4 opacity-100" />
+          {/* Token (词元) 数量 */}
+          <div className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow relative h-[180px]">
+            <div className="p-6 flex items-center h-full">
+              <div className="flex-1">
+                <div className="flex flex-row items-center space-x-2 pb-2">
+                  <h3 className="tracking-tight text-sm font-medium text-slate-500">
+                    Token (词元) 数量
+                  </h3>
+                  <Activity className="h-4 w-4 text-blue-500" />
+                </div>
+                <div className="flex items-baseline space-x-2 mt-2">
+                  <div className="text-3xl font-bold text-slate-800">
+                    8,153,956
+                  </div>
+                  <span className="text-sm font-bold text-slate-600">
+                    剩余
+                  </span>
+                </div>
+                <div className="text-xs mt-4 space-y-1">
+                  <div className="text-slate-500">
+                    总计: 15,000,000
+                  </div>
+                  <div className="text-slate-500 flex items-center gap-1">
+                    已使用:{" "}
+                    <span className="w-2.5 h-2.5 bg-[#cbd5e1] rounded-sm inline-block"></span>{" "}
+                    6,846,044
+                  </div>
+                </div>
+              </div>
+              <div className="w-32 h-32 relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: "剩余", value: 8153956 },
+                        { name: "已使用", value: 6846044 },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={50}
+                      paddingAngle={0}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      <Cell key="cell-0" fill="#3b82f6" />
+                      <Cell key="cell-1" fill="#cbd5e1" />
+                    </Pie>
+                    <RechartsTooltip
+                      formatter={(value: number) =>
+                        value.toLocaleString()
+                      }
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-0.5">
+                  <span className="text-xs text-blue-600 font-bold">
+                    54%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Card 3 */}
-          <div className="bg-gradient-to-r from-[#7a53fe] to-[#5a36f9] rounded-lg p-5 text-white relative overflow-hidden h-36 flex flex-col justify-between shadow-sm">
-            <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-12 translate-y-8">
-              <div className="w-32 h-32 rounded-full border-[12px] border-white"></div>
-            </div>
-            <div className="absolute right-0 bottom-0 opacity-10 transform -translate-x-2 -translate-y-2">
-              <div className="w-48 h-48 rounded-full border-[12px] border-white"></div>
-            </div>
-            <div className="text-sm font-medium opacity-90 z-10">赠送积分</div>
-            <div className="flex items-baseline space-x-2 z-10 mb-2">
-              <span className="text-[32px] font-bold leading-none">0</span>
-              <span className="text-sm">积分</span>
-            </div>
-            <div className="absolute right-4 bottom-4 z-10 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <Gift className="w-4 h-4 opacity-100" />
+          {/* 实验时长 */}
+          <div className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow relative h-[180px]">
+            <div className="p-6 flex items-center h-full">
+              <div className="flex-1">
+                <div className="flex flex-row items-center space-x-2 pb-2">
+                  <h3 className="tracking-tight text-sm font-medium text-slate-500">
+                    实验时长
+                  </h3>
+                  <Clock className="h-4 w-4 text-emerald-500" />
+                </div>
+                <div className="flex items-baseline space-x-2 mt-2">
+                  <div className="text-3xl font-bold text-slate-800">
+                    4,500
+                  </div>
+                  <span className="text-sm font-bold text-slate-600">
+                    分钟 剩余
+                  </span>
+                </div>
+                <div className="text-xs mt-4 space-y-1">
+                  <div className="text-slate-500">总计: 6,000 分钟</div>
+                  <div className="text-slate-500 flex items-center gap-1">
+                    已使用:{" "}
+                    <span className="w-2.5 h-2.5 bg-[#cbd5e1] rounded-sm inline-block"></span>{" "}
+                    1,500 分钟
+                  </div>
+                </div>
+              </div>
+              <div className="w-32 h-32 relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: "剩余", value: 4500 },
+                        { name: "已使用", value: 1500 },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={50}
+                      paddingAngle={0}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      <Cell key="cell-0" fill="#10b981" />
+                      <Cell key="cell-1" fill="#cbd5e1" />
+                    </Pie>
+                    <RechartsTooltip
+                      formatter={(value: number) => value + " 分钟"}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-0.5">
+                  <span className="text-xs text-emerald-600 font-bold">
+                    75%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Action Buttons to the right */}
-        <div className="flex flex-col justify-center pl-8 space-y-4">
-          <button className="text-[#108ee9] hover:text-blue-700 text-[13px] font-medium transition-colors text-right w-full">订购充值</button>
-          <button className="text-[#108ee9] hover:text-blue-700 text-[13px] font-medium transition-colors text-right w-full">计费明细</button>
+          {/* PPT 生成次数 */}
+          <div className="bg-white border border-slate-200 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-shadow relative h-[180px]">
+            <div className="p-6 flex items-center h-full">
+              <div className="flex-1">
+                <div className="flex flex-row items-center space-x-2 pb-2">
+                  <h3 className="tracking-tight text-sm font-medium text-slate-500">
+                    PPT 生成次数
+                  </h3>
+                  <FileText className="h-4 w-4 text-purple-500" />
+                </div>
+                <div className="flex items-baseline space-x-2 mt-2">
+                  <div className="text-3xl font-bold text-slate-800">
+                    4
+                  </div>
+                  <span className="text-sm font-bold text-slate-600">
+                    次 剩余
+                  </span>
+                </div>
+                <div className="text-xs mt-4 space-y-1">
+                  <div className="text-slate-500">总计: 5 次</div>
+                  <div className="text-slate-500 flex items-center gap-1">
+                    已使用:{" "}
+                    <span className="w-2.5 h-2.5 bg-[#cbd5e1] rounded-sm inline-block"></span>{" "}
+                    1 次
+                  </div>
+                </div>
+              </div>
+              <div className="w-32 h-32 relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: "剩余", value: 4 },
+                        { name: "已使用", value: 1 },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={50}
+                      paddingAngle={0}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      <Cell key="cell-0" fill="#a855f7" />
+                      <Cell key="cell-1" fill="#cbd5e1" />
+                    </Pie>
+                    <RechartsTooltip
+                      formatter={(value: number) => value + " 次"}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-0.5">
+                  <span className="text-xs text-purple-600 font-bold">
+                    80%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

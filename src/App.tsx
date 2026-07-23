@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Registration from "./pages/Registration";
 import ConfigManagement from "./pages/ConfigManagement";
+import PlatformOperation from "./pages/PlatformOperation";
 import Personal from "./pages/Personal";
 import ForgotPassword from "./pages/ForgotPassword";
 import Profile from "./pages/Profile";
@@ -32,6 +33,7 @@ export default function App() {
     | "invite-landing"
     | "invite-records"
     | "mobile-success"
+    | "platform-operation"
   >("login");
   const [isNavOpen, setIsNavOpen] = useState(false);
 
@@ -48,6 +50,7 @@ export default function App() {
     { id: "invite-landing", label: "邀请单页" },
     { id: "school", label: "学校库" },
     { id: "mobile-success", label: "移动端注册成功" },
+    { id: "platform-operation", label: "平台运营" },
   ] as const;
 
   return (
@@ -120,6 +123,9 @@ export default function App() {
         )}
         {activeView === "invite-records" && <InviteRecords />}
         {activeView === "mobile-success" && <MobileRegistrationSuccess />}
+        {activeView === "platform-operation" && (
+          <PlatformOperation onNavigate={(view) => setActiveView(view as any)} />
+        )}
       </div>
     </div>
   );

@@ -76,6 +76,12 @@ export default function Home({ onNavigate }: HomeProps) {
                 系统管理
               </button>
               <button 
+                onClick={() => onNavigate('platform-operation')}
+                className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 border-b border-slate-50"
+              >
+                平台运营
+              </button>
+              <button 
                 onClick={() => onNavigate('login')}
                 className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50"
               >
