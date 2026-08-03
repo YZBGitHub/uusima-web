@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronLeft, Bot, Languages, ChevronDown, User, MonitorSmartphone, FolderOpen, PieChart, Star, ArrowUp } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Bot, Languages, ChevronDown, User, MonitorSmartphone, FolderOpen, PieChart, Star, ArrowUp, UserCircle, Settings, LogOut, Activity } from 'lucide-react';
 
 interface HomeProps {
   onNavigate: (view: any) => void;
@@ -8,6 +8,9 @@ interface HomeProps {
 export default function Home({ onNavigate }: HomeProps) {
   // Carousel mock state
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isTenantOpen, setIsTenantOpen] = useState(false);
+  const activeTenant = { name: "教育公司" };
 
   return (
     <div className="min-h-screen bg-[#f5f7fa] flex flex-col font-sans">
@@ -54,40 +57,79 @@ export default function Home({ onNavigate }: HomeProps) {
           </button>
 
           {/* User Profile Dropdown Component */}
-          <div className="relative group cursor-pointer flex items-center space-x-2">
-            <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center overflow-hidden">
-              <User className="w-4 h-4 text-slate-500" />
-            </div>
-            <span className="text-slate-700 font-medium text-sm">杨振邦<span className="text-slate-400 font-normal text-xs">(15396005420)</span></span>
-            <ChevronDown className="w-4 h-4 text-slate-400" />
+          <div className="relative">
+            <button 
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className="flex items-center space-x-2 cursor-pointer focus:outline-none hover:opacity-80 transition-opacity"
+            >
+              <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center overflow-hidden">
+                <User className="w-4 h-4 text-slate-500" />
+              </div>
+              <span className="text-slate-700 font-medium text-sm">杨振邦<span className="text-slate-400 font-normal text-xs">(15396005420)</span></span>
+              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
             
-            {/* Dropdown Menu (Hover to reveal for simple mock) */}
-            <div className="absolute top-10 right-0 w-48 bg-white border border-slate-100 rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              <button 
-                onClick={() => onNavigate('personal')}
-                className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 border-b border-slate-50"
-              >
-                个人中心
-              </button>
-              <button 
-                onClick={() => onNavigate('config')}
-                className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 border-b border-slate-50"
-              >
-                系统管理
-              </button>
-              <button 
-                onClick={() => onNavigate('platform-operation')}
-                className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 border-b border-slate-50"
-              >
-                平台运营
-              </button>
-              <button 
-                onClick={() => onNavigate('login')}
-                className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50"
-              >
-                退出登录
-              </button>
-            </div>
+            {isUserMenuOpen && (
+              <div className="absolute right-0 mt-3 w-56 bg-white rounded shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-50 overflow-hidden transform origin-top-right">
+                <div className="relative h-12 bg-[#e6f4ff]">
+                  <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-11 h-11 rounded-full bg-[#f48b8d] text-white flex items-center justify-center font-medium border-[3px] border-white text-sm shadow-sm">
+                    振邦
+                  </div>
+                </div>
+                <div className="pt-8 pb-1">
+                  <div className="text-center px-4 mb-2">
+                    <div className="font-medium text-slate-800 text-sm">杨振邦</div>
+                    <div className="text-xs text-slate-400 mt-0.5">15396005420</div>
+                  </div>
+                  <div className="h-px bg-slate-100 my-2 mx-2"></div>
+                  <button 
+                    onClick={() => onNavigate && onNavigate('personal')}
+                    className="w-full flex items-center px-4 py-2 text-[13px] text-slate-600 hover:text-blue-500 hover:bg-slate-50 transition-colors"
+                  >
+                    <UserCircle className="w-4 h-4 mr-2" />
+                    个人设置
+                  </button>
+                  <button 
+                    onClick={() => typeof onNavigate !== 'undefined' && onNavigate('config')}
+                    className="w-full flex items-center px-4 py-2 text-[13px] text-slate-600 hover:text-blue-500 hover:bg-slate-50 transition-colors"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    系统管理
+                  </button>
+                  <button 
+                    onClick={() => typeof onNavigate !== 'undefined' && onNavigate('platform-operation')}
+                    className="w-full flex items-center px-4 py-2 text-[13px] text-slate-600 hover:text-blue-500 hover:bg-slate-50 transition-colors"
+                  >
+                    <Activity className="w-4 h-4 mr-2" />
+                    平台运营
+                  </button>
+                  <button 
+                    onClick={() => typeof onNavigate !== 'undefined' && onNavigate('login')}
+                    className="w-full flex items-center px-4 py-2 text-[13px] text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    退出登录
+                  </button>
+                </div>
+                <div className="border-t border-slate-100 px-3 py-3">
+                  <div className="text-[12px] text-slate-500 mb-2 px-1">组织</div>
+                  <div className="bg-[#f5f7fa] rounded flex items-center justify-between p-2">
+                    <div className="flex items-center space-x-2 overflow-hidden">
+                      <div className="w-5 h-5 bg-white rounded shadow-sm text-blue-500 flex items-center justify-center shrink-0 font-bold text-xs italic">
+                        X
+                      </div>
+                      <span className="text-[13px] text-slate-700 truncate">{typeof activeTenant !== 'undefined' && activeTenant ? activeTenant.name : "教育公司"}</span>
+                    </div>
+                    <button 
+                      onClick={() => { setIsUserMenuOpen(false); typeof setIsTenantOpen !== 'undefined' && setIsTenantOpen(true); }}
+                      className="text-[12px] text-slate-400 hover:text-blue-500 flex items-center shrink-0"
+                    >
+                      切换 <ChevronRight className="w-3 h-3 ml-0.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>

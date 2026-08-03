@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ChevronDown, Edit, Trash2, Users, Network, X, Upload, Download } from 'lucide-react';
+import { Search, ChevronDown, Edit, Trash2, Users, Network, X, Upload, Download , FileText} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function TenantManagement() {
@@ -13,6 +13,127 @@ export default function TenantManagement() {
   const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
 
   const [schoolSearchQuery, setSchoolSearchQuery] = useState('');
+  const [logModalOpen, setLogModalOpen] = useState(false);
+  const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
+
+  const mockLogs = React.useMemo(() => {
+
+
+      const baseLogs = [
+
+
+        { id: 1, time: '2026-08-08 10:00:00', type: '租户操作', operator: 'admin', remarks: '创建租户' },
+
+
+        { id: 2, time: '2026-09-09 11:20:00', type: '租户操作', operator: 'admin', remarks: '停用租户' },
+
+
+        { id: 3, time: '2026-09-09 14:30:00', type: '订单操作', operator: 'admin', remarks: '新增订单（订单号：xxx，金额：888）' },
+
+
+        { id: 4, time: '2026-09-09 16:45:00', type: '订单操作', operator: 'admin', remarks: '作废订单（订单号：xxx）' }
+
+
+      ];
+
+
+      for (let i = 5; i <= 45; i++) {
+
+
+        baseLogs.push({
+
+
+          id: i,
+
+
+          time: `2026-09-${String((i % 28) + 1).padStart(2, '0')} 10:00:00`,
+
+
+          type: i % 3 === 0 ? '订单操作' : '租户操作',
+
+
+          operator: i % 2 === 0 ? 'admin' : 'system',
+
+
+          remarks: i % 3 === 0 ? '新增订单（订单号：test，金额：99）' : '更新租户信息'
+
+
+        });
+
+
+      }
+
+
+      return baseLogs.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
+
+    }, []);
+
+
+  
+
+
+    const [logTimeFilter, setLogTimeFilter] = useState('');
+
+
+    const [logTypeFilter, setLogTypeFilter] = useState('');
+
+
+    const [logOperatorFilter, setLogOperatorFilter] = useState('');
+
+
+    const [logCurrentPage, setLogCurrentPage] = useState(1);
+
+
+    const [logPageSize, setLogPageSize] = useState(10);
+
+
+  
+
+
+    const filteredLogs = React.useMemo(() => {
+
+
+      return mockLogs.filter(log => {
+
+
+        const matchTime = logTimeFilter ? log.time.includes(logTimeFilter) : true;
+
+
+        const matchType = logTypeFilter ? log.type === logTypeFilter : true;
+
+
+        const matchOp = logOperatorFilter ? log.operator.toLowerCase().includes(logOperatorFilter.toLowerCase()) : true;
+
+
+        return matchTime && matchType && matchOp;
+
+
+      });
+
+
+    }, [mockLogs, logTimeFilter, logTypeFilter, logOperatorFilter]);
+
+
+  
+
+
+    const logTotalPages = Math.ceil(filteredLogs.length / logPageSize) || 1;
+
+
+    const paginatedLogs = filteredLogs.slice((logCurrentPage - 1) * logPageSize, logCurrentPage * logPageSize);
+
+
+  
+
+
+    React.useEffect(() => {
+
+
+      setLogCurrentPage(1);
+
+
+    }, [logTimeFilter, logTypeFilter, logOperatorFilter, logPageSize]);
   const [schoolDropdownOpen, setSchoolDropdownOpen] = useState(false);
   const [missingOrgModalOpen, setMissingOrgModalOpen] = useState(false);
   const [missingOrgName, setMissingOrgName] = useState('');
@@ -150,6 +271,16 @@ export default function TenantManagement() {
                   >
                     <Edit className="w-4 h-4 mr-1" />
                     编辑
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setCurrentTenantId(tenant.id);
+                      setLogModalOpen(true);
+                    }}
+                    className="flex items-center text-blue-500 hover:text-blue-700 font-medium"
+                  >
+                    <FileText className="w-4 h-4 mr-1" />
+                    日志
                   </button>
                   <button className="flex items-center text-red-500 hover:text-red-700 font-medium">
                     <Trash2 className="w-4 h-4 mr-1" />
@@ -676,6 +807,164 @@ export default function TenantManagement() {
                   </button>
                 </div>
               </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+      {/* 日志 Modal */}
+      <AnimatePresence>
+        {logModalOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setLogModalOpen(false)}
+              className="fixed inset-0 bg-black/50 z-[120]"
+            />
+            <div className="fixed inset-0 z-[121] flex items-center justify-center p-4 pointer-events-none">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="bg-white rounded-xl shadow-xl w-full max-w-[700px] flex flex-col overflow-hidden pointer-events-auto"
+              >
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+                  <h2 className="text-lg font-semibold text-slate-900">日志</h2>
+                  <button 
+                    onClick={() => setLogModalOpen(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                
+                <div className="p-6">
+
+                  <div className="flex flex-col max-h-[70vh]">
+                    <div className="shrink-0 mb-4 space-y-3">
+                      <p className="text-slate-600 text-sm">
+                        记录租户的创建信息、订单新增记录、作废记录、启用停用记录。
+                      </p>
+                      
+                      {/* 筛选区 */}
+                      <div className="flex items-center space-x-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-slate-600">时间：</span>
+                          <input 
+                            type="date"
+                            value={logTimeFilter}
+                            onChange={(e) => setLogTimeFilter(e.target.value)}
+                            className="px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-slate-600">类型：</span>
+                          <select 
+                            value={logTypeFilter}
+                            onChange={(e) => setLogTypeFilter(e.target.value)}
+                            className="px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:border-blue-500"
+                          >
+                            <option value="">全部</option>
+                            <option value="租户操作">租户操作</option>
+                            <option value="订单操作">订单操作</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-slate-600">操作者：</span>
+                          <input 
+                            type="text"
+                            placeholder="输入操作者"
+                            value={logOperatorFilter}
+                            onChange={(e) => setLogOperatorFilter(e.target.value)}
+                            className="w-32 px-2 py-1.5 text-sm border border-slate-300 rounded focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+                        <div className="ml-auto flex items-center space-x-2">
+                          <button 
+                            onClick={() => { setLogTimeFilter(''); setLogTypeFilter(''); setLogOperatorFilter(''); }}
+                            className="px-3 py-1.5 text-sm text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors"
+                          >
+                            重置
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-auto border border-slate-200 rounded-lg">
+                      <table className="w-full text-left text-sm relative">
+                        <thead className="bg-[#4a5568] text-white sticky top-0 z-10">
+                          <tr>
+                            <th className="px-4 py-3 font-medium w-[150px] border-r border-[#2d3748]/20">时间</th>
+                            <th className="px-4 py-3 font-medium w-[120px] border-r border-[#2d3748]/20">类型</th>
+                            <th className="px-4 py-3 font-medium w-[120px] border-r border-[#2d3748]/20">操作者</th>
+                            <th className="px-4 py-3 font-medium">备注说明</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {paginatedLogs.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                                暂无日志记录
+                              </td>
+                            </tr>
+                          ) : (
+                            paginatedLogs.map((log) => (
+                              <tr key={log.id} className="bg-white hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-700 border-r border-slate-200">{log.time}</td>
+                                <td className="px-4 py-3 text-slate-700 border-r border-slate-200">{log.type}</td>
+                                <td className="px-4 py-3 text-slate-700 border-r border-slate-200">{log.operator}</td>
+                                <td className="px-4 py-3 text-slate-700">{log.remarks}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {/* 分页 */}
+                    {filteredLogs.length > 0 && (
+                      <div className="shrink-0 flex items-center justify-between pt-4 mt-2 border-t border-slate-100 bg-white">
+                        <div className="text-sm text-slate-500 flex items-center">
+                          共 {filteredLogs.length} 条记录
+                          <select 
+                            value={logPageSize}
+                            onChange={(e) => setLogPageSize(Number(e.target.value))}
+                            className="ml-3 px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-blue-500 bg-white"
+                          >
+                            <option value={10}>10 条/页</option>
+                            <option value={20}>20 条/页</option>
+                            <option value={50}>50 条/页</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center space-x-1 text-sm">
+                          <button 
+                            onClick={() => setLogCurrentPage(Math.max(1, logCurrentPage - 1))}
+                            disabled={logCurrentPage === 1}
+                            className="px-2 py-1 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            上一页
+                          </button>
+                          
+                          <span className="px-3 py-1 bg-blue-50 text-blue-600 font-medium rounded">
+                            {logCurrentPage} / {logTotalPages}
+                          </span>
+                          
+                          <button 
+                            onClick={() => setLogCurrentPage(Math.min(logTotalPages, logCurrentPage + 1))}
+                            disabled={logCurrentPage === logTotalPages}
+                            className="px-2 py-1 text-slate-600 hover:bg-slate-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            下一页
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+</motion.div>
             </div>
           </>
         )}
