@@ -216,13 +216,15 @@ export default function OnlineTenants() {
     type: '学校',
     city: '',
     schoolLevel: '本科',
-    subCollege: ''
+    subCollege: '',
+    adminAccount: '',
+    adminPassword: ''
   });
 
   const handleAddClick = () => {
     setFormMode('add');
     setEditingId(null);
-    setFormData({ name: '', type: '学校', city: '', schoolLevel: '本科', subCollege: '' });
+    setFormData({ name: '', type: '学校', city: '', schoolLevel: '本科', subCollege: '', adminAccount: '', adminPassword: '' });
     setIsFormModalOpen(true);
   };
 
@@ -533,11 +535,7 @@ export default function OnlineTenants() {
                       >
                         日志
                       </button>
-                      <button 
-                        className="text-red-500 hover:text-red-600 font-medium text-xs transition-colors"
-                      >
-                        删除
-                      </button>
+                      
                     </div>
                   </td>
                 </tr>
@@ -635,7 +633,32 @@ export default function OnlineTenants() {
                     <option value="机构">机构</option>
                   </select>
                 </div>
-
+                
+                {formMode === 'add' && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-slate-700">管理员账号 <span className="text-red-500">*</span></label>
+                      <input 
+                        type="text" 
+                        value={formData.adminAccount}
+                        onChange={e => setFormData({...formData, adminAccount: e.target.value})}
+                        placeholder="请输入管理员账号" 
+                        className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-slate-700">管理员密码 <span className="text-red-500">*</span></label>
+                      <input 
+                        type="password" 
+                        value={formData.adminPassword}
+                        onChange={e => setFormData({...formData, adminPassword: e.target.value})}
+                        placeholder="请输入管理员密码" 
+                        className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" 
+                      />
+                    </div>
+                  </>
+                )}
+                
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-slate-700">所在城市 (省市区) <span className="text-red-500">*</span></label>
                   <input 
@@ -686,7 +709,7 @@ export default function OnlineTenants() {
                 </button>
                 <button 
                   onClick={handleAddTenant}
-                  disabled={!formData.name || !formData.city}
+                  disabled={!formData.name || !formData.city || (formMode === 'add' && (!formData.adminAccount || !formData.adminPassword))}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   确定

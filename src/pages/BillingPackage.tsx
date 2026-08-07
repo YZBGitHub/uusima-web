@@ -347,7 +347,6 @@ export default function BillingPackage() {
                 </th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-48">套餐名称</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-24">类型</th>
-                <th className="px-6 py-4 font-medium text-slate-500 w-24">版本</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-32 text-right">价格 (元)</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-24 text-right">使用有效期(月)</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-32">资源额度</th>
@@ -360,7 +359,7 @@ export default function BillingPackage() {
             <tbody className="divide-y divide-slate-100">
               {paginatedPackages.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-6 py-20 text-center text-slate-500">
+                  <td colSpan={10} className="px-6 py-20 text-center text-slate-500">
                     暂无数据
                   </td>
                 </tr>
@@ -373,7 +372,6 @@ export default function BillingPackage() {
                       </td>
                       <td className="px-6 py-4 text-slate-700 font-medium truncate" title={pkg.name}>{pkg.name}</td>
                       <td className="px-6 py-4 text-slate-600 truncate" title={pkg.type}>{pkg.type}</td>
-                      <td className="px-6 py-4 text-slate-600">{pkg.version}</td>
                       <td className="px-6 py-4 text-slate-600 text-right">{pkg.price.toFixed(2)}</td>
                       <td className="px-6 py-4 text-slate-600 text-right">{pkg.serviceLife}</td>
                       <td className="px-6 py-4 text-slate-600">
@@ -422,14 +420,14 @@ export default function BillingPackage() {
                     </tr>
                     {expandedRows.has(pkg.id) && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan={11} className="px-6 py-4">
+                        <td colSpan={10} className="px-6 py-4">
                           <div className="grid grid-cols-4 gap-4 text-sm bg-white p-4 rounded border border-slate-200 ml-12 mr-12 shadow-sm">
                             <div>
-                              <span className="text-slate-500 block mb-1">实验时长 (分钟)</span>
+                              <span className="text-slate-500 block mb-1">实验时长（分钟）</span>
                               <span className="text-slate-800 font-medium text-lg">{pkg.duration.toLocaleString()}</span>
                             </div>
                             <div>
-                              <span className="text-slate-500 block mb-1">Token数量</span>
+                              <span className="text-slate-500 block mb-1">token（数量）</span>
                               <span className="text-slate-800 font-medium text-lg">{pkg.tokenCount.toLocaleString()}</span>
                             </div>
                             <div>
@@ -542,12 +540,12 @@ export default function BillingPackage() {
                   {errors.type && <p className="text-xs text-red-500">{errors.type}</p>}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">实验时长(分钟)</label>
+                  <label className="text-sm font-medium text-slate-700">实验时长（分钟）</label>
                   <input type="number" value={formData.duration} onChange={e => setFormData({...formData, duration: e.target.value})} className={`w-full px-3 py-2 border ${errors.duration ? 'border-red-500' : 'border-slate-300'} rounded focus:outline-none focus:ring-1 focus:ring-blue-500`} placeholder="请输入实验时长" />
                   {errors.duration && <p className="text-xs text-red-500">{errors.duration}</p>}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">token数量</label>
+                  <label className="text-sm font-medium text-slate-700">token（数量）</label>
                   <input type="number" value={formData.tokenCount} onChange={e => setFormData({...formData, tokenCount: e.target.value})} className={`w-full px-3 py-2 border ${errors.tokenCount ? 'border-red-500' : 'border-slate-300'} rounded focus:outline-none focus:ring-1 focus:ring-blue-500`} placeholder="请输入token数量" />
                   {errors.tokenCount && <p className="text-xs text-red-500">{errors.tokenCount}</p>}
                 </div>

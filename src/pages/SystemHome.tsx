@@ -311,50 +311,58 @@ export default function SystemHome() {
                 </td>
                 <td className="px-6 py-5 text-center text-slate-600">{item.used}</td>
                 <td className="px-6 py-5">
-                  <div className="flex items-center justify-center space-x-3">
-                    <span className={`text-sm ${item.isLimited ? 'text-[#108ee9] font-medium' : 'text-slate-400'}`}>有限制</span>
-                    <button 
-                      onClick={() => handleToggle(item.id)}
-                      className={`w-11 h-[22px] rounded-full flex items-center p-[2px] transition-colors ${item.isLimited ? 'bg-[#108ee9]' : 'bg-slate-300'}`}
-                    >
-                      <div className={`w-[18px] h-[18px] bg-white rounded-full shadow-sm transform transition-transform ${item.isLimited ? 'translate-x-[22px]' : 'translate-x-0'}`} />
-                    </button>
-                    <span className={`text-sm ${!item.isLimited ? 'text-slate-800 font-medium' : 'text-slate-600'}`}>无限制</span>
-                  </div>
+                  {item.id === 'duration' ? (
+                    <div className="text-center text-slate-400">-</div>
+                  ) : (
+                    <div className="flex items-center justify-center space-x-3">
+                      <span className={`text-sm ${item.isLimited ? 'text-[#108ee9] font-medium' : 'text-slate-400'}`}>有限制</span>
+                      <button 
+                        onClick={() => handleToggle(item.id)}
+                        className={`w-11 h-[22px] rounded-full flex items-center p-[2px] transition-colors ${item.isLimited ? 'bg-[#108ee9]' : 'bg-slate-300'}`}
+                      >
+                        <div className={`w-[18px] h-[18px] bg-white rounded-full shadow-sm transform transition-transform ${item.isLimited ? 'translate-x-[22px]' : 'translate-x-0'}`} />
+                      </button>
+                      <span className={`text-sm ${!item.isLimited ? 'text-slate-800 font-medium' : 'text-slate-600'}`}>无限制</span>
+                    </div>
+                  )}
                 </td>
                 <td className="px-6 py-5">
-                  <div className="flex items-center justify-center">
-                    <div className="flex items-center border border-slate-200 rounded overflow-hidden shadow-sm bg-white">
-                      <button 
-                        onClick={() => handleLimitChange(item.id, Math.max(0, item.maxLimit - 1))}
-                        className={`px-3 py-1.5 bg-slate-50 border-r border-slate-200 transition-colors ${!item.isLimited ? 'text-slate-300' : 'text-slate-500 hover:bg-slate-100'}`}
-                        disabled={!item.isLimited}
-                      >
-                        -
-                      </button>
-                      <input 
-                        type="text" 
-                        value={item.maxLimit} 
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          handleLimitChange(item.id, isNaN(val) ? 0 : val);
-                        }}
-                        className={`w-28 text-center py-1.5 focus:outline-none text-sm disabled:cursor-not-allowed disabled:bg-slate-50 ${!item.isLimited ? 'text-slate-400' : 'text-slate-700'}`}
-                        disabled={!item.isLimited}
-                      />
-                      <button 
-                        onClick={() => handleLimitChange(item.id, item.maxLimit + 1)}
-                        className={`px-3 py-1.5 bg-slate-50 border-l border-slate-200 transition-colors ${!item.isLimited ? 'text-slate-300' : 'text-slate-500 hover:bg-slate-100'}`}
-                        disabled={!item.isLimited}
-                      >
-                        +
-                      </button>
+                  {item.id === 'duration' ? (
+                    <div className="text-center text-slate-400">-</div>
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center border border-slate-200 rounded overflow-hidden shadow-sm bg-white">
+                        <button 
+                          onClick={() => handleLimitChange(item.id, Math.max(0, item.maxLimit - 1))}
+                          className={`px-3 py-1.5 bg-slate-50 border-r border-slate-200 transition-colors ${!item.isLimited ? 'text-slate-300' : 'text-slate-500 hover:bg-slate-100'}`}
+                          disabled={!item.isLimited}
+                        >
+                          -
+                        </button>
+                        <input 
+                          type="text" 
+                          value={item.maxLimit}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            handleLimitChange(item.id, isNaN(val) ? 0 : val);
+                          }}
+                          className={`w-28 text-center py-1.5 focus:outline-none text-sm disabled:cursor-not-allowed disabled:bg-slate-50 ${!item.isLimited ? 'text-slate-400' : 'text-slate-700'}`}
+                          disabled={!item.isLimited}
+                        />
+                        <button 
+                          onClick={() => handleLimitChange(item.id, item.maxLimit + 1)}
+                          className={`px-3 py-1.5 bg-slate-50 border-l border-slate-200 transition-colors ${!item.isLimited ? 'text-slate-300' : 'text-slate-500 hover:bg-slate-100'}`}
+                          disabled={!item.isLimited}
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </td>
                 <td className="px-6 py-5 text-center">
                   <div className="flex items-center justify-center space-x-3">
-                    <button className="text-[#108ee9] hover:text-blue-700 transition-colors text-[13px] font-medium">限额设置</button>
+                    {item.id !== 'duration' && <button className="text-[#108ee9] hover:text-blue-700 transition-colors text-[13px] font-medium">限额设置</button>}
                     <button className="text-[#108ee9] hover:text-blue-700 transition-colors text-[13px] font-medium">用量详情</button>
                   </div>
                 </td>

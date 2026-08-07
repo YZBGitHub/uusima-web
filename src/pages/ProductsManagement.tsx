@@ -1,5 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, Trash2, Edit2, AlertCircle, X, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Trash2, Edit2, AlertCircle, X, Loader2, ChevronLeft, ChevronRight, Link as LinkIcon, ChevronDown } from 'lucide-react';
+
+interface AppItem {
+  id: string;
+  name: string;
+  code: string;
+}
+
+const appsData: AppItem[] = [
+  { id: '1', name: '用户中心', code: 'tenant-app' },
+  { id: '2', name: '硬件智能体系统', code: 'device-ai' },
+  { id: '3', name: '运营决策大屏', code: 'dashboard-ops' },
+  { id: '4', name: '考试题库系统', code: 'exam-app' },
+  { id: '5', name: 'AI学伴', code: 'aixb' },
+  { id: '6', name: '二维码平台', code: 'qrcode-app' },
+  { id: '7', name: 'AIOT应用', code: 'aiot-app' },
+  { id: '8', name: '行业云', code: 'industry-cloud' },
+  { id: '9', name: 'UPMS', code: 'upms-app' },
+  { id: '10', name: '行业云移动应用', code: 'industry-cloud-app' },
+];
 
 interface ProductItem {
   id: number;
@@ -12,62 +31,115 @@ interface ProductItem {
   salesLimitPrice: string;
   coreElements: string;
   updateTime: string;
+  associatedAppIds: string[];
 }
 
 const initialProducts: ProductItem[] = [
   {
     id: 1,
-    name: '智能交互白板',
+    name: '智慧教学实验平台V1.0.0',
     status: '启用',
-    model: 'IB-2023',
-    type: '硬件',
-    partNumber: 'PN-001',
-    customerPrice: '15000',
-    salesLimitPrice: '12000',
-    coreElements: '4K显示, 多点触控',
-    updateTime: '2023-10-25 14:30:00'
+    model: 'LingY-600',
+    type: '云服务',
+    partNumber: '',
+    customerPrice: '158000',
+    salesLimitPrice: '108000',
+    coreElements: '1）5 年云服务\n2）共100 个账号\n3）5000 小时/每年\n赠送：\na) 提供平台课程任意三个（不包括认证课）',
+    updateTime: '2023-10-25 14:30:00',
+    associatedAppIds: []
   },
   {
     id: 2,
-    name: 'AI助手基础版',
+    name: '智慧教学实验平台服务增配包-A',
     status: '启用',
-    model: 'AI-B-v1',
-    type: '软件',
-    partNumber: 'SW-101',
+    model: 'LingY-611',
+    type: '云服务',
+    partNumber: '',
     customerPrice: '5000',
-    salesLimitPrice: '4500',
-    coreElements: '文本生成, 智能问答',
-    updateTime: '2023-10-26 09:15:00'
+    salesLimitPrice: '3500',
+    coreElements: '1）1 年服务期\n2）共5 个账号\n3）共1000 小时',
+    updateTime: '2023-10-26 09:15:00',
+    associatedAppIds: []
   },
   {
     id: 3,
-    name: '智能交互白板 Pro',
-    status: '禁用',
-    model: 'IB-2024P',
+    name: '智慧教学实验平台服务增配包-B',
+    status: '启用',
+    model: 'LingY-612',
+    type: '云服务',
+    partNumber: '',
+    customerPrice: '5000',
+    salesLimitPrice: '3500',
+    coreElements: '1）1 年服务期\n2）1亿个 Token',
+    updateTime: '2023-11-01 10:00:00',
+    associatedAppIds: []
+  },
+  {
+    id: 4,
+    name: 'AI技能分析系统V1.0',
+    status: '启用',
+    model: 'LingX-1300',
+    type: '云服务',
+    partNumber: '',
+    customerPrice: '108000',
+    salesLimitPrice: '65000',
+    coreElements: '1）5年云服务\n2）1亿个 Token/年',
+    updateTime: '2023-11-02 10:00:00',
+    associatedAppIds: []
+  },
+  {
+    id: 5,
+    name: 'AI知识库应用系统V1.0(原：学科大模型平台V1.0)',
+    status: '启用',
+    model: 'USMA-KB1000',
+    type: '云服务',
+    partNumber: '',
+    customerPrice: '108000',
+    salesLimitPrice: '65000',
+    coreElements: '1）5年云服务\n2）5年算力服务，1亿Token/年',
+    updateTime: '2023-11-03 10:00:00',
+    associatedAppIds: []
+  },
+  {
+    id: 6,
+    name: 'AI智能体应用系统V1.0',
+    status: '启用',
+    model: 'USMA-Ag1000',
+    type: '云服务',
+    partNumber: '',
+    customerPrice: '108000',
+    salesLimitPrice: '65000',
+    coreElements: '1）5 年云服务\n2）5年算力服务，1亿Token/年',
+    updateTime: '2023-11-04 10:00:00',
+    associatedAppIds: []
+  },
+  {
+    id: 7,
+    name: '硬件智能体系统V1.0',
+    status: '启用',
+    model: 'USMA-1500',
+    type: '云服务',
+    partNumber: '',
+    customerPrice: '108000',
+    salesLimitPrice: '65000',
+    coreElements: '1）5 年服务期\n2）1 亿个 token/每年',
+    updateTime: '2023-11-05 10:00:00',
+    associatedAppIds: []
+  },
+  {
+    id: 8,
+    name: '硬件智能体终端',
+    status: '启用',
+    model: 'USMA-1501',
     type: '硬件',
-    partNumber: 'PN-002',
-    customerPrice: '25000',
-    salesLimitPrice: '20000',
-    coreElements: '8K显示, 多点触控, 语音控制',
-    updateTime: '2023-11-01 10:00:00'
+    partNumber: '',
+    customerPrice: '3000',
+    salesLimitPrice: '2500',
+    coreElements: '1）硬件设备\n2）每实验套件赠送1个线上账号',
+    updateTime: '2023-11-06 10:00:00',
+    associatedAppIds: []
   }
 ];
-
-// Generate some dummy data for pagination testing
-for (let i = 4; i <= 45; i++) {
-  initialProducts.push({
-    id: i,
-    name: `测试产品 ${i}`,
-    status: i % 3 === 0 ? '禁用' : '启用',
-    model: `Model-${i}`,
-    type: i % 2 === 0 ? '硬件' : '软件',
-    partNumber: `PN-${100 + i}`,
-    customerPrice: `${1000 * i}`,
-    salesLimitPrice: `${800 * i}`,
-    coreElements: `核心要素 ${i}`,
-    updateTime: `2023-11-${String((i % 30) + 1).padStart(2, '0')} 10:00:00`
-  });
-}
 
 interface SearchCondition {
   name: string;
@@ -108,8 +180,20 @@ export default function ProductsManagement() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [productToDelete, setProductToDelete] = useState<number | null>(null);
+
+  // Associate App Modal State
+  const [showAppModal, setShowAppModal] = useState(false);
+  const [selectedProductForApp, setSelectedProductForApp] = useState<ProductItem | null>(null);
+  const [selectedAppIds, setSelectedAppIds] = useState<string[]>([]);
+
+  // Expandable Rows State
+  const [expandedRows, setExpandedRows] = useState<number[]>([]);
+
+  const toggleRowExpanded = (id: number) => {
+    setExpandedRows(prev => prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]);
+  };
   
-  const initialFormData: Omit<ProductItem, 'id' | 'updateTime'> = {
+  const initialFormData: Omit<ProductItem, 'id' | 'updateTime' | 'associatedAppIds'> = {
     name: '',
     status: '启用',
     model: '',
@@ -120,8 +204,8 @@ export default function ProductsManagement() {
     coreElements: ''
   };
   
-  const [formData, setFormData] = useState<Omit<ProductItem, 'id' | 'updateTime'>>(initialFormData);
-  const [formErrors, setFormErrors] = useState<Partial<Record<keyof Omit<ProductItem, 'id' | 'updateTime'>, string>>>({});
+  const [formData, setFormData] = useState<Omit<ProductItem, 'id' | 'updateTime' | 'associatedAppIds'>>(initialFormData);
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof Omit<ProductItem, 'id' | 'updateTime' | 'associatedAppIds'>, string>>>({});
   
   const handleSearch = () => {
     setIsSearching(true);
@@ -181,8 +265,29 @@ export default function ProductsManagement() {
     setShowModal(true);
     setShowConfirmClose(false);
   };
+
+  const handleOpenAssociateApp = (product: ProductItem) => {
+    setSelectedProductForApp(product);
+    setSelectedAppIds(product.associatedAppIds || []);
+    setShowAppModal(true);
+  };
+
+  const handleToggleAppSelection = (appId: string) => {
+    setSelectedAppIds(prev => 
+      prev.includes(appId) ? prev.filter(id => id !== appId) : [...prev, appId]
+    );
+  };
+
+  const handleSaveAppAssociation = () => {
+    if (selectedProductForApp) {
+      setProducts(prev => prev.map(p => 
+        p.id === selectedProductForApp.id ? { ...p, associatedAppIds: selectedAppIds } : p
+      ));
+    }
+    setShowAppModal(false);
+  };
   
-  const handleChange = (field: keyof Omit<ProductItem, 'id' | 'updateTime'>, value: string) => {
+  const handleChange = (field: keyof Omit<ProductItem, 'id' | 'updateTime' | 'associatedAppIds'>, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (formErrors[field]) {
       setFormErrors(prev => ({ ...prev, [field]: undefined }));
@@ -219,7 +324,7 @@ export default function ProductsManagement() {
   };
   
   const validateForm = () => {
-    const errors: Partial<Record<keyof Omit<ProductItem, 'id' | 'updateTime'>, string>> = {};
+    const errors: Partial<Record<keyof Omit<ProductItem, 'id' | 'updateTime' | 'associatedAppIds'>, string>> = {};
     let isValid = true;
     
     const trimmedName = formData.name.trim();
@@ -459,6 +564,7 @@ export default function ProductsManagement() {
           <table className="w-full text-left text-sm whitespace-nowrap min-w-[max-content] table-fixed">
             <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
               <tr>
+                <th className="px-3 py-4 w-10"></th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-12">
                   <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                 </th>
@@ -466,18 +572,15 @@ export default function ProductsManagement() {
                 <th className="px-6 py-4 font-medium text-slate-500 w-24">类型</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-32">型号</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-32">料号</th>
-                <th className="px-6 py-4 font-medium text-slate-500 w-32 text-right">客户价 (元)</th>
-                <th className="px-6 py-4 font-medium text-slate-500 w-32 text-right">销售限价 (元)</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-24">状态</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-40">更新时间</th>
-                <th className="px-6 py-4 font-medium text-slate-500 w-64">核心要素</th>
-                <th className="px-6 py-4 font-medium text-slate-500 w-32">操作</th>
+                <th className="px-6 py-4 font-medium text-slate-500 w-48">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isSearching ? (
                 <tr>
-                  <td colSpan={11} className="px-6 py-20 text-center">
+                  <td colSpan={9} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
                       <p>正在加载数据...</p>
@@ -486,7 +589,7 @@ export default function ProductsManagement() {
                 </tr>
               ) : searchError ? (
                 <tr>
-                  <td colSpan={11} className="px-6 py-20 text-center">
+                  <td colSpan={9} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
                       <p className="mb-4">数据加载失败</p>
@@ -501,7 +604,7 @@ export default function ProductsManagement() {
                 </tr>
               ) : paginatedProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-6 py-20 text-center">
+                  <td colSpan={9} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-500">
                       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-3">
                         <Search className="w-8 h-8 text-slate-300" />
@@ -512,38 +615,81 @@ export default function ProductsManagement() {
                 </tr>
               ) : (
                 paginatedProducts.map(product => (
-                  <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                    </td>
-                    <td className="px-6 py-4 text-slate-700 font-medium truncate" title={product.name}>{product.name}</td>
-                    <td className="px-6 py-4 text-slate-600 truncate" title={product.type}>{product.type || '-'}</td>
-                    <td className="px-6 py-4 text-slate-600 truncate" title={product.model}>{product.model || '-'}</td>
-                    <td className="px-6 py-4 text-slate-600 truncate" title={product.partNumber}>{product.partNumber || '-'}</td>
-                    <td className="px-6 py-4 text-slate-600 text-right">
-                      {product.customerPrice ? Number(product.customerPrice).toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}
-                    </td>
-                    <td className="px-6 py-4 text-slate-600 text-right">
-                      {product.salesLimitPrice ? Number(product.salesLimitPrice).toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${product.status === '启用' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
-                        {product.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500 truncate">{product.updateTime}</td>
-                    <td className="px-6 py-4 text-slate-600 truncate max-w-[16rem]" title={product.coreElements}>{product.coreElements || '-'}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleOpenEdit(product)} className="text-[#108ee9] hover:text-blue-700 transition-colors flex items-center text-sm">
-                          <Edit2 className="w-3 h-3 mr-1" /> 编辑
+                  <React.Fragment key={product.id}>
+                    <tr className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-3 py-4 text-center">
+                        <button 
+                          onClick={() => toggleRowExpanded(product.id)} 
+                          className="p-1 hover:bg-slate-200 rounded text-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {expandedRows.includes(product.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                         </button>
-                        <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-600 transition-colors flex items-center text-sm">
-                          <Trash2 className="w-3 h-3 mr-1" /> 删除
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-6 py-4">
+                        <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                      </td>
+                      <td className="px-6 py-4 text-slate-700 font-medium truncate" title={product.name}>{product.name}</td>
+                      <td className="px-6 py-4 text-slate-600 truncate" title={product.type}>{product.type || '-'}</td>
+                      <td className="px-6 py-4 text-slate-600 truncate" title={product.model}>{product.model || '-'}</td>
+                      <td className="px-6 py-4 text-slate-600 truncate" title={product.partNumber}>{product.partNumber || '-'}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${product.status === '启用' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
+                          {product.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500 truncate">{product.updateTime}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-3 transition-opacity">
+                          <button onClick={() => handleOpenAssociateApp(product)} className="text-[#108ee9] hover:text-blue-700 transition-colors flex items-center text-sm">
+                            <LinkIcon className="w-3 h-3 mr-1" /> 关联应用
+                          </button>
+                          <button onClick={() => handleOpenEdit(product)} className="text-[#108ee9] hover:text-blue-700 transition-colors flex items-center text-sm">
+                            <Edit2 className="w-3 h-3 mr-1" /> 编辑
+                          </button>
+                          <button onClick={() => handleDelete(product.id)} className="text-red-500 hover:text-red-600 transition-colors flex items-center text-sm">
+                            <Trash2 className="w-3 h-3 mr-1" /> 删除
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedRows.includes(product.id) && (
+                      <tr className="bg-slate-50/80 border-b border-slate-100">
+                        <td colSpan={9} className="px-6 py-4">
+                          <div className="grid grid-cols-4 gap-6 ml-10">
+                            <div>
+                              <div className="text-xs font-medium text-slate-500 mb-1">客户价 (元)</div>
+                              <div className="text-sm text-slate-700">{product.customerPrice ? Number(product.customerPrice).toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs font-medium text-slate-500 mb-1">销售限价 (元)</div>
+                              <div className="text-sm text-slate-700">{product.salesLimitPrice ? Number(product.salesLimitPrice).toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs font-medium text-slate-500 mb-1">核心要素</div>
+                              <div className="text-sm text-slate-700 whitespace-pre-wrap">{product.coreElements || '-'}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs font-medium text-slate-500 mb-1">关联应用</div>
+                              <div className="text-sm text-slate-700 flex flex-wrap gap-1">
+                                {product.associatedAppIds && product.associatedAppIds.length > 0 ? (
+                                  product.associatedAppIds.map(appId => {
+                                    const app = appsData.find(a => a.id === appId);
+                                    return app ? (
+                                      <span key={appId} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                        {app.name}
+                                      </span>
+                                    ) : null;
+                                  })
+                                ) : (
+                                  <span className="text-slate-400">-</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))
               )}
             </tbody>
@@ -788,6 +934,56 @@ export default function ProductsManagement() {
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
               <button onClick={() => setProductToDelete(null)} className="px-4 py-2 border border-slate-300 text-slate-700 rounded bg-white hover:bg-slate-50 transition-colors text-sm font-medium">取消</button>
               <button onClick={executeDelete} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-medium">确认删除</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Associate App Modal */}
+      {showAppModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-semibold text-slate-800">关联应用 - {selectedProductForApp?.name}</h3>
+              <button onClick={() => setShowAppModal(false)} className="text-slate-400 hover:text-slate-500 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto bg-white">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-6 py-4 font-medium text-slate-500 w-12 text-center">选择</th>
+                    <th className="px-6 py-4 font-medium text-slate-500">应用名称</th>
+                    <th className="px-6 py-4 font-medium text-slate-500">应用代码</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {appsData.map(app => (
+                    <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-3 text-center">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedAppIds.includes(app.id)}
+                          onChange={() => handleToggleAppSelection(app.id)}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+                        />
+                      </td>
+                      <td className="px-6 py-3 text-slate-700">{app.name}</td>
+                      <td className="px-6 py-3 text-slate-500">{app.code}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center shrink-0">
+              <span className="text-sm text-slate-600">已选择 {selectedAppIds.length} 个应用</span>
+              <div className="flex space-x-3">
+                <button onClick={() => setShowAppModal(false)} className="px-4 py-2 border border-slate-300 text-slate-700 rounded bg-white hover:bg-slate-50 transition-colors text-sm font-medium">取消</button>
+                <button onClick={handleSaveAppAssociation} className="px-4 py-2 bg-[#108ee9] text-white rounded hover:bg-blue-600 transition-colors text-sm font-medium">确定</button>
+              </div>
             </div>
           </div>
         </div>
