@@ -2,28 +2,22 @@ import React, { useState } from 'react';
 import { Plus, X, Search, ChevronDown, Bell, ChevronRight, UserCircle, Settings, LogOut, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-function Header() {
+function Header({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isTenantOpen, setIsTenantOpen] = useState(false);
   const activeTenant = { name: "教育公司" };
-  const onNavigate = (view: string) => {};
-  return (
+    return (
     <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10 shrink-0">
       <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 flex items-center justify-center font-bold text-lg text-white bg-gradient-to-br from-blue-500 to-indigo-600 rounded">
-                N
-            </div>
-            <span className="text-xl font-bold text-slate-800 tracking-tight">UUSIMA <span className="font-medium text-base ml-1">智慧教学实验平台</span></span>
+            <img src="/logo.png" alt="UUSIMA 智慧教学实验平台" className="h-8 object-contain" />
           </div>
           <div className="h-5 w-px bg-slate-300 mx-2" />
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-600">
+            <button className="hover:text-blue-600 transition-colors" onClick={() => onNavigate && onNavigate('home')}>首页</button>
             <a href="#" className="hover:text-blue-600">课程大厅</a>
             <a href="#" className="hover:text-blue-600">实验大厅</a>
-            <a href="#" className="hover:text-blue-600">考试大厅</a>
-            <a href="#" className="hover:text-blue-600">最佳实践</a>
-            <a href="#" className="hover:text-blue-600">产品中心</a>
-            <a href="#" className="hover:text-blue-600">关于UUSIMA</a>
+            <button className="hover:text-blue-600 transition-colors" onClick={() => onNavigate && onNavigate('dataset-hall')}>数据大厅</button>
           </nav>
       </div>
       <div className="flex items-center space-x-4">
@@ -322,7 +316,7 @@ function AssetsTab() {
   )
 }
 
-export default function Profile() {
+export default function Profile({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [activeMenu, setActiveMenu] = useState('info');
   const [isBindEmailModalOpen, setIsBindEmailModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -330,7 +324,7 @@ export default function Profile() {
 
   return (
     <div className="absolute inset-0 bg-[#eef1f6] flex flex-col font-sans">
-      <Header />
+      <Header onNavigate={onNavigate} />
 
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧侧边栏 */}

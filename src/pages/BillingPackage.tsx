@@ -13,6 +13,7 @@ interface PackageItem {
   serviceLife: number;
   price: number;
   products: string;
+  billingItems: { id: string; type: string; name: string; value: number }[];
   status: 'draft' | 'enabled' | 'disabled' | 'archived';
   updateTime: string;
 }
@@ -33,6 +34,10 @@ const generateMockData = (): PackageItem[] => {
       serviceLife: 12,
       price: 99.9 * i,
       products: 'AI技能分析系统, 知识库应用系统',
+      billingItems: [
+        { id: `bi-${i}-1`, type: 'token', name: '词元兑换', value: 100000 * i },
+        { id: `bi-${i}-2`, type: 'duration', name: '实验时长兑换', value: 1000 * i }
+      ],
       status: statuses[i % 4],
       updateTime: `2023-10-${String((i % 28) + 1).padStart(2, '0')} 10:00:00`
     });
@@ -47,6 +52,24 @@ const STATUS_MAP = {
   enabled: { label: '启用', color: 'bg-green-100 text-green-700' },
   disabled: { label: '停用', color: 'bg-red-100 text-red-700' },
   archived: { label: '归档', color: 'bg-gray-100 text-gray-500' }
+};
+
+const BILLING_PRESETS: Record<string, { label: string; value: number }[]> = {
+  token: [
+    { label: '1万', value: 10000 },
+    { label: '10万', value: 100000 },
+    { label: '100万', value: 1000000 },
+  ],
+  ppt: [
+    { label: '10次', value: 10 },
+    { label: '1千次', value: 1000 },
+    { label: '1万次', value: 10000 },
+  ],
+  duration: [
+    { label: '100分钟', value: 100 },
+    { label: '1000分钟', value: 1000 },
+    { label: '1万分钟', value: 10000 },
+  ]
 };
 
 export default function BillingPackage() {
@@ -69,6 +92,54 @@ export default function BillingPackage() {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Modal State
+  // Billing Items Modal
+  const [showBillingModal, setShowBillingModal] = useState(false);
+  const [currentBillingPkgId, setCurrentBillingPkgId] = useState<string | null>(null);
+  
+  const [showAddBillingItemModal, setShowAddBillingItemModal] = useState(false);
+  const [billingItemForm, setBillingItemForm] = useState({ type: 'token', value: 10000 as number | '', isCustom: false });
+
+  const handleOpenBillingItems = (pkgId: string) => {
+    setCurrentBillingPkgId(pkgId);
+    setShowBillingModal(true);
+  };
+  
+  const handleAddBillingItem = () => {
+    if (!currentBillingPkgId) return;
+    if (billingItemForm.value === '' || Number(billingItemForm.value) <= 0) return;
+    
+    let name = '';
+    if (billingItemForm.type === 'token') name = '词元兑换';
+    else if (billingItemForm.type === 'ppt') name = 'PPT生成兑换';
+    else if (billingItemForm.type === 'duration') name = '实验时长兑换';
+
+    setPackages(packages.map(p => {
+      if (p.id === currentBillingPkgId) {
+        return {
+          ...p,
+          billingItems: [...(p.billingItems || []), {
+            id: `bi-${Date.now()}`,
+            type: billingItemForm.type,
+            name,
+            value: Number(billingItemForm.value)
+          }]
+        };
+      }
+      return p;
+    }));
+    setShowAddBillingItemModal(false);
+    setBillingItemForm({ type: 'token', value: BILLING_PRESETS['token'][0].value, isCustom: false });
+  };
+  
+  const handleDeleteBillingItem = (pkgId: string, itemId: string) => {
+    setPackages(packages.map(p => {
+      if (p.id === pkgId) {
+        return { ...p, billingItems: p.billingItems.filter(i => i.id !== itemId) };
+      }
+      return p;
+    }));
+  };
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -342,15 +413,14 @@ export default function BillingPackage() {
           <table className="w-full text-left text-sm whitespace-nowrap min-w-[max-content] table-fixed">
             <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-4 font-medium text-slate-500 w-12">
+                <th className="px-4 py-4 font-medium text-slate-500 w-12"></th>
+                <th className="px-2 py-4 font-medium text-slate-500 w-12">
                   <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                 </th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-48">套餐名称</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-24">类型</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-32 text-right">价格 (元)</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-24 text-right">使用有效期(月)</th>
-                <th className="px-6 py-4 font-medium text-slate-500 w-32">资源额度</th>
-                <th className="px-6 py-4 font-medium text-slate-500 w-48">关联产品</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-24">状态</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-40">更新时间</th>
                 <th className="px-6 py-4 font-medium text-slate-500 w-48">操作</th>
@@ -367,23 +437,18 @@ export default function BillingPackage() {
                 paginatedPackages.map(pkg => (
                   <React.Fragment key={pkg.id}>
                     <tr className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4 text-slate-400">
+                        <button onClick={() => toggleRowExpand(pkg.id)} className="focus:outline-none hover:bg-slate-100 p-1 rounded transition-colors">
+                          {expandedRows.has(pkg.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        </button>
+                      </td>
+                      <td className="px-2 py-4">
                         <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                       </td>
                       <td className="px-6 py-4 text-slate-700 font-medium truncate" title={pkg.name}>{pkg.name}</td>
                       <td className="px-6 py-4 text-slate-600 truncate" title={pkg.type}>{pkg.type}</td>
                       <td className="px-6 py-4 text-slate-600 text-right">{pkg.price.toFixed(2)}</td>
                       <td className="px-6 py-4 text-slate-600 text-right">{pkg.serviceLife}</td>
-                      <td className="px-6 py-4 text-slate-600">
-                        <button 
-                          onClick={() => toggleRowExpand(pkg.id)} 
-                          className="flex items-center text-blue-600 hover:text-blue-800 focus:outline-none"
-                        >
-                          查看额度
-                          {expandedRows.has(pkg.id) ? <ChevronDown className="w-4 h-4 ml-1" /> : <ChevronRight className="w-4 h-4 ml-1" />}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600 truncate max-w-[12rem]" title={pkg.products}>{pkg.products || '-'}</td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${STATUS_MAP[pkg.status].color}`}>
                           {STATUS_MAP[pkg.status].label}
@@ -396,6 +461,7 @@ export default function BillingPackage() {
                             <>
                               <button onClick={() => changeStatus(pkg.id, 'enabled')} className="text-green-600 hover:text-green-700 text-xs flex items-center"><Play className="w-3 h-3 mr-1" /> 启用</button>
                               <button onClick={() => handleOpenEdit(pkg)} className="text-[#108ee9] hover:text-blue-700 text-xs flex items-center"><Edit2 className="w-3 h-3 mr-1" /> 编辑</button>
+                              <button onClick={() => handleOpenBillingItems(pkg.id)} className="text-[#108ee9] hover:text-blue-700 text-xs flex items-center">计费项设置</button>
                               <button onClick={() => handleDelete(pkg.id)} className="text-red-500 hover:text-red-600 text-xs flex items-center"><Trash2 className="w-3 h-3 mr-1" /> 删除</button>
                             </>
                           )}
@@ -404,12 +470,14 @@ export default function BillingPackage() {
                               <button onClick={() => changeStatus(pkg.id, 'disabled')} className="text-orange-500 hover:text-orange-600 text-xs flex items-center"><Square className="w-3 h-3 mr-1" /> 停用</button>
                               <button onClick={() => changeStatus(pkg.id, 'draft')} className="text-slate-600 hover:text-slate-700 text-xs flex items-center"><ArrowLeft className="w-3 h-3 mr-1" /> 退回草稿</button>
                               <button onClick={() => handleOpenEdit(pkg)} className="text-[#108ee9] hover:text-blue-700 text-xs flex items-center"><Edit2 className="w-3 h-3 mr-1" /> 编辑</button>
+                              <button onClick={() => handleOpenBillingItems(pkg.id)} className="text-[#108ee9] hover:text-blue-700 text-xs flex items-center">计费项设置</button>
                             </>
                           )}
                           {pkg.status === 'disabled' && (
                             <>
                               <button onClick={() => changeStatus(pkg.id, 'enabled')} className="text-green-600 hover:text-green-700 text-xs flex items-center"><Play className="w-3 h-3 mr-1" /> 启用</button>
                               <button onClick={() => changeStatus(pkg.id, 'archived')} className="text-slate-600 hover:text-slate-700 text-xs flex items-center"><Archive className="w-3 h-3 mr-1" /> 归档</button>
+                              <button onClick={() => handleOpenBillingItems(pkg.id)} className="text-[#108ee9] hover:text-blue-700 text-xs flex items-center">计费项设置</button>
                             </>
                           )}
                           {pkg.status === 'archived' && (
@@ -419,25 +487,57 @@ export default function BillingPackage() {
                       </td>
                     </tr>
                     {expandedRows.has(pkg.id) && (
-                      <tr className="bg-slate-50/50">
-                        <td colSpan={10} className="px-6 py-4">
-                          <div className="grid grid-cols-4 gap-4 text-sm bg-white p-4 rounded border border-slate-200 ml-12 mr-12 shadow-sm">
+                      <tr className="bg-slate-50/30 border-b border-slate-200">
+                        <td colSpan={9} className="px-14 py-4">
+                          <div className="bg-white rounded-lg border border-slate-200 p-6 space-y-6 shadow-sm">
+                            
                             <div>
-                              <span className="text-slate-500 block mb-1">实验时长（分钟）</span>
-                              <span className="text-slate-800 font-medium text-lg">{pkg.duration.toLocaleString()}</span>
+                              <h4 className="text-sm font-semibold text-slate-800 mb-3 border-l-4 border-blue-500 pl-2">关联产品</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {pkg.products ? pkg.products.split(',').map(prod => (
+                                  <span key={prod} className="px-3 py-1 bg-slate-100 text-slate-700 rounded text-xs">{prod.trim()}</span>
+                                )) : <span className="text-sm text-slate-400">暂无关联产品</span>}
+                              </div>
                             </div>
+                            
                             <div>
-                              <span className="text-slate-500 block mb-1">token（数量）</span>
-                              <span className="text-slate-800 font-medium text-lg">{pkg.tokenCount.toLocaleString()}</span>
+                              <h4 className="text-sm font-semibold text-slate-800 mb-3 border-l-4 border-blue-500 pl-2">计费项配置</h4>
+                              {pkg.billingItems && pkg.billingItems.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {pkg.billingItems.map(item => (
+                                    <div key={item.id} className="flex justify-between items-center bg-slate-50 px-4 py-3 rounded border border-slate-100">
+                                      <span className="text-sm text-slate-600">{item.name}</span>
+                                      <span className="text-sm font-medium text-slate-800">{item.value.toLocaleString()}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-sm text-slate-400">暂无计费项配置</div>
+                              )}
                             </div>
+
                             <div>
-                              <span className="text-slate-500 block mb-1">PPT次数</span>
-                              <span className="text-slate-800 font-medium text-lg">{pkg.pptCount.toLocaleString()}</span>
+                              <h4 className="text-sm font-semibold text-slate-800 mb-3 border-l-4 border-blue-500 pl-2">资源额度 (旧版兼容)</h4>
+                              <div className="grid grid-cols-4 gap-4 text-sm">
+                                <div className="bg-slate-50 p-3 rounded">
+                                  <span className="text-slate-500 block mb-1 text-xs">实验时长（分钟）</span>
+                                  <span className="text-slate-800 font-medium">{pkg.duration.toLocaleString()}</span>
+                                </div>
+                                <div className="bg-slate-50 p-3 rounded">
+                                  <span className="text-slate-500 block mb-1 text-xs">token（数量）</span>
+                                  <span className="text-slate-800 font-medium">{pkg.tokenCount.toLocaleString()}</span>
+                                </div>
+                                <div className="bg-slate-50 p-3 rounded">
+                                  <span className="text-slate-500 block mb-1 text-xs">PPT次数</span>
+                                  <span className="text-slate-800 font-medium">{pkg.pptCount.toLocaleString()}</span>
+                                </div>
+                                <div className="bg-slate-50 p-3 rounded">
+                                  <span className="text-slate-500 block mb-1 text-xs">账号数量</span>
+                                  <span className="text-slate-800 font-medium">{pkg.accountCount.toLocaleString()}</span>
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-slate-500 block mb-1">账号数量</span>
-                              <span className="text-slate-800 font-medium text-lg">{pkg.accountCount.toLocaleString()}</span>
-                            </div>
+
                           </div>
                         </td>
                       </tr>
@@ -514,6 +614,152 @@ export default function BillingPackage() {
           </div>
         )}
       </div>
+
+      {showBillingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col h-[70vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+              <h3 className="text-lg font-semibold text-slate-800">
+                计费项管理 - {packages.find(p => p.id === currentBillingPkgId)?.name}
+              </h3>
+              <button onClick={() => setShowBillingModal(false)} className="text-slate-400 hover:text-slate-500 transition-colors">
+                <span className="text-xl">&times;</span>
+              </button>
+            </div>
+            
+            <div className="p-6 flex-1 overflow-auto flex flex-col">
+              <div className="mb-4 shrink-0 flex justify-end">
+                <button 
+                  onClick={() => setShowAddBillingItemModal(true)}
+                  className="flex items-center px-4 py-2 bg-[#108ee9] text-white rounded text-sm hover:bg-blue-600 transition-colors shadow-sm"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  新增计费项
+                </button>
+              </div>
+              
+              <div className="flex-1 border border-slate-200 rounded-lg overflow-auto">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+                    <tr>
+                      <th className="px-6 py-3 font-medium text-slate-500">计费项类型</th>
+                      <th className="px-6 py-3 font-medium text-slate-500">额度值</th>
+                      <th className="px-6 py-3 font-medium text-slate-500 text-right w-24">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {packages.find(p => p.id === currentBillingPkgId)?.billingItems?.length ? (
+                      packages.find(p => p.id === currentBillingPkgId)?.billingItems.map(item => (
+                        <tr key={item.id} className="hover:bg-slate-50/50">
+                          <td className="px-6 py-3 text-slate-700">{item.name}</td>
+                          <td className="px-6 py-3 text-slate-600">{item.value.toLocaleString()}</td>
+                          <td className="px-6 py-3 text-right">
+                            <button 
+                              onClick={() => handleDeleteBillingItem(currentBillingPkgId!, item.id)}
+                              className="text-red-500 hover:text-red-600 text-xs flex items-center justify-end w-full"
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" /> 删除
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={3} className="px-6 py-10 text-center text-slate-500">暂无配置计费项</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddBillingItemModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-semibold text-slate-800">选择积分配置项</h3>
+              <button onClick={() => setShowAddBillingItemModal(false)} className="text-slate-400 hover:text-slate-500 transition-colors">
+                <span className="text-xl">&times;</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700">配置项</label>
+                <select 
+                  value={billingItemForm.type}
+                  onChange={e => {
+                    const newType = e.target.value;
+                    setBillingItemForm({ 
+                      type: newType, 
+                      value: BILLING_PRESETS[newType][0].value, 
+                      isCustom: false 
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="token">词元(token)兑换</option>
+                  <option value="ppt">PPT生成兑换</option>
+                  <option value="duration">实验时长兑换</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700 mb-2 block">配置额度</label>
+                <div className="flex items-center space-x-3">
+                  <div className="flex border border-slate-200 rounded divide-x divide-slate-200 overflow-hidden text-sm">
+                    {BILLING_PRESETS[billingItemForm.type].map((preset) => (
+                      <button
+                        key={preset.value}
+                        onClick={() => setBillingItemForm({ ...billingItemForm, value: preset.value, isCustom: false })}
+                        className={`px-4 py-2 transition-colors ${!billingItemForm.isCustom && billingItemForm.value === preset.value ? 'bg-[#3b82f6] text-white font-medium' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setBillingItemForm({ ...billingItemForm, isCustom: true })}
+                      className={`px-4 py-2 transition-colors ${billingItemForm.isCustom ? 'bg-[#3b82f6] text-white font-medium' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      自定义
+                    </button>
+                  </div>
+                  
+                  {billingItemForm.isCustom && (
+                    <div className="flex items-center border border-slate-200 rounded overflow-hidden text-sm w-32 shrink-0">
+                      <button 
+                        onClick={() => setBillingItemForm({ ...billingItemForm, value: Math.max(1, Number(billingItemForm.value) - 1) })}
+                        className="px-3 py-2 bg-slate-50 text-slate-500 hover:bg-slate-100 border-r border-slate-200 focus:outline-none"
+                      >
+                        -
+                      </button>
+                      <input 
+                        type="number" 
+                        min="1"
+                        value={billingItemForm.value}
+                        onChange={e => setBillingItemForm({...billingItemForm, value: e.target.value ? Number(e.target.value) : ''})}
+                        className="w-full px-2 py-2 text-center text-slate-700 focus:outline-none"
+                        style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
+                      />
+                      <button 
+                        onClick={() => setBillingItemForm({ ...billingItemForm, value: Number(billingItemForm.value) + 1 })}
+                        className="px-3 py-2 bg-slate-50 text-slate-500 hover:bg-slate-100 border-l border-slate-200 focus:outline-none"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
+              <button onClick={() => setShowAddBillingItemModal(false)} className="px-4 py-2 border border-slate-300 text-slate-700 rounded bg-white hover:bg-slate-50 text-sm font-medium">取消</button>
+              <button onClick={handleAddBillingItem} className="px-4 py-2 bg-[#108ee9] text-white rounded hover:bg-blue-600 text-sm font-medium">添加</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">

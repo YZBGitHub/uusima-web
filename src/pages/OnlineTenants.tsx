@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import TenantResourceOverview from './TenantResourceOverview';
 import OrdersManagement from './OrdersManagement';
 import UsersManagement from './UsersManagement';
+import PortalConfigModal from '../components/PortalConfigModal';
 
 interface Tenant {
   id: string;
@@ -22,6 +23,11 @@ interface Tenant {
 export default function OnlineTenants() {
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
   const [logModalOpen, setLogModalOpen] = useState(false);
+  const [portalModalState, setPortalModalState] = useState<{isOpen: boolean, tenantId: string, tenantName: string}>({
+    isOpen: false,
+    tenantId: '',
+    tenantName: ''
+  });
 
   const mockLogs = React.useMemo(() => {
 
@@ -521,6 +527,12 @@ export default function OnlineTenants() {
                         成员管理
                       </button>
                       <button 
+                        onClick={() => setPortalModalState({isOpen: true, tenantId: tenant.id, tenantName: tenant.name})}
+                        className="text-[#108ee9] hover:text-blue-700 font-medium text-xs transition-colors"
+                      >
+                        门户配置
+                      </button>
+                      <button 
                         onClick={() => handleEditClick(tenant)}
                         className="text-[#108ee9] hover:text-blue-700 font-medium text-xs transition-colors"
                       >
@@ -897,6 +909,14 @@ export default function OnlineTenants() {
           </>
         )}
       </AnimatePresence>
+
+      {/* 门户配置 Modal */}
+      <PortalConfigModal
+        isOpen={portalModalState.isOpen}
+        onClose={() => setPortalModalState({ ...portalModalState, isOpen: false })}
+        tenantId={portalModalState.tenantId}
+        tenantName={portalModalState.tenantName}
+      />
     </div>
   );
 }

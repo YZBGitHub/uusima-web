@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GraduationCap, Wallet, CreditCard, Gift, Users, Activity, Clock, FileText } from 'lucide-react';
+import { GraduationCap, Wallet, CreditCard, Gift, Users, Activity, Clock, FileText, Search, RefreshCw, Coins, X, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   PieChart,
   Pie,
@@ -9,6 +9,9 @@ import {
 } from "recharts";
 
 export default function SystemHome() {
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [showUsageDetailsModal, setShowUsageDetailsModal] = useState(false);
+  const [selectedUsageItem, setSelectedUsageItem] = useState<any>(null);
   const [limits, setLimits] = useState([
     { id: 'token', name: 'Token', remaining: 8153956, used: 6846044, isLimited: true, maxLimit: 5000000 },
     { id: 'duration', name: '实验时长', remaining: 4500, used: 1500, isLimited: true, maxLimit: 6000 },
@@ -362,8 +365,8 @@ export default function SystemHome() {
                 </td>
                 <td className="px-6 py-5 text-center">
                   <div className="flex items-center justify-center space-x-3">
-                    {item.id !== 'duration' && <button className="text-[#108ee9] hover:text-blue-700 transition-colors text-[13px] font-medium">限额设置</button>}
-                    <button className="text-[#108ee9] hover:text-blue-700 transition-colors text-[13px] font-medium">用量详情</button>
+                    {item.id !== 'duration' && <button onClick={() => { setSelectedUsageItem(item); setShowLimitModal(true); }} className="text-[#108ee9] hover:text-blue-700 transition-colors text-[13px] font-medium">限额设置</button>}
+                    <button onClick={() => { setSelectedUsageItem(item); setShowUsageDetailsModal(true); }} className="text-[#108ee9] hover:text-blue-700 transition-colors text-[13px] font-medium">用量详情</button>
                   </div>
                 </td>
               </tr>
@@ -372,6 +375,307 @@ export default function SystemHome() {
           </tbody>
         </table>
       </div>
+
+      {showLimitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-7xl h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center text-slate-800 font-bold text-lg">
+                <GraduationCap className="w-6 h-6 mr-2 text-[#108ee9]" />
+                新大陆教育行业云
+              </div>
+              <button onClick={() => setShowLimitModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col bg-white">
+              <h2 className="text-lg font-bold text-slate-800 mb-6">限额分配（按账号） Token</h2>
+              
+              {/* Stat Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="rounded-xl p-6 relative overflow-hidden bg-gradient-to-br from-[#40a9ff] to-[#096dd9] text-white shadow-md">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mt-20 -mr-20"></div>
+                  <div className="relative z-10">
+                    <div className="text-sm font-medium text-white/90 mb-2">套餐总量</div>
+                    <div className="text-4xl font-bold">971976159</div>
+                  </div>
+                  <div className="absolute bottom-4 right-4 z-10 opacity-30">
+                    <Coins className="w-16 h-16" />
+                  </div>
+                  <div className="absolute bottom-4 right-4 z-10 text-white/90">
+                    <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
+                      <Coins className="w-6 h-6" />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="rounded-xl p-6 relative overflow-hidden bg-gradient-to-br from-[#5c8aff] to-[#2b5aed] text-white shadow-md">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mt-20 -mr-20"></div>
+                  <div className="relative z-10">
+                    <div className="text-sm font-medium text-white/90 mb-2">已分配额度</div>
+                    <div className="text-4xl font-bold">148292682</div>
+                  </div>
+                  <div className="absolute bottom-4 right-4 z-10 text-white/90">
+                    <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
+                      <Wallet className="w-6 h-6" />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="rounded-xl p-6 relative overflow-hidden bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white shadow-md">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mt-20 -mr-20"></div>
+                  <div className="relative z-10">
+                    <div className="text-sm font-medium text-white/90 mb-2">未分配额度</div>
+                    <div className="text-4xl font-bold">823683477</div>
+                  </div>
+                  <div className="absolute bottom-4 right-4 z-10 text-white/90">
+                    <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
+                      <Gift className="w-6 h-6" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Controls */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex space-x-2">
+                  <button className="px-4 py-2 bg-[#3b82f6] text-white rounded text-sm font-medium hover:bg-blue-600 transition-colors">
+                    批量配置
+                  </button>
+                  <button className="px-4 py-2 bg-[#a5cbf8] text-white rounded text-sm font-medium cursor-not-allowed">
+                    保存
+                  </button>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <select className="appearance-none pl-3 pr-8 py-2 border border-slate-200 rounded text-sm text-slate-500 bg-white hover:border-slate-300 focus:outline-none w-40">
+                      <option>请选择组织机构</option>
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2 top-2.5 pointer-events-none" />
+                  </div>
+                  <div className="relative">
+                    <select className="appearance-none pl-3 pr-8 py-2 border border-slate-200 rounded text-sm text-slate-500 bg-white hover:border-slate-300 focus:outline-none w-32">
+                      <option>请选择角色</option>
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2 top-2.5 pointer-events-none" />
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="请输入关键词" 
+                    className="pl-3 pr-3 py-2 border border-slate-200 rounded text-sm w-48 focus:outline-none focus:border-[#3b82f6]"
+                  />
+                  <button className="px-4 py-2 bg-[#3b82f6] text-white rounded text-sm flex items-center hover:bg-blue-600 transition-colors">
+                    <Search className="w-4 h-4 mr-1" />
+                    搜索
+                  </button>
+                  <button className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded text-sm flex items-center hover:bg-slate-50 transition-colors">
+                    <RefreshCw className="w-4 h-4 mr-1" />
+                    重置
+                  </button>
+                </div>
+              </div>
+              
+              {/* Table */}
+              <div className="flex-1 overflow-auto border-t border-slate-100">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-white sticky top-0 z-10 border-b border-slate-100">
+                    <tr>
+                      <th className="px-6 py-4 font-normal text-slate-600">姓名</th>
+                      <th className="px-6 py-4 font-normal text-slate-600">角色</th>
+                      <th className="px-6 py-4 font-normal text-slate-600">班级</th>
+                      <th className="px-6 py-4 font-normal text-slate-600 text-right">使用量</th>
+                      <th className="px-6 py-4 font-normal text-slate-600 text-center w-64">最高限额</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {[
+                      { name: '江杰', roles: '学生,AI学伴-学生,学员', cls: '产品', limit: 5000000, used: 600000, percent: 12 },
+                      { name: '翁林奇', roles: '学生,老师,AI学伴-教师,阅卷老师,案例创建者,案例开发者', cls: '产品', limit: 5000000, used: 12222, percent: 0.2 },
+                      { name: '郑鸿杰', roles: '产品管理员,学生,学校管理员,运营决策者,AI学伴-学生,超级管理员,运营管理员,案例创建者,案例开发者,系统管理员', cls: '产品', limit: 5000000, used: 250000, percent: 5 },
+                      { name: '涂玉宝', roles: '学生,AI学伴-学生,学科大模型-学生', cls: '产品', limit: 5000000, used: 12222, percent: 12 },
+                      { name: '智联网演示学生01', roles: '学生,AI学伴-学生,学科大模型-学生', cls: '产品', limit: 5000000, used: 89000, percent: 1.7 },
+                      { name: '小周', roles: '学生,AI学伴-学生,学科大模型-学生', cls: '软件', limit: 5000000, used: 400000, percent: 8 },
+                      { name: '小小陈（接口自动化）', roles: '学生,AI学伴-学生,学科大模型-学生', cls: '测试部', limit: 5000000, used: 0, percent: 0 },
+                      { name: '(学生)开放接口测试', roles: '学生,AI学伴-学生,学科大模型-学生', cls: '软件', limit: 5000000, used: 50000, percent: 1 }
+                    ].map((user, i) => (
+                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 text-slate-600">{user.name}</td>
+                        <td className="px-6 py-4 text-slate-500 text-xs leading-relaxed max-w-md">{user.roles}</td>
+                        <td className="px-6 py-4 text-slate-600">{user.cls}</td>
+                        <td className="px-6 py-4 text-slate-600 text-right font-medium">{user.used.toLocaleString()}次<span className="text-slate-400 font-normal ml-1">({user.percent}%)</span></td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center">
+                            <div className="flex items-center border border-slate-200 rounded overflow-hidden bg-white">
+                              <button className="px-3 py-1.5 bg-slate-50 border-r border-slate-200 text-slate-500 hover:bg-slate-100 transition-colors">
+                                -
+                              </button>
+                              <input 
+                                type="text" 
+                                value={user.limit}
+                                readOnly
+                                className="w-24 text-center py-1.5 focus:outline-none text-sm text-slate-700"
+                              />
+                              <button className="px-3 py-1.5 bg-slate-50 border-l border-slate-200 text-slate-500 hover:bg-slate-100 transition-colors">
+                                +
+                              </button>
+                            </div>
+                            <span className="ml-2 text-slate-500 text-sm">次</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination */}
+              <div className="flex items-center justify-end mt-4 text-sm text-slate-500 space-x-4">
+                <span>共 27 条</span>
+                <div className="relative">
+                  <select className="appearance-none pl-3 pr-8 py-1.5 border border-slate-200 rounded text-slate-600 bg-white hover:border-slate-300 focus:outline-none">
+                    <option>10条/页</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2 top-2 pointer-events-none" />
+                </div>
+                <div className="flex items-center space-x-1">
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-400 hover:bg-slate-100"><ChevronLeft className="w-4 h-4" /></button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-[#3b82f6] text-white">1</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-600 hover:bg-slate-100">2</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-600 hover:bg-slate-100">3</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-400 hover:bg-slate-100"><ChevronRight className="w-4 h-4" /></button>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span>前往</span>
+                  <input type="text" defaultValue="1" className="w-12 text-center py-1 border border-slate-200 rounded focus:outline-none focus:border-[#3b82f6]" />
+                  <span>页</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Real Usage Details Modal */}
+      {showUsageDetailsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white shadow-xl w-full max-w-7xl h-[90vh] overflow-hidden flex flex-col relative rounded-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h2 className="text-lg font-bold text-slate-800">用量详情</h2>
+              <button onClick={() => setShowUsageDetailsModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col bg-white">
+              
+              {/* Controls */}
+              <div className="flex items-center justify-end mb-6 space-x-3">
+                <input 
+                  type="text" 
+                  placeholder="请输入使用账号" 
+                  className="pl-3 pr-3 py-1.5 border border-slate-200 rounded text-sm w-48 focus:outline-none focus:border-[#3b82f6] text-slate-600"
+                />
+                
+                <div className="flex items-center border border-slate-200 rounded bg-white text-sm">
+                  <div className="px-3 py-1.5 text-slate-400 flex items-center">
+                    <Clock className="w-4 h-4 mr-2" />
+                    <input type="text" placeholder="开始日期" className="w-20 outline-none text-slate-600 bg-transparent" />
+                  </div>
+                  <span className="text-slate-300">-</span>
+                  <div className="px-3 py-1.5 text-slate-400 flex items-center">
+                    <input type="text" placeholder="结束日期" className="w-20 outline-none text-slate-600 bg-transparent" />
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <select className="appearance-none pl-3 pr-8 py-1.5 border border-slate-200 rounded text-sm text-slate-500 bg-white hover:border-slate-300 focus:outline-none w-32">
+                    <option>Token</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2 top-2 pointer-events-none" />
+                </div>
+                
+                <button className="px-4 py-1.5 bg-[#3b82f6] text-white rounded text-sm flex items-center hover:bg-blue-600 transition-colors">
+                  <Search className="w-4 h-4 mr-1" />
+                  搜索
+                </button>
+                <button className="px-4 py-1.5 bg-white border border-[#3b82f6] text-[#3b82f6] rounded text-sm flex items-center hover:bg-blue-50 transition-colors">
+                  <RefreshCw className="w-4 h-4 mr-1" />
+                  重置
+                </button>
+              </div>
+              
+              {/* Table */}
+              <div className="flex-1 overflow-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-white sticky top-0 z-10 border-b border-slate-100">
+                    <tr>
+                      <th className="px-6 py-4 font-normal text-slate-500">序号</th>
+                      <th className="px-6 py-4 font-normal text-slate-500">开始时间</th>
+                      <th className="px-6 py-4 font-normal text-slate-500">使用账号</th>
+                      <th className="px-6 py-4 font-normal text-slate-500 text-center">计费项</th>
+                      <th className="px-6 py-4 font-normal text-slate-500 text-right">用量</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {[
+                      { id: 1, time: '2026-08-10 15:23:18', account: '15959081657', billing: 'openai直接调用', amount: '681 Token(s)' },
+                      { id: 2, time: '2026-08-10 11:38:34', account: '15959081657', billing: 'openai直接调用', amount: '652 Token(s)' },
+                      { id: 3, time: '2026-08-10 11:04:44', account: '15959081657', billing: 'openai直接调用', amount: '616 Token(s)' },
+                      { id: 4, time: '2026-08-10 11:03:40', account: '15959081657', billing: 'openai直接调用', amount: '653 Token(s)' },
+                      { id: 5, time: '2026-08-10 11:02:26', account: '15959081657', billing: 'openai直接调用', amount: '593 Token(s)' },
+                      { id: 6, time: '2026-08-10 11:01:55', account: '18558756641', billing: 'openai直接调用', amount: '6679 Token(s)' },
+                      { id: 7, time: '2026-08-10 11:01:28', account: '15959081657', billing: 'openai直接调用', amount: '651 Token(s)' },
+                      { id: 8, time: '2026-08-10 11:00:56', account: '15959081657', billing: 'openai直接调用', amount: '643 Token(s)' },
+                      { id: 9, time: '2026-08-10 11:00:48', account: '15959081657', billing: 'openai直接调用', amount: '645 Token(s)' },
+                      { id: 10, time: '2026-08-10 11:00:29', account: '15959081657', billing: 'openai直接调用', amount: '644 Token(s)' }
+                    ].map((row, i) => (
+                      <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 text-slate-500">{row.id}</td>
+                        <td className="px-6 py-4 text-slate-600">{row.time}</td>
+                        <td className="px-6 py-4 text-slate-600">{row.account}</td>
+                        <td className="px-6 py-4 text-slate-600 text-center">{row.billing}</td>
+                        <td className="px-6 py-4 text-slate-600 text-right">{row.amount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination */}
+              <div className="flex items-center justify-end mt-4 text-sm text-slate-500 space-x-4 pt-4 border-t border-slate-100">
+                <span className="text-slate-600">当前页合计Token(s): 12457 Token</span>
+                <span>共 3158 条</span>
+                <div className="relative">
+                  <select className="appearance-none pl-3 pr-8 py-1.5 border border-slate-200 rounded text-slate-600 bg-white hover:border-slate-300 focus:outline-none">
+                    <option>10条/页</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2 top-2 pointer-events-none" />
+                </div>
+                <div className="flex items-center space-x-1">
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-400 hover:bg-slate-100"><ChevronLeft className="w-4 h-4" /></button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-[#3b82f6] text-white">1</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-600 hover:bg-slate-100">2</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-600 hover:bg-slate-100">3</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-600 hover:bg-slate-100">4</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-600 hover:bg-slate-100">5</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-600 hover:bg-slate-100">6</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-600 hover:bg-slate-100">...</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-600 hover:bg-slate-100">316</button>
+                  <button className="w-8 h-8 flex items-center justify-center rounded bg-slate-50 text-slate-400 hover:bg-slate-100"><ChevronRight className="w-4 h-4" /></button>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span>前往</span>
+                  <input type="text" defaultValue="1" className="w-12 text-center py-1 border border-slate-200 rounded focus:outline-none focus:border-[#3b82f6]" />
+                  <span>页</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

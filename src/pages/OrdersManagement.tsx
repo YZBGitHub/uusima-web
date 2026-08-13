@@ -15,6 +15,7 @@ interface PackageDetails {
   serviceLife: number;
   startTime: string;
   endTime: string;
+  billingItems?: { id: string; name: string; value: number; used: number }[];
 }
 
 interface OrderPackage {
@@ -44,6 +45,7 @@ interface Order {
 export default function OrdersManagement({ hideTenantSearch = false, isSystemManagement = false, presetTenantId, presetTenantName }: { hideTenantSearch?: boolean; isSystemManagement?: boolean; presetTenantId?: string; presetTenantName?: string; } = {}) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedPackageIndex, setSelectedPackageIndex] = useState(0);
+  const [selectedCoursePackageIndex, setSelectedCoursePackageIndex] = useState(0);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [showAddModal, setShowAddModal] = useState(false);
   const [addStep, setAddStep] = useState(hideTenantSearch ? 2 : 1);
@@ -174,6 +176,7 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
 
   const [currentPage, setCurrentPage] = useState(1);
   const [detailTab, setDetailTab] = useState<'package' | 'course'>('package');
+  const [resourceTab, setResourceTab] = useState<'legacy' | 'billing'>('billing');
   const itemsPerPage = 10;
 
   const [orders, setOrders] = useState<Order[]>([
@@ -190,7 +193,7 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
       price: 50000,
       crmOrderNo: 'CRM-2026-001',
       remarks: '加急办理',
-      coursePackage: '物联网基础课程包',
+      coursePackage: '物联网基础课程包, 大数据课程包',
       status: '生效中',
       packageDetails: {
         packageType: 'UUSIMA',
@@ -204,7 +207,12 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
         usedPptCount: 30,
         serviceLife: 1,
         startTime: '2026-04-20 00:00:00',
-        endTime: '2027-04-20 00:00:00'
+        endTime: '2027-04-20 00:00:00',
+        billingItems: [
+          { id: '1', name: '词元(token)兑换', value: 5000000, used: 2500000 },
+          { id: '2', name: 'PPT生成兑换', value: 100, used: 30 },
+          { id: '3', name: '实验时长兑换', value: 3000, used: 1200 }
+        ]
       },
       packages: [
         {
@@ -221,7 +229,12 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
             usedPptCount: 30,
             serviceLife: 1,
             startTime: '2026-04-20 00:00:00',
-            endTime: '2027-04-20 00:00:00'
+            endTime: '2027-04-20 00:00:00',
+            billingItems: [
+              { id: '1', name: '词元(token)兑换', value: 5000000, used: 2500000 },
+              { id: '2', name: 'PPT生成兑换', value: 100, used: 30 },
+              { id: '3', name: '实验时长兑换', value: 3000, used: 1200 }
+            ]
           }
         },
         {
@@ -238,7 +251,11 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
             usedPptCount: 10,
             serviceLife: 1,
             startTime: '2026-04-20 00:00:00',
-            endTime: '2027-04-20 00:00:00'
+            endTime: '2027-04-20 00:00:00',
+            billingItems: [
+              { id: '4', name: '词元(token)兑换', value: 2000000, used: 1000000 },
+              { id: '5', name: 'PPT生成兑换', value: 50, used: 10 }
+            ]
           }
         }
       ]
@@ -269,7 +286,12 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
         usedPptCount: 20,
         serviceLife: 1,
         startTime: '2025-07-22 00:00:00',
-        endTime: '2026-07-22 00:00:00'
+        endTime: '2026-07-22 00:00:00',
+        billingItems: [
+          { id: '1', name: '词元(token)兑换', value: 1000000, used: 900000 },
+          { id: '2', name: 'PPT生成兑换', value: 20, used: 20 },
+          { id: '3', name: '实验时长兑换', value: 1000, used: 800 }
+        ]
       }
     }
   ]);
@@ -1029,7 +1051,7 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col"
+              className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col"
             >
               <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                 <h3 className="text-lg font-semibold text-slate-800">
@@ -1079,7 +1101,7 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
                   )}
                 </div>
               </div>
-              <div className="p-6 max-h-[75vh] overflow-y-auto">
+              <div className="p-6 flex-1 overflow-y-auto min-h-0">
                 {detailTab === 'package' && (() => {
                   const displayPackages = selectedOrder.packages || [{ packageName: selectedOrder.packageName, packageDetails: selectedOrder.packageDetails }];
                   const currentPackage = displayPackages[selectedPackageIndex] || displayPackages[0];
@@ -1129,44 +1151,90 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
                     </div>
 
                     <div>
-                      <h4 className="text-base font-semibold text-slate-800 mb-4 flex flex-wrap items-center">
-                        <div className="flex items-center mr-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                        <h4 className="text-base font-semibold text-slate-800 flex items-center m-0">
                           <Activity className="w-4 h-4 mr-2 text-[#108ee9]" />
                           资源使用情况
-                        </div>
-                        <span className="text-xs font-normal text-slate-500 mt-2 sm:mt-0 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 leading-relaxed max-w-full">
-                          套餐信息简述（实验时长：{currentPackage.packageDetails.duration.toLocaleString()}分钟/年  token数量：{currentPackage.packageDetails.tokenCount >= 100000000 ? `${currentPackage.packageDetails.tokenCount / 100000000}亿` : currentPackage.packageDetails.tokenCount.toLocaleString()}个/每年  账号数量：{currentPackage.packageDetails.accountCount}个  PPT次数：{currentPackage.packageDetails.pptCount}次  有效期：{currentPackage.packageDetails.serviceLife * 12}个月）
-                        </span>
-                      </h4>
+                        </h4>
+                        {currentPackage.packageDetails.billingItems && currentPackage.packageDetails.billingItems.length > 0 && (
+                          <div className="flex bg-slate-100 p-1 rounded-md self-start sm:self-auto shrink-0">
+                            <button
+                              onClick={() => setResourceTab('legacy')}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-all ${
+                                resourceTab === 'legacy' 
+                                  ? 'bg-white shadow-sm text-[#108ee9]' 
+                                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                              }`}
+                            >
+                              基础资源
+                            </button>
+                            <button
+                              onClick={() => setResourceTab('billing')}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-all ${
+                                resourceTab === 'billing' 
+                                  ? 'bg-white shadow-sm text-[#108ee9]' 
+                                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                              }`}
+                            >
+                              计费项资源
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       <div className="space-y-0 border border-slate-100 rounded-lg overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-3 bg-slate-50/50 border-b border-slate-100">
-                          <span className="text-slate-500 text-sm">实验时长 (已用/总计)</span>
-                          <span className="text-slate-800 text-sm font-medium">
-                            <span className="text-[#108ee9]">{currentPackage.packageDetails.usedDuration.toLocaleString()}</span> / {currentPackage.packageDetails.duration.toLocaleString()} 分钟
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                          <span className="text-slate-500 text-sm">Token 数量 (已用/总计)</span>
-                          <span className="text-slate-800 text-sm font-medium">
-                            <span className="text-[#108ee9]">{currentPackage.packageDetails.usedTokenCount.toLocaleString()}</span> / {currentPackage.packageDetails.tokenCount.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between px-4 py-3 bg-slate-50/50 border-b border-slate-100">
-                          <span className="text-slate-500 text-sm">账号数量 (已用/总计)</span>
-                          <span className="text-slate-800 text-sm font-medium">
-                            <span className="text-[#108ee9]">{currentPackage.packageDetails.usedAccountCount.toLocaleString()}</span> / {currentPackage.packageDetails.accountCount.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                          <span className="text-slate-500 text-sm">PPT 次数 (已用/总计)</span>
-                          <span className="text-slate-800 text-sm font-medium">
-                            <span className="text-[#108ee9]">{currentPackage.packageDetails.usedPptCount.toLocaleString()}</span> / {currentPackage.packageDetails.pptCount.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between px-4 py-3 bg-slate-50/50 border-b border-slate-100">
-                          <span className="text-slate-500 text-sm">使用年限</span>
-                          <span className="text-slate-800 text-sm font-medium">{currentPackage.packageDetails.serviceLife} 年</span>
-                        </div>
+                        {currentPackage.packageDetails.billingItems && resourceTab === 'billing' ? (
+                          <>
+                            {currentPackage.packageDetails.billingItems.map((item, idx) => (
+                              <div key={item.id} className={`flex items-center justify-between px-4 py-3 border-b border-slate-100 ${idx % 2 === 0 ? 'bg-slate-50/50' : 'bg-white'}`}>
+                                <span className="text-slate-500 text-sm">{item.name} (已用/总计)</span>
+                                <span className="text-slate-800 text-sm font-medium">
+                                  <span className="text-[#108ee9]">{item.used.toLocaleString()}</span> / {item.value.toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                            <div className={`flex items-center justify-between px-4 py-3 border-b border-slate-100 ${currentPackage.packageDetails.billingItems.length % 2 === 0 ? 'bg-slate-50/50' : 'bg-white'}`}>
+                              <span className="text-slate-500 text-sm">账号数量 (已用/总计)</span>
+                              <span className="text-slate-800 text-sm font-medium">
+                                <span className="text-[#108ee9]">{currentPackage.packageDetails.usedAccountCount.toLocaleString()}</span> / {currentPackage.packageDetails.accountCount.toLocaleString()}
+                              </span>
+                            </div>
+                            <div className={`flex items-center justify-between px-4 py-3 border-b border-slate-100 ${(currentPackage.packageDetails.billingItems.length + 1) % 2 === 0 ? 'bg-slate-50/50' : 'bg-white'}`}>
+                              <span className="text-slate-500 text-sm">使用年限</span>
+                              <span className="text-slate-800 text-sm font-medium">{currentPackage.packageDetails.serviceLife} 年</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between px-4 py-3 bg-slate-50/50 border-b border-slate-100">
+                              <span className="text-slate-500 text-sm">实验时长 (已用/总计)</span>
+                              <span className="text-slate-800 text-sm font-medium">
+                                <span className="text-[#108ee9]">{currentPackage.packageDetails.usedDuration.toLocaleString()}</span> / {currentPackage.packageDetails.duration.toLocaleString()} 分钟
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                              <span className="text-slate-500 text-sm">Token 数量 (已用/总计)</span>
+                              <span className="text-slate-800 text-sm font-medium">
+                                <span className="text-[#108ee9]">{currentPackage.packageDetails.usedTokenCount.toLocaleString()}</span> / {currentPackage.packageDetails.tokenCount.toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between px-4 py-3 bg-slate-50/50 border-b border-slate-100">
+                              <span className="text-slate-500 text-sm">账号数量 (已用/总计)</span>
+                              <span className="text-slate-800 text-sm font-medium">
+                                <span className="text-[#108ee9]">{currentPackage.packageDetails.usedAccountCount.toLocaleString()}</span> / {currentPackage.packageDetails.accountCount.toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                              <span className="text-slate-500 text-sm">PPT 次数 (已用/总计)</span>
+                              <span className="text-slate-800 text-sm font-medium">
+                                <span className="text-[#108ee9]">{currentPackage.packageDetails.usedPptCount.toLocaleString()}</span> / {currentPackage.packageDetails.pptCount.toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between px-4 py-3 bg-slate-50/50 border-b border-slate-100">
+                              <span className="text-slate-500 text-sm">使用年限</span>
+                              <span className="text-slate-800 text-sm font-medium">{currentPackage.packageDetails.serviceLife} 年</span>
+                            </div>
+                          </>
+                        )}
                         <div className="flex items-center justify-between px-4 py-3 border-slate-100">
                           <span className="text-slate-500 text-sm">关联产品</span>
                           <span className="text-slate-800 text-sm font-medium">{packages.find(p => p.name === currentPackage.packageName)?.product || '全系产品'}</span>
@@ -1177,16 +1245,38 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
                   );
                 })()}
 
-                {detailTab === 'course' && selectedOrder.coursePackage && (
+                {detailTab === 'course' && selectedOrder.coursePackage && (() => {
+                  const coursePackages = selectedOrder.coursePackage.split(',').map(s => s.trim()).filter(Boolean);
+                  const currentCoursePackage = coursePackages[selectedCoursePackageIndex] || coursePackages[0];
+                  
+                  return (
                   <div>
+                    {coursePackages.length > 1 && (
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        {coursePackages.map((pkg, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setSelectedCoursePackageIndex(idx)}
+                            className={`px-4 py-2 text-sm rounded border transition-colors ${
+                              selectedCoursePackageIndex === idx 
+                                ? 'bg-indigo-50 text-indigo-600 border-indigo-200 font-medium' 
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-200 hover:text-indigo-600'
+                            }`}
+                          >
+                            {pkg}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    
                     <h4 className="text-base font-semibold text-slate-800 mb-4 flex items-center">
                       <BookOpen className="w-4 h-4 mr-2 text-[#108ee9]" /> 
-                      关联课程列表
+                      关联课程列表 {coursePackages.length > 1 && <span className="text-slate-500 text-sm ml-2 font-normal">({currentCoursePackage})</span>}
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {courses.filter(c => selectedOrder.coursePackage && c.name.includes(selectedOrder.coursePackage) || selectedOrder.coursePackage && selectedOrder.coursePackage.includes(c.name)).length > 0 ? (
-                        courses.filter(c => selectedOrder.coursePackage && c.name.includes(selectedOrder.coursePackage) || selectedOrder.coursePackage && selectedOrder.coursePackage.includes(c.name)).map(course => (
-                          <div key={course.id} className="p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-col">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {courses.filter(c => currentCoursePackage && c.name.includes(currentCoursePackage) || currentCoursePackage && currentCoursePackage.includes(c.name)).length > 0 ? (
+                        courses.filter(c => currentCoursePackage && c.name.includes(currentCoursePackage) || currentCoursePackage && currentCoursePackage.includes(c.name)).map(course => (
+                          <div key={course.id} className="p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-col hover:shadow-sm transition-shadow">
                             <div className="font-medium text-slate-800 mb-3">{course.name}</div>
                             <div className="flex flex-col space-y-2 mb-3">
                               <div className="flex items-center text-sm text-slate-600">
@@ -1203,7 +1293,7 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
                         ))
                       ) : (
                         courses.map(course => (
-                          <div key={course.id} className="p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-col">
+                          <div key={course.id} className="p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-col hover:shadow-sm transition-shadow">
                             <div className="font-medium text-slate-800 mb-3">{course.name}</div>
                             <div className="flex flex-col space-y-2 mb-3">
                               <div className="flex items-center text-sm text-slate-600">
@@ -1221,7 +1311,8 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
                       )}
                     </div>
                   </div>
-                )}
+                  );
+                })()}
               </div>
               <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
                 <button

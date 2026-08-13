@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
-import Home from "./pages/Home";
+import CourseHall from "./pages/CourseHall";
 import Login from "./pages/Login";
 import Registration from "./pages/Registration";
 import ConfigManagement from "./pages/ConfigManagement";
@@ -15,10 +15,10 @@ import JoinOrg from "./pages/JoinOrg";
 import InviteLanding from "./pages/InviteLanding";
 import InviteRecords from "./pages/InviteRecords";
 import MobileRegistrationSuccess from "./pages/MobileRegistrationSuccess";
+import DatasetHall from "./pages/DatasetHall";
 
 export default function App() {
   const [activeView, setActiveView] = useState<
-    | "home"
     | "login"
     | "registration"
     | "certification"
@@ -34,11 +34,12 @@ export default function App() {
     | "invite-records"
     | "mobile-success"
     | "platform-operation"
-  >("login");
+    | "dataset-hall"
+  >("course-hall");
   const [isNavOpen, setIsNavOpen] = useState(false);
 
   const navItems = [
-    { id: "home", label: "首页" },
+    { id: "course-hall", label: "课程大厅" },
     { id: "login", label: "登录" },
     { id: "registration", label: "用户注册" },
     { id: "config", label: "系统管理" },
@@ -96,8 +97,8 @@ export default function App() {
 
       {/* 动态页面渲染内容区域 */}
       <div className="flex-1 relative overflow-x-hidden">
-        {activeView === "home" && (
-          <Home onNavigate={(view) => setActiveView(view)} />
+        {activeView === "course-hall" && (
+          <CourseHall onNavigate={(view) => setActiveView(view as any)} />
         )}
         {activeView === "login" && (
           <Login onNavigate={(view) => setActiveView(view)} />
@@ -114,7 +115,7 @@ export default function App() {
         {activeView === "forgot-password" && (
           <ForgotPassword onNavigate={(view) => setActiveView(view)} />
         )}
-        {activeView === "school" && <SchoolLibrary />}
+        {activeView === "school" && <SchoolLibrary onNavigate={(view) => setActiveView(view as any)} />}
         {activeView === "tenant" && <TenantManagement />}
         {activeView === "personal-tenant" && <PersonalTenantManagement />}
         {activeView === "join-org" && <JoinOrg />}
@@ -125,6 +126,9 @@ export default function App() {
         {activeView === "mobile-success" && <MobileRegistrationSuccess />}
         {activeView === "platform-operation" && (
           <PlatformOperation onNavigate={(view) => setActiveView(view as any)} />
+        )}
+        {activeView === "dataset-hall" && (
+          <DatasetHall onNavigate={(view) => setActiveView(view as any)} />
         )}
       </div>
     </div>

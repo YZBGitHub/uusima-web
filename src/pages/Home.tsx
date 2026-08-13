@@ -19,24 +19,15 @@ export default function Home({ onNavigate }: HomeProps) {
         <div className="flex items-center space-x-12">
           {/* Logo */}
           <div className="flex items-center space-x-2 cursor-pointer" onClick={() => onNavigate('home')}>
-            <div className="w-8 h-8 flex items-center justify-center font-bold text-lg text-white bg-gradient-to-br from-blue-500 to-indigo-600 rounded" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)' }}>
-              N
-            </div>
-            <span className="text-xl font-bold text-slate-800 tracking-tight">UUSIMA <span className="font-medium text-base ml-1">智慧教学实验平台</span></span>
+            <img src="/logo.png" alt="UUSIMA 智慧教学实验平台" className="h-8 object-contain" />
           </div>
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center space-x-8 text-sm text-slate-500">
+            <a href="#" className="text-blue-600 font-medium transition-colors">首页</a>
             <a href="#" className="hover:text-blue-600 transition-colors">课程大厅</a>
             <a href="#" className="hover:text-blue-600 transition-colors">实验大厅</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">考试大厅</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">最佳实践</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">产品中心</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">关于UUSIMA</a>
-            <button className="flex items-center hover:text-blue-600 transition-colors">
-              <span className="mb-1">...</span>
-              <ChevronDown className="w-3 h-3 ml-1" />
-            </button>
+            <button className="hover:text-blue-600 transition-colors" onClick={() => onNavigate && onNavigate('dataset-hall')}>数据大厅</button>
           </nav>
         </div>
 
