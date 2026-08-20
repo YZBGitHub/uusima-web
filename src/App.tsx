@@ -16,6 +16,8 @@ import InviteLanding from "./pages/InviteLanding";
 import InviteRecords from "./pages/InviteRecords";
 import MobileRegistrationSuccess from "./pages/MobileRegistrationSuccess";
 import DatasetHall from "./pages/DatasetHall";
+import LabHall from "./pages/LabHall";
+import SmartAssistant from "./components/SmartAssistant";
 
 export default function App() {
   const [activeView, setActiveView] = useState<
@@ -35,6 +37,7 @@ export default function App() {
     | "mobile-success"
     | "platform-operation"
     | "dataset-hall"
+    | "lab-hall"
   >("course-hall");
   const [isNavOpen, setIsNavOpen] = useState(false);
 
@@ -130,7 +133,11 @@ export default function App() {
         {activeView === "dataset-hall" && (
           <DatasetHall onNavigate={(view) => setActiveView(view as any)} />
         )}
+        {activeView === "lab-hall" && (
+          <LabHall onNavigate={(view) => setActiveView(view as any)} />
+        )}
       </div>
+      <SmartAssistant />
     </div>
   );
 }

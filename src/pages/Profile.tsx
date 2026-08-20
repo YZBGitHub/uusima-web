@@ -16,7 +16,7 @@ function Header({ onNavigate }: { onNavigate?: (view: string) => void }) {
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-600">
             <button className="hover:text-blue-600 transition-colors" onClick={() => onNavigate && onNavigate('home')}>首页</button>
             <a href="#" className="hover:text-blue-600">课程大厅</a>
-            <a href="#" className="hover:text-blue-600">实验大厅</a>
+            <button className="hover:text-blue-600 transition-colors" onClick={() => onNavigate && onNavigate('lab-hall')}>实验大厅</button>
             <button className="hover:text-blue-600 transition-colors" onClick={() => onNavigate && onNavigate('dataset-hall')}>数据大厅</button>
           </nav>
       </div>

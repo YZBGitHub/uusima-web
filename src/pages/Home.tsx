@@ -26,16 +26,13 @@ export default function Home({ onNavigate }: HomeProps) {
           <nav className="hidden md:flex items-center space-x-8 text-sm text-slate-500">
             <a href="#" className="text-blue-600 font-medium transition-colors">首页</a>
             <a href="#" className="hover:text-blue-600 transition-colors">课程大厅</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">实验大厅</a>
+            <button className="hover:text-blue-600 transition-colors" onClick={() => onNavigate && onNavigate('lab-hall')}>实验大厅</button>
             <button className="hover:text-blue-600 transition-colors" onClick={() => onNavigate && onNavigate('dataset-hall')}>数据大厅</button>
           </nav>
         </div>
 
         {/* Right Actions */}
         <div className="flex items-center space-x-6 text-sm">
-          <button className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
-            <Bot className="w-4 h-4" />
-          </button>
           <button className="flex items-center text-slate-600 hover:text-blue-600 transition-colors">
             <Languages className="w-4 h-4 mr-1" />
             En
@@ -124,7 +121,7 @@ export default function Home({ onNavigate }: HomeProps) {
           </div>
         </div>
       </header>
-
+      
       {/* Main Hero Banner Section */}
       <div className="relative w-full h-[600px] overflow-hidden bg-gradient-to-r from-[#eef4fd] to-[#e1effc]">
         {/* Abstract Background pattern */}

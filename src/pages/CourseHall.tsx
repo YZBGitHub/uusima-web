@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Search, Bot, Languages, User, UserCircle, Settings, LogOut, Activity, ChevronRight, BookOpen } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Bot, Languages, User, UserCircle, Settings, LogOut, Activity, ChevronRight, BookOpen } from 'lucide-react';
 
 export default function CourseHall({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -8,6 +8,7 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
   const [activeSort, setActiveSort] = useState('默认排序');
   const [selectedMajor, setSelectedMajor] = useState('全部');
   const [selectedType, setSelectedType] = useState('全部');
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
   const majors = ['全部', '物联网', '人工智能', '工业互联网', '大数据', '区块链', '专业技术技能', '岗位课程'];
   const types = ['全部', '岗位技能认证', '基础通识', '专业基础课', '专业核心课', '行业应用课', '技能课程', '岗位认证课'];
@@ -118,20 +119,17 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center space-x-8 text-sm text-slate-500">
             <button className="text-blue-500 font-medium transition-colors" onClick={() => onNavigate && onNavigate('course-hall')}>课程大厅</button>
-            <a href="#" className="hover:text-blue-500 transition-colors">实验大厅</a>
+            <button className="hover:text-blue-500 transition-colors" onClick={() => onNavigate && onNavigate('lab-hall')}>实验大厅</button>
             <button className="hover:text-blue-500 transition-colors" onClick={() => onNavigate && onNavigate('dataset-hall')}>数据大厅</button>
+            <a href="https://aixb.nlecloud.com/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">AI技能分析系统</a>
+            <a href="https://lct-xy.nlecloud.com/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">AI产教融合系统</a>
+            <a href="https://deviceai.nlecloud.com/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">硬件智能体系统</a>
             <a href="#" className="hover:text-blue-500 transition-colors" onClick={(e) => e.preventDefault()}>考试系统</a>
-            <a href="#" className="hover:text-blue-500 transition-colors" onClick={(e) => e.preventDefault()}>AI全过程数据采集</a>
-            <a href="#" className="hover:text-blue-500 transition-colors" onClick={(e) => e.preventDefault()}>AI智能体应用</a>
-            <a href="#" className="hover:text-blue-500 transition-colors" onClick={(e) => e.preventDefault()}>AI产教融合工作台</a>
           </nav>
         </div>
 
         {/* Right Actions */}
         <div className="flex items-center space-x-6 text-sm">
-          <button className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors">
-            <Bot className="w-4 h-4" />
-          </button>
           <button className="flex items-center text-slate-600 hover:text-blue-500 transition-colors">
             <Languages className="w-4 h-4 mr-1" />
             En
@@ -256,7 +254,7 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
           <div className="space-y-4">
             <div className="flex items-start">
               <div className="text-sm font-medium text-slate-700 w-20 shrink-0 mt-1.5">专业：</div>
-              <div className="flex flex-wrap gap-2 flex-1">
+              <div className="flex flex-wrap gap-2 flex-1 relative pr-16">
                 {majors.map(m => (
                   <button 
                     key={m}
@@ -266,26 +264,32 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
                     {m}
                   </button>
                 ))}
-              </div>
-            </div>
-            
-            <div className="flex items-start">
-              <div className="text-sm font-medium text-slate-700 w-20 shrink-0 mt-1.5">课程类型：</div>
-              <div className="flex flex-wrap gap-2 flex-1 relative">
-                {types.map(t => (
-                  <button 
-                    key={t}
-                    onClick={() => setSelectedType(t)}
-                    className={`px-3 py-1.5 text-sm rounded ${selectedType === t ? 'bg-blue-100 text-blue-600 border border-blue-200' : 'text-slate-600 hover:text-blue-500 border border-transparent'}`}
-                  >
-                    {t}
-                  </button>
-                ))}
-                <button className="absolute right-0 top-1.5 text-sm text-slate-500 hover:text-slate-800">
-                  展开
+                <button 
+                  onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                  className="absolute right-0 top-1.5 flex items-center space-x-1 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+                >
+                  <span>{isFilterExpanded ? '收起' : '展开'}</span>
+                  {isFilterExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                 </button>
               </div>
             </div>
+            
+            {isFilterExpanded && (
+              <div className="flex items-start">
+                <div className="text-sm font-medium text-slate-700 w-20 shrink-0 mt-1.5">课程类型：</div>
+                <div className="flex flex-wrap gap-2 flex-1 relative">
+                  {types.map(t => (
+                    <button 
+                      key={t}
+                      onClick={() => setSelectedType(t)}
+                      className={`px-3 py-1.5 text-sm rounded ${selectedType === t ? 'bg-blue-100 text-blue-600 border border-blue-200' : 'text-slate-600 hover:text-blue-500 border border-transparent'}`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -325,9 +329,8 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
                 <div className="p-4 flex flex-col flex-1">
                   <h3 className="text-[15px] font-bold text-slate-800 mb-3 line-clamp-1 group-hover:text-blue-600 transition-colors">{course.title}</h3>
                   
-                  <div className="flex items-center justify-between mb-3 text-xs">
+                  <div className="flex items-center mb-3 text-xs">
                     <span className="text-blue-500 font-medium truncate pr-2">{course.category}</span>
-                    <span className="text-blue-500 shrink-0">{course.students} 人在学</span>
                   </div>
                   
                   <p className="text-xs text-slate-500 mb-4 line-clamp-2 leading-relaxed flex-1">
