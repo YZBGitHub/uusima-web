@@ -186,7 +186,7 @@ export default function PlatformOperation({ onNavigate }: { onNavigate?: (view: 
           </div>
           
           {activeMenu === 'order-list' ? (
-            <OrdersManagement />
+            <OrdersManagement isSystemManagement={true} />
           ) : activeMenu === 'order-product' ? (
             <ProductsManagement />
           ) : activeMenu === 'order-billing' ? (

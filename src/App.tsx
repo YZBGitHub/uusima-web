@@ -18,6 +18,9 @@ import MobileRegistrationSuccess from "./pages/MobileRegistrationSuccess";
 import DatasetHall from "./pages/DatasetHall";
 import LabHall from "./pages/LabHall";
 import SmartAssistant from "./components/SmartAssistant";
+import TeachingManagement from "./pages/TeachingManagement";
+import CourseLearning from "./pages/CourseLearning";
+import CourseStudy from "./pages/CourseStudy";
 
 export default function App() {
   const [activeView, setActiveView] = useState<
@@ -38,7 +41,10 @@ export default function App() {
     | "platform-operation"
     | "dataset-hall"
     | "lab-hall"
-  >("course-hall");
+    | "teaching-management"
+    | "course-learning"
+    | "course-study"
+  >((new URLSearchParams(window.location.search).get("view") as any) || "teaching-management");
   const [isNavOpen, setIsNavOpen] = useState(false);
 
   const navItems = [
@@ -55,6 +61,8 @@ export default function App() {
     { id: "school", label: "学校库" },
     { id: "mobile-success", label: "移动端注册成功" },
     { id: "platform-operation", label: "平台运营" },
+    { id: "teaching-management", label: "管理员主页" },
+    { id: "course-study", label: "课程学习界面" },
   ] as const;
 
   return (
@@ -135,6 +143,15 @@ export default function App() {
         )}
         {activeView === "lab-hall" && (
           <LabHall onNavigate={(view) => setActiveView(view as any)} />
+        )}
+        {activeView === "teaching-management" && (
+          <TeachingManagement onNavigate={(view) => setActiveView(view as any)} />
+        )}
+        {activeView === "course-learning" && (
+          <CourseLearning onNavigate={(view) => setActiveView(view as any)} />
+        )}
+        {activeView === "course-study" && (
+          <CourseStudy onNavigate={(view) => setActiveView(view as any)} />
         )}
       </div>
       <SmartAssistant />

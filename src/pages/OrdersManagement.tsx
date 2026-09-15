@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Check, BookOpen, Package, Activity, FileText } from 'lucide-react';
+import { X, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Check, BookOpen, Package, Activity, FileText, Settings, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface PackageDetails {
@@ -37,6 +37,8 @@ interface Order {
   crmOrderNo: string;
   remarks: string;
   coursePackage?: string;
+  regions?: string[];
+  industryChains?: string[];
   packageDetails: PackageDetails;
   packages?: OrderPackage[];
   status: '生效中' | '到期' | '已作废';
@@ -109,8 +111,25 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
     salesperson: '',
     orderPrice: '',
     crmOrderNo: '',
-    remarks: ''
+    remarks: '',
+    regions: [] as string[],
+    industryChains: [] as string[]
   });
+  
+  const [isRegionOpen, setIsRegionOpen] = useState(false);
+  const [isIndustryOpen, setIsIndustryOpen] = useState(false);
+  
+  const industryOptions = ['新能源', '智能制造', '半导体', '生物医药', '新材料', '人工智能', '航空航天', '金融科技'];
+  const regionOptions = [
+    '北京市-市辖区-朝阳区',
+    '北京市-市辖区-海淀区',
+    '广东省-深圳市-南山区',
+    '广东省-广州市-天河区',
+    '浙江省-杭州市-余杭区',
+    '上海市-市辖区-浦东新区',
+    '江苏省-南京市-建邺区',
+    '四川省-成都市-高新区'
+  ];
 
   
   const [packageSearch, setPackageSearch] = useState('');
@@ -175,9 +194,12 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
   ];
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [detailTab, setDetailTab] = useState<'package' | 'course'>('package');
+  const [detailTab, setDetailTab] = useState<'package' | 'course' | 'industry'>('package');
   const [resourceTab, setResourceTab] = useState<'legacy' | 'billing'>('billing');
   const itemsPerPage = 10;
+
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [configType, setConfigType] = useState<'course' | 'industry'>('course');
 
   const [orders, setOrders] = useState<Order[]>([
     {
@@ -194,6 +216,8 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
       crmOrderNo: 'CRM-2026-001',
       remarks: '加急办理',
       coursePackage: '物联网基础课程包, 大数据课程包',
+      regions: ['北京市-市辖区-朝阳区'],
+      industryChains: ['新能源'],
       status: '生效中',
       packageDetails: {
         packageType: 'UUSIMA',
@@ -574,6 +598,72 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
                 <input type="text" value={formData.crmOrderNo} onChange={e => { setFormData({...formData, crmOrderNo: e.target.value}); if (formErrors.crmOrderNo) setFormErrors({...formErrors, crmOrderNo: ''}) }} className={`w-full px-3 py-2 border ${formErrors.crmOrderNo ? 'border-red-500' : 'border-slate-300'} rounded focus:outline-none focus:ring-1 focus:ring-blue-500`} placeholder="英文字母、数字、连字符" />
                 {formErrors.crmOrderNo && <p className="text-xs text-red-500">{formErrors.crmOrderNo}</p>}
               </div>
+              <div className="space-y-1 relative">
+                <label className="text-sm text-slate-600">地域（可选）</label>
+                <div 
+                  className="w-full px-3 py-2 border border-slate-300 rounded cursor-pointer flex justify-between items-center bg-white"
+                  onClick={() => setIsRegionOpen(!isRegionOpen)}
+                >
+                  <span className={formData.regions.length > 0 ? "text-slate-800" : "text-slate-400"}>
+                    {formData.regions.length > 0 ? `已选择 ${formData.regions.length} 项` : '请选择全国省市区'}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                </div>
+                {isRegionOpen && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {regionOptions.map(region => (
+                      <div 
+                        key={region}
+                        onClick={() => {
+                          const newRegions = formData.regions.includes(region) 
+                            ? formData.regions.filter(r => r !== region)
+                            : [...formData.regions, region];
+                          setFormData({...formData, regions: newRegions});
+                        }}
+                        className="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer"
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 ${formData.regions.includes(region) ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                          {formData.regions.includes(region) && <Check className="w-3 h-3 text-white" />}
+                        </div>
+                        <span className="text-sm text-slate-700">{region}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1 relative">
+                <label className="text-sm text-slate-600">产业链（可选）</label>
+                <div 
+                  className="w-full px-3 py-2 border border-slate-300 rounded cursor-pointer flex justify-between items-center bg-white"
+                  onClick={() => setIsIndustryOpen(!isIndustryOpen)}
+                >
+                  <span className={formData.industryChains.length > 0 ? "text-slate-800 truncate pr-4" : "text-slate-400"}>
+                    {formData.industryChains.length > 0 ? formData.industryChains.join('，') : '请选择产业链'}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                </div>
+                {isIndustryOpen && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {industryOptions.map(industry => (
+                      <div 
+                        key={industry}
+                        onClick={() => {
+                          const newIndustries = formData.industryChains.includes(industry) 
+                            ? formData.industryChains.filter(i => i !== industry)
+                            : [...formData.industryChains, industry];
+                          setFormData({...formData, industryChains: newIndustries});
+                        }}
+                        className="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer"
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 ${formData.industryChains.includes(industry) ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                          {formData.industryChains.includes(industry) && <Check className="w-3 h-3 text-white" />}
+                        </div>
+                        <span className="text-sm text-slate-700">{industry}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="space-y-1 col-span-2 relative">
                 <label className="text-sm text-slate-600">(可选) 课程包（可多选）</label>
                 <div 
@@ -753,6 +843,14 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
                     <span className="text-slate-500 mr-2">CRM订单号:</span>
                     <span className="text-slate-800">{formData.crmOrderNo || '-'}</span>
                   </div>
+                  <div>
+                    <span className="text-slate-500 mr-2">地域:</span>
+                    <span className="text-slate-800">{formData.regions.length > 0 ? `已选 ${formData.regions.length} 项` : '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 mr-2">产业链:</span>
+                    <span className="text-slate-800">{formData.industryChains.length > 0 ? formData.industryChains.join('，') : '-'}</span>
+                  </div>
                   <div className="col-span-2">
                     <span className="text-slate-500 mr-2">备注:</span>
                     <span className="text-slate-800">{formData.remarks || '-'}</span>
@@ -780,7 +878,7 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
           </button>
           {!isSystemManagement && (
             <button
-              onClick={() => { setShowAddModal(true); setAddStep(hideTenantSearch ? 2 : 1); setFormErrors({}); setFormData({ projectName: "", customerName: "", salesperson: "", orderPrice: "", crmOrderNo: "", remarks: "" }); setSelectedPackages([]); setSelectedCourses([]); setIsCourseDropdownOpen(false); }}
+              onClick={() => { setShowAddModal(true); setAddStep(hideTenantSearch ? 2 : 1); setFormErrors({}); setFormData({ projectName: "", customerName: "", salesperson: "", orderPrice: "", crmOrderNo: "", remarks: "", regions: [], industryChains: [] }); setSelectedPackages([]); setSelectedCourses([]); setIsCourseDropdownOpen(false); }}
               className="flex items-center space-x-1 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
             >
               <Plus className="w-4 h-4" />
@@ -1084,20 +1182,38 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
                   </div>
                 </div>
                 
-                <div className="flex border-b border-slate-200 mt-2">
-                  <button 
-                    onClick={() => setDetailTab('package')}
-                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${detailTab === 'package' ? 'border-[#108ee9] text-[#108ee9]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                  >
-                    套餐使用情况
-                  </button>
-                  {selectedOrder.coursePackage && (
+                <div className="flex justify-between items-end border-b border-slate-200 mt-2">
+                  <div className="flex">
                     <button 
-                      onClick={() => setDetailTab('course')}
-                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${detailTab === 'course' ? 'border-[#108ee9] text-[#108ee9]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                      onClick={() => setDetailTab('package')}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${detailTab === 'package' ? 'border-[#108ee9] text-[#108ee9]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
                     >
-                      课程包明细 ({selectedOrder.coursePackage})
+                      套餐使用情况
                     </button>
+                    {selectedOrder.coursePackage && (
+                      <button 
+                        onClick={() => setDetailTab('course')}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${detailTab === 'course' ? 'border-[#108ee9] text-[#108ee9]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                      >
+                        课程包明细 ({selectedOrder.coursePackage})
+                      </button>
+                    )}
+                    {((selectedOrder.regions && selectedOrder.regions.length > 0) || (selectedOrder.industryChains && selectedOrder.industryChains.length > 0)) && (
+                      <button 
+                        onClick={() => setDetailTab('industry')}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${detailTab === 'industry' ? 'border-[#108ee9] text-[#108ee9]' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                      >
+                        产业数据配置
+                      </button>
+                    )}
+                  </div>
+                  
+                  {isSystemManagement && (detailTab === 'course' || detailTab === 'industry') && (
+                    <div className="flex space-x-2 pb-2">
+                      <button onClick={() => { setConfigType(detailTab as 'course' | 'industry'); setShowConfigModal(true); }} className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded text-sm font-medium hover:bg-blue-100 transition-colors flex items-center shadow-sm">
+                        <Settings className="w-3.5 h-3.5 mr-1" /> 配置
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1313,6 +1429,42 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
                   </div>
                   );
                 })()}
+                
+                {detailTab === 'industry' && (
+                  <div className="space-y-6">
+                    {selectedOrder.regions && selectedOrder.regions.length > 0 && (
+                      <div>
+                        <h4 className="text-base font-semibold text-slate-800 mb-4 flex items-center">
+                          <Activity className="w-4 h-4 mr-2 text-[#108ee9]" /> 
+                          分配的地域
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedOrder.regions.map((region, idx) => (
+                            <span key={idx} className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-100 rounded text-sm font-medium">
+                              {region}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedOrder.industryChains && selectedOrder.industryChains.length > 0 && (
+                      <div>
+                        <h4 className="text-base font-semibold text-slate-800 mb-4 flex items-center">
+                          <Activity className="w-4 h-4 mr-2 text-[#108ee9]" /> 
+                          分配的产业链
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedOrder.industryChains.map((industry, idx) => (
+                            <span key={idx} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-sm font-medium">
+                              {industry}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
                 <button
@@ -1320,6 +1472,160 @@ export default function OrdersManagement({ hideTenantSearch = false, isSystemMan
                   className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
                 >
                   关闭
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+
+      {/* Config Edit Modal */}
+      <AnimatePresence>
+        {showConfigModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                <h3 className="text-lg font-semibold text-slate-800 flex items-center">
+                  <Settings className="w-5 h-5 mr-2 text-slate-500" />
+                  修改{configType === 'course' ? '课程包' : '产业数据'}配置
+                </h3>
+                <button
+                  onClick={() => setShowConfigModal(false)}
+                  className="text-slate-400 hover:text-slate-500 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[60vh] text-slate-600">
+                <div className="bg-blue-50 text-blue-800 text-sm p-4 rounded border border-blue-100 mb-4">
+                  在这里可以调整订单所分配的{configType === 'course' ? '课程包' : '产业数据（地域、产业链）'}配置。修改保存后，新配置将立即生效。
+                </div>
+                {configType === 'course' ? (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">配置课程包（可多选）</label>
+                    <div className="w-full mt-2 bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden flex flex-col">
+                      <div className="p-3 border-b border-slate-100 bg-slate-50">
+                        <div className="relative">
+                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                          <input
+                            type="text"
+                            placeholder="搜索课程包名称或专业..."
+                            value={courseSearch}
+                            onChange={e => setCourseSearch(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="p-4 bg-slate-50/50 max-h-[40vh] overflow-y-auto">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {courses.filter(c => c.name.includes(courseSearch) || c.major.includes(courseSearch)).map(course => {
+                            const isSelected = selectedCourses.includes(course.id);
+                            return (
+                              <div 
+                                key={course.id}
+                                className={`p-3 text-sm bg-white border rounded-lg cursor-pointer flex items-start space-x-3 transition-colors ${
+                                  isSelected ? 'border-blue-500 shadow-sm ring-1 ring-blue-100' : 'border-slate-200 hover:border-blue-300'
+                                }`}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setSelectedCourses(selectedCourses.filter(id => id !== course.id));
+                                  } else {
+                                    setSelectedCourses([...selectedCourses, course.id]);
+                                  }
+                                }}
+                              >
+                                <img src={course.cover} alt={course.name} className="w-16 h-12 object-cover rounded shadow-sm bg-slate-100" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-slate-800 mb-1 flex justify-between">
+                                    {course.name}
+                                    {isSelected && <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />}
+                                  </div>
+                                  <div className="text-xs text-slate-500 mb-1">专业: <span className="text-slate-600 bg-slate-100 px-1 rounded">{course.major}</span></div>
+                                  <div className="text-xs text-slate-400 line-clamp-1" title={course.description}>{course.description}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">地域配置</label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {regionOptions.map(region => {
+                          const isSelected = formData.regions.includes(region);
+                          return (
+                            <div 
+                              key={region}
+                              onClick={() => {
+                                const newRegions = isSelected
+                                  ? formData.regions.filter(r => r !== region)
+                                  : [...formData.regions, region];
+                                setFormData({...formData, regions: newRegions});
+                              }}
+                              className={`flex items-center px-4 py-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-blue-300 bg-white'}`}
+                            >
+                              <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                              <span className={`text-sm ${isSelected ? 'text-blue-700 font-medium' : 'text-slate-700'}`}>{region}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-slate-700">产业链配置</label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {industryOptions.map(industry => {
+                          const isSelected = formData.industryChains.includes(industry);
+                          return (
+                            <div 
+                              key={industry}
+                              onClick={() => {
+                                const newIndustries = isSelected 
+                                  ? formData.industryChains.filter(i => i !== industry)
+                                  : [...formData.industryChains, industry];
+                                setFormData({...formData, industryChains: newIndustries});
+                              }}
+                              className={`flex items-center px-4 py-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-blue-300 bg-white'}`}
+                            >
+                              <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                                {isSelected && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                              <span className={`text-sm ${isSelected ? 'text-blue-700 font-medium' : 'text-slate-700'}`}>{industry}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowConfigModal(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded text-sm font-medium hover:bg-slate-100 transition-colors bg-white"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    // Mock save action
+                    setShowConfigModal(false);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                  保存配置
                 </button>
               </div>
             </motion.div>

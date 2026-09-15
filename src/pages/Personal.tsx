@@ -24,10 +24,70 @@ import {
 
 export default function Personal({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [activeTeachingTab, setActiveTeachingTab] = useState('进行中');
-  const [activeTaskListTab, setActiveTaskListTab] = useState('教学任务');
+  const [activeTaskListTab, setActiveTaskListTab] = useState('进行中');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isTenantOpen, setIsTenantOpen] = useState(false);
   const activeTenant = { name: "教育公司" };
+
+  const CourseSearchDropdown = ({ placeholder = "请输入课程名称进行搜索" }: { placeholder?: string }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const courses = ['自然语言处理技术与应用', 'Python程序设计进阶', '机器学习基础', '深度学习原理', '计算机视觉实战'];
+    const filtered = courses.filter(c => c.toLowerCase().includes(search.toLowerCase()));
+
+    return (
+      <div className="relative w-64 z-10">
+        <div 
+          className="flex items-center border border-slate-200 rounded-md bg-white w-full overflow-hidden focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400"
+        >
+          <div className="pl-3 pr-2 text-slate-400">
+            <Search className="w-4 h-4" />
+          </div>
+          <input 
+            type="text" 
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setIsOpen(true);
+            }}
+            onFocus={() => setIsOpen(true)}
+            onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+            placeholder={placeholder}
+            className="w-full py-1.5 text-xs outline-none text-slate-600 bg-transparent"
+          />
+          <div 
+            className="px-2 border-l border-slate-200 bg-slate-50 flex items-center justify-center cursor-pointer hover:bg-slate-100 h-full" 
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsOpen(!isOpen);
+            }}
+          >
+            <ChevronDown className="w-4 h-4 text-slate-400" />
+          </div>
+        </div>
+        
+        {isOpen && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+            {filtered.length > 0 ? filtered.map((c, idx) => (
+              <div 
+                key={idx}
+                className="px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 cursor-pointer"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setSearch(c);
+                  setIsOpen(false);
+                }}
+              >
+                {c}
+              </div>
+            )) : (
+              <div className="px-3 py-2 text-xs text-slate-400 text-center">无匹配课程</div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const EmptyState = () => (
     <div className="flex flex-col items-center justify-center text-slate-400 mt-20">
@@ -42,6 +102,68 @@ export default function Personal({ onNavigate }: { onNavigate?: (view: string) =
         </svg>
       </div>
       <p className="text-sm">暂无任务</p>
+    </div>
+  );
+
+  const mockCourses = [
+    {
+      id: 1,
+      title: '自然语言处理技术与应用17888340735441',
+      courseName: '自然语言处理技术与应用',
+      progress: 0,
+      lastProgress: '1-6 任务2 中文文本分词方法与工具使用 （理论）',
+      issueTime: '2023-09-01 10:00',
+      lastStudyTime: '2023-09-15 14:30',
+      cover: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=300&h=200'
+    },
+    {
+      id: 2,
+      title: 'Python程序设计进阶任务202308',
+      courseName: 'Python程序设计进阶',
+      progress: 45,
+      lastProgress: '2-1 面向对象编程基础',
+      issueTime: '2023-08-20 09:00',
+      lastStudyTime: '2023-09-14 16:20',
+      cover: 'https://images.unsplash.com/photo-1526379095098-d400fd0bfce8?auto=format&fit=crop&q=80&w=300&h=200'
+    }
+  ];
+
+  const CourseCard = ({ course }: { course: typeof mockCourses[0]; key?: React.Key }) => (
+    <div className="flex flex-col border border-slate-200 rounded-lg overflow-hidden bg-white hover:shadow-md transition-shadow">
+      <div className="w-full h-[140px] shrink-0 bg-blue-50 relative">
+        <img src={course.cover} alt={course.title} className="absolute inset-0 w-full h-full object-cover" />
+      </div>
+      <div className="flex-1 p-4 flex flex-col justify-between">
+        <div>
+          <h3 className="text-sm font-bold text-slate-800 line-clamp-1" title={course.title}>{course.title}</h3>
+          <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{course.courseName}</p>
+          
+          <div className="flex items-center space-x-2 mt-3">
+            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${course.progress}%` }}></div>
+            </div>
+            <span className="text-xs text-slate-500 w-8">{course.progress}%</span>
+          </div>
+          
+          <div className="text-xs text-slate-500 mt-2 line-clamp-1" title={`上次进度：${course.lastProgress}`}>
+            上次进度：{course.lastProgress}
+          </div>
+          
+          <div className="text-[10px] text-slate-400 mt-1.5 flex flex-col space-y-0.5">
+            <span>下发时间：{course.issueTime}</span>
+            <span>最近学习：{course.lastStudyTime}</span>
+          </div>
+        </div>
+        
+        <div className="flex justify-end mt-4">
+          <button 
+            onClick={() => onNavigate && onNavigate('course-learning')}
+            className="bg-[#4a8df8] hover:bg-blue-600 text-white text-xs px-5 py-2 rounded transition-colors"
+          >
+            继续学习
+          </button>
+        </div>
+      </div>
     </div>
   );
 
@@ -167,7 +289,7 @@ export default function Personal({ onNavigate }: { onNavigate?: (view: string) =
             className="flex items-center space-x-3 px-4 py-3 bg-[#e6f0ff] text-blue-600 rounded-lg font-medium transition-colors"
           >
             <Home className="w-5 h-5" />
-            <span>首页</span>
+            <span>学生主页</span>
           </button>
           
           <button 
@@ -324,7 +446,10 @@ export default function Personal({ onNavigate }: { onNavigate?: (view: string) =
         <div className="grid grid-cols-2 gap-4 flex-1">
           {/* Left Panel */}
           <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col h-[500px]">
-            <h2 className="text-lg font-bold text-slate-800">我的教学任务</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-800">我的任务</h2>
+              <CourseSearchDropdown placeholder="检索任务课程..." />
+            </div>
             
             <div className="flex space-x-3 mt-5">
               {['进行中', '已完成'].map(tab => (
@@ -342,33 +467,25 @@ export default function Personal({ onNavigate }: { onNavigate?: (view: string) =
               ))}
             </div>
             
-            <div className="flex-1 flex items-center justify-center">
-              <EmptyState />
+            <div className="flex-1 mt-5 overflow-y-auto pr-2">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                {mockCourses.map(course => (
+                  <CourseCard key={`left-${course.id}`} course={course} />
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Right Panel */}
           <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col h-[500px]">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-800">我的任务列表</h2>
+              <h2 className="text-lg font-bold text-slate-800">我的自学</h2>
               
-              <div className="flex items-center border border-slate-200 rounded-md overflow-hidden bg-white w-64">
-                <div className="pl-3 pr-2 text-slate-400">
-                  <Search className="w-4 h-4" />
-                </div>
-                <input 
-                  type="text" 
-                  placeholder="请输入课程名称进行搜索" 
-                  className="w-full py-1.5 text-xs outline-none text-slate-600"
-                />
-                <button className="px-3 py-1.5 border-l border-slate-200 hover:bg-slate-50 transition-colors">
-                  <Search className="w-4 h-4 text-slate-400" />
-                </button>
-              </div>
+              <CourseSearchDropdown placeholder="检索自学课程..." />
             </div>
             
             <div className="flex space-x-3 mt-5">
-              {['教学任务', '学习任务', '已完成'].map(tab => (
+              {['进行中', '已完成'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTaskListTab(tab)}
@@ -383,8 +500,12 @@ export default function Personal({ onNavigate }: { onNavigate?: (view: string) =
               ))}
             </div>
             
-            <div className="flex-1 flex items-center justify-center">
-              <EmptyState />
+            <div className="flex-1 mt-5 overflow-y-auto pr-2">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                {mockCourses.map(course => (
+                  <CourseCard key={`task-${course.id}`} course={course} />
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -1,0 +1,25 @@
+    }
+
+    if (formData.remarks && formData.remarks.length > 500) {
+      errors.remarks = '字符长度限制在 0 ~ 500 个字符之间';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const [formData, setFormData] = useState({
+    projectName: '',
+    customerName: '',
+    salesperson: '',
+    orderPrice: '',
+    crmOrderNo: '',
+    remarks: ''
+  });
+
+  
+  const [packageSearch, setPackageSearch] = useState('');
+  interface SelectedPackageData {
+  id: string;
+  count: number;
+  effectiveTime: string;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Key, Download, Edit, Plus, Trash2, Activity, FileText, Upload, CheckCircle2, ChevronRight, AlertCircle, FileUp, X, Settings } from 'lucide-react';
+import { Shield, Key, Download, Edit, Plus, Trash2, Activity, FileText, Upload, CheckCircle2, ChevronRight, AlertCircle, FileUp, X, Settings, ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TenantAuthManagementProps {
@@ -19,8 +19,25 @@ export default function TenantAuthManagement({ tenant }: TenantAuthManagementPro
     product: '',
     salesperson: '',
     deployer: '',
-    expireTime: ''
+    expireTime: '',
+    regions: [] as string[],
+    industryChains: [] as string[]
   });
+
+  const [isRegionOpen, setIsRegionOpen] = useState(false);
+  const [isIndustryOpen, setIsIndustryOpen] = useState(false);
+
+  const industryOptions = ['新能源', '智能制造', '半导体', '生物医药', '新材料', '人工智能', '航空航天', '金融科技'];
+  const regionOptions = [
+    '北京市-市辖区-朝阳区',
+    '北京市-市辖区-海淀区',
+    '广东省-深圳市-南山区',
+    '广东省-广州市-天河区',
+    '浙江省-杭州市-余杭区',
+    '上海市-市辖区-浦东新区',
+    '江苏省-南京市-建邺区',
+    '四川省-成都市-高新区'
+  ];
 
   const [generatedInfo, setGeneratedInfo] = useState({
     authTime: '',
@@ -302,6 +319,72 @@ export default function TenantAuthManagement({ tenant }: TenantAuthManagementPro
                           className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                         />
                       </div>
+                      <div className="space-y-2 relative">
+                        <label className="text-sm font-medium text-slate-700">地域（可选）</label>
+                        <div 
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg cursor-pointer flex justify-between items-center bg-white"
+                          onClick={() => setIsRegionOpen(!isRegionOpen)}
+                        >
+                          <span className={authData.regions.length > 0 ? "text-slate-800" : "text-slate-400"}>
+                            {authData.regions.length > 0 ? `已选择 ${authData.regions.length} 项` : '请选择全国省市区'}
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
+                        </div>
+                        {isRegionOpen && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                            {regionOptions.map(region => (
+                              <div 
+                                key={region}
+                                onClick={() => {
+                                  const newRegions = authData.regions.includes(region) 
+                                    ? authData.regions.filter(r => r !== region)
+                                    : [...authData.regions, region];
+                                  setAuthData({...authData, regions: newRegions});
+                                }}
+                                className="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer"
+                              >
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 ${authData.regions.includes(region) ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                                  {authData.regions.includes(region) && <Check className="w-3 h-3 text-white" />}
+                                </div>
+                                <span className="text-sm text-slate-700">{region}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-2 relative">
+                        <label className="text-sm font-medium text-slate-700">产业链（可选）</label>
+                        <div 
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg cursor-pointer flex justify-between items-center bg-white"
+                          onClick={() => setIsIndustryOpen(!isIndustryOpen)}
+                        >
+                          <span className={authData.industryChains.length > 0 ? "text-slate-800 truncate pr-4" : "text-slate-400"}>
+                            {authData.industryChains.length > 0 ? authData.industryChains.join('，') : '请选择产业链'}
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                        </div>
+                        {isIndustryOpen && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                            {industryOptions.map(industry => (
+                              <div 
+                                key={industry}
+                                onClick={() => {
+                                  const newIndustries = authData.industryChains.includes(industry) 
+                                    ? authData.industryChains.filter(i => i !== industry)
+                                    : [...authData.industryChains, industry];
+                                  setAuthData({...authData, industryChains: newIndustries});
+                                }}
+                                className="flex items-center px-4 py-2 hover:bg-slate-50 cursor-pointer"
+                              >
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 ${authData.industryChains.includes(industry) ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                                  {authData.industryChains.includes(industry) && <Check className="w-3 h-3 text-white" />}
+                                </div>
+                                <span className="text-sm text-slate-700">{industry}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -330,9 +413,21 @@ export default function TenantAuthManagement({ tenant }: TenantAuthManagementPro
                             <span className="w-32 text-sm text-slate-500">部署人员：</span>
                             <span className="text-sm font-medium text-slate-800">{authData.deployer || '李四'}</span>
                           </div>
-                          <div className="flex">
+                          <div className="flex pb-4 border-b border-slate-200">
                             <span className="w-32 text-sm text-slate-500">过期时间：</span>
                             <span className="text-sm font-medium text-slate-800">{authData.expireTime || '2025-12-31'}</span>
+                          </div>
+                          <div className="flex pb-4 border-b border-slate-200">
+                            <span className="w-32 text-sm text-slate-500">地域：</span>
+                            <span className="text-sm font-medium text-slate-800">
+                              {authData.regions.length > 0 ? `已选择 ${authData.regions.length} 项` : '未配置'}
+                            </span>
+                          </div>
+                          <div className="flex">
+                            <span className="w-32 text-sm text-slate-500">产业链：</span>
+                            <span className="text-sm font-medium text-slate-800">
+                              {authData.industryChains.length > 0 ? authData.industryChains.join('，') : '未配置'}
+                            </span>
                           </div>
                         </div>
                       </div>
