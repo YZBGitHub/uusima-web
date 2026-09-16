@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   ArrowLeft,
   AlignLeft,
@@ -55,7 +55,17 @@ import {
   Wrench,
   Camera,
   Minimize,
-  Paperclip
+  Paperclip,
+  Table,
+  Link,
+  Quote,
+  Undo2,
+  Redo2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelTopClose,
+  PanelTopOpen,
+  BookOpen
 } from 'lucide-react';
 
 // 四叶彩色气泡章节徽标（高精度还原截图）
@@ -185,6 +195,63 @@ interface ChapterData {
   items: ResourceTaskItem[];
 }
 
+// 实验报告 Markdown 实时渲染组件（解析常用格式，优雅排版）
+const ReportMarkdownPreview: React.FC<{ content: string }> = ({ content }) => {
+  if (!content.trim()) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-slate-300 select-none p-8">
+        <FileText className="w-12 h-12 stroke-[1.2] mb-3 text-slate-200" />
+        <span className="text-sm text-slate-400">正文实时渲染预览区</span>
+        <span className="text-xs text-slate-300 mt-1">在左侧编辑区输入文本后，此处将实时展示规范排版</span>
+      </div>
+    );
+  }
+
+  const lines = content.split('\n');
+  return (
+    <div className="max-w-none text-slate-800 text-sm leading-relaxed space-y-2.5 p-6 overflow-y-auto h-full select-text custom-scrollbar">
+      {lines.map((line, idx) => {
+        if (line.startsWith('# ')) {
+          return <h1 key={idx} className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2 mt-4 mb-2">{line.replace(/^# /, '')}</h1>;
+        }
+        if (line.startsWith('## ')) {
+          return <h2 key={idx} className="text-lg font-bold text-slate-800 mt-3 mb-1.5">{line.replace(/^## /, '')}</h2>;
+        }
+        if (line.startsWith('### ')) {
+          return <h3 key={idx} className="text-base font-semibold text-slate-800 mt-2 mb-1">{line.replace(/^### /, '')}</h3>;
+        }
+        if (line.startsWith('> ')) {
+          return <blockquote key={idx} className="border-l-4 border-blue-500 pl-3 py-1.5 bg-blue-50/50 text-slate-600 rounded-r text-xs my-2">{line.replace(/^> /, '')}</blockquote>;
+        }
+        if (line.startsWith('- ') || line.startsWith('* ')) {
+          return (
+            <div key={idx} className="flex items-start space-x-2 pl-2 text-xs sm:text-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0"></span>
+              <span>{line.replace(/^[-*] /, '')}</span>
+            </div>
+          );
+        }
+        if (line.startsWith('- [ ] ') || line.startsWith('- [x] ')) {
+          const checked = line.startsWith('- [x] ');
+          return (
+            <div key={idx} className="flex items-center space-x-2 pl-2 text-xs">
+              <input type="checkbox" checked={checked} readOnly className="rounded text-blue-600 pointer-events-none" />
+              <span className={checked ? 'line-through text-slate-400' : 'text-slate-700'}>{line.replace(/^- \[[ x]\] /, '')}</span>
+            </div>
+          );
+        }
+        if (line.startsWith('```')) {
+          return <div key={idx} className="text-[11px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded w-max">{line}</div>;
+        }
+        if (!line.trim()) {
+          return <div key={idx} className="h-2"></div>;
+        }
+        return <p key={idx} className="my-1 text-slate-700 text-xs sm:text-sm leading-relaxed">{line}</p>;
+      })}
+    </div>
+  );
+};
+
 export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string) => void }) {
   // 浮动抽屉激活状态：'directory'(目录) | 'notes'(笔记) | 'ai'(AI学伴) | null
   const [floatingDrawer, setFloatingDrawer] = useState<'directory' | 'notes' | 'ai' | null>('directory');
@@ -281,12 +348,40 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
     setIsAiHistoryOpen(false);
   };
 
+  // 界面视窗显隐控制：隐藏左侧导航、隐藏顶部、隐藏手册(右侧资源面板由 isResourceOpen 控制)
+  const [isLeftNavHidden, setIsLeftNavHidden] = useState<boolean>(false);
+  const [isHeaderHidden, setIsHeaderHidden] = useState<boolean>(false);
+
+  // 实验报告类型步骤专用状态（100%参考截图还原大纲与双栏 Markdown 编辑器）
+  const [reportSidebarOpen, setReportSidebarOpen] = useState<boolean>(true);
+  const [reportContent, setReportContent] = useState<string>('');
+  const [reportViewMode, setReportViewMode] = useState<'both' | 'edit' | 'preview'>('both');
+  const [isReportFullscreen, setIsReportFullscreen] = useState<boolean>(false);
+
+  // 实验报告工具栏插入辅助函数
+  const handleInsertReportTag = (prefix: string, suffix: string = '') => {
+    const textarea = document.getElementById('report-editor-textarea') as HTMLTextAreaElement | null;
+    if (!textarea) {
+      setReportContent(prev => prev ? `${prev}\n${prefix}${suffix}` : `${prefix}${suffix}`);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const prev = reportContent;
+    const selected = prev.substring(start, end);
+    const next = prev.substring(0, start) + prefix + selected + suffix + prev.substring(end);
+    setReportContent(next);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, end + prefix.length);
+    }, 0);
+  };
+
   // 左下角快捷工具箱状态与方法（截图、全屏）
   const [isToolsOpen, setIsToolsOpen] = useState<boolean>(false);
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [isScreenFlashing, setIsScreenFlashing] = useState<boolean>(false);
 
-  // 监听浏览器全屏状态变化
   useEffect(() => {
     const onFullScreenChange = () => {
       setIsFullScreen(!!document.fullscreenElement);
@@ -1040,6 +1135,47 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
     }
   };
 
+  // 将目录所有步骤打平成按顺序排列的一维数组（用于上一步/下一步按目录顺序切换）
+  const allDirectorySteps = useMemo(() => {
+    return directoryData.flatMap(chapter =>
+      chapter.steps.map(step => ({
+        chapterId: chapter.id,
+        chapterTitle: chapter.chapterTitle,
+        step
+      }))
+    );
+  }, [directoryData]);
+
+  // 当前激活步骤在扁平列表中的索引
+  const currentStepIndex = useMemo(() => {
+    return allDirectorySteps.findIndex(item => item.step.id === currentStepId);
+  }, [allDirectorySteps, currentStepId]);
+
+  // 动态计算任务进度百分比（基于当前步骤在目录总步骤中的进度）
+  const taskProgressPercent = useMemo(() => {
+    if (allDirectorySteps.length === 0) return 10;
+    const currentIdx = currentStepIndex >= 0 ? currentStepIndex + 1 : 1;
+    return Math.round((currentIdx / allDirectorySteps.length) * 100);
+  }, [allDirectorySteps, currentStepIndex]);
+
+  // 根据当前目录切换到上一步骤
+  const handlePrevStep = () => {
+    if (currentStepIndex > 0) {
+      const prev = allDirectorySteps[currentStepIndex - 1];
+      setExpandedChapters(prevExp => ({ ...prevExp, [prev.chapterId]: true }));
+      handleSelectStep(prev.chapterTitle, prev.step);
+    }
+  };
+
+  // 根据当前目录切换到下一步骤
+  const handleNextStep = () => {
+    if (currentStepIndex < allDirectorySteps.length - 1) {
+      const next = allDirectorySteps[currentStepIndex + 1];
+      setExpandedChapters(prevExp => ({ ...prevExp, [next.chapterId]: true }));
+      handleSelectStep(next.chapterTitle, next.step);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans select-none relative">
       
@@ -1053,234 +1189,358 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
         </div>
       )}
 
-      {/* 顶部主导航栏 */}
-      <header className="py-1 min-h-[56px] bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0 shadow-xs z-20">
-        <div className="flex items-center">
+      {/* 隐藏顶部时的快速唤回悬浮把手 */}
+      {isHeaderHidden && (
+        <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           <button 
-            onClick={() => onNavigate ? onNavigate('course-hall') : (window.history.length > 1 ? window.history.back() : null)}
-            className="text-blue-500 hover:bg-blue-50 p-1.5 rounded-md transition-colors mr-3 cursor-pointer"
-            title="返回上一级"
+            type="button"
+            onClick={() => setIsHeaderHidden(false)}
+            className="bg-white/95 hover:bg-white border border-t-0 border-slate-200/90 px-3.5 py-1 rounded-b-lg shadow-md text-xs text-slate-600 hover:text-blue-600 flex items-center space-x-1.5 transition-all cursor-pointer backdrop-blur-sm"
+            title="恢复显示顶部导航栏"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <PanelTopOpen className="w-3.5 h-3.5 text-blue-600" />
+            <span>显示顶部栏</span>
           </button>
-          <img 
-            src="https://images.unsplash.com/photo-1516110833967-0b5716ca1387?auto=format&fit=crop&q=80&w=60&h=60" 
-            alt="Cover" 
-            className="w-6 h-6 rounded mr-2 object-cover" 
-          />
-          <div className="flex items-baseline space-x-3">
-            <h1 className="text-[15px] font-medium text-slate-800">《Python可视化应用》</h1>
-            <span className="text-[12px] text-slate-400 font-normal hidden sm:inline">AI学伴-功能演示1789454686416</span>
-          </div>
         </div>
-        
-        <div className="flex flex-1 justify-end items-center pr-8 space-x-8 text-sm">
-          <div className="flex flex-col items-center justify-center">
+      )}
+
+      {/* 顶部主导航栏 */}
+      {!isHeaderHidden && (
+        <header className="relative py-1 min-h-[56px] bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0 shadow-xs z-20">
+          {/* 左侧：返回按钮与课程标题 */}
+          <div className="flex items-center shrink-0 z-10">
+            <button 
+              onClick={() => onNavigate ? onNavigate('personal') : null}
+              className="text-blue-500 hover:bg-blue-50 p-1.5 rounded-md transition-colors mr-3 cursor-pointer"
+              title="我的主页"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+            <img 
+              src="https://images.unsplash.com/photo-1516110833967-0b5716ca1387?auto=format&fit=crop&q=80&w=60&h=60" 
+              alt="Cover" 
+              className="w-6 h-6 rounded mr-2 object-cover" 
+            />
+            <div className="flex items-baseline space-x-3">
+              <h1 className="text-[15px] font-medium text-slate-800">《Python可视化应用》</h1>
+              <span className="text-[12px] text-slate-400 font-normal hidden sm:inline">AI学伴-功能演示1789454686416</span>
+            </div>
+          </div>
+          
+          {/* 中间居中模块：任务进度与当前步骤 */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none md:pointer-events-auto max-w-[42%] text-center z-10">
             <div className="flex items-center text-slate-600 text-[13px]">
               <span className="mr-2">任务进度:</span>
-              <span className="font-medium text-slate-800">10 %</span>
+              <span className="font-semibold text-slate-800">{taskProgressPercent} %</span>
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap max-w-[340px] truncate">
+            <div 
+              className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[240px] sm:max-w-[320px] md:max-w-[400px] lg:max-w-[500px]"
+              title={`当前步骤: ${activeChapter.chapterTitle} - ${activeStep.title}`}
+            >
               当前步骤: {activeChapter.chapterTitle} - {activeStep.title}
             </div>
           </div>
+          
+          {/* 右侧：剩余时间与操作按钮 */}
+          <div className="flex items-center space-x-3 shrink-0 ml-auto z-10">
+            <div className="hidden xl:flex items-center text-slate-600 text-[13px] mr-2">
+              <span className="mr-2 text-slate-400">剩余时间:</span>
+              <span className="font-medium text-slate-700">16: 34: 50</span>
+            </div>
 
-          <div className="hidden lg:flex items-center text-slate-600 text-[13px]">
-            <span className="mr-2">剩余时间:</span>
-            <span className="font-medium text-slate-800">16: 34: 50</span>
+            <button 
+              onClick={handlePrevStep}
+              disabled={currentStepIndex <= 0}
+              className={`px-4 py-1.5 border rounded text-sm flex items-center transition-colors ${
+                currentStepIndex <= 0
+                  ? 'border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed'
+                  : 'border-slate-300 text-slate-600 hover:bg-slate-50 hover:text-blue-600 cursor-pointer'
+              }`}
+              title={currentStepIndex <= 0 ? '已经是第一个步骤' : '根据目录切换至上一节'}
+            >
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              上一步
+            </button>
+            <button 
+              onClick={handleNextStep}
+              disabled={currentStepIndex >= allDirectorySteps.length - 1}
+              className={`px-4 py-1.5 border rounded text-sm flex items-center transition-colors ${
+                currentStepIndex >= allDirectorySteps.length - 1
+                  ? 'border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed'
+                  : 'border-slate-300 text-slate-600 hover:bg-slate-50 hover:text-blue-600 cursor-pointer'
+              }`}
+              title={currentStepIndex >= allDirectorySteps.length - 1 ? '已经是最后一个步骤' : '根据目录切换至下一节'}
+            >
+              下一步
+              <ChevronsRight className="w-4 h-4 ml-1" />
+            </button>
+            <button className="px-4 py-1.5 border border-blue-200 text-blue-500 hover:bg-blue-50 rounded text-sm flex items-center transition-colors bg-blue-50/30 cursor-pointer">
+              <ArrowLeft className="w-4 h-4 mr-1 rotate-90" />
+              上报本节
+            </button>
+            <button className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-colors shadow-xs cursor-pointer">
+              提交任务
+            </button>
           </div>
-        </div>
-        
-        <div className="flex items-center space-x-3 shrink-0">
-          <button 
-            onClick={() => {
-              setCurrentPage(prev => Math.max(1, prev - 1));
-              triggerSwitchToast(activeChapter.chapterTitle, '上一步');
-            }}
-            className="px-4 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 text-sm flex items-center transition-colors cursor-pointer"
+        </header>
+      )}
+
+      {/* 当左侧导航隐藏时的极简悬浮恢复栏 */}
+      {isLeftNavHidden && (
+        <div className="fixed left-3 bottom-5 z-50 flex items-center space-x-2 animate-in fade-in slide-in-from-left-2 duration-200">
+          <button
+            type="button"
+            onClick={() => setIsLeftNavHidden(false)}
+            className="h-9 px-3 bg-white/95 backdrop-blur-sm border border-slate-200/90 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg shadow-lg flex items-center space-x-1.5 text-xs font-medium transition-all cursor-pointer"
+            title="恢复显示左侧导航栏"
           >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            上一步
+            <PanelLeftOpen className="w-4 h-4 text-blue-600" />
+            <span>显示导航</span>
           </button>
-          <button 
-            onClick={() => {
-              setCurrentPage(prev => Math.min(totalPages, prev + 1));
-              triggerSwitchToast(activeChapter.chapterTitle, '下一步');
-            }}
-            className="px-4 py-1.5 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 text-sm flex items-center transition-colors cursor-pointer"
+          
+          <button
+            type="button"
+            onClick={() => setIsToolsOpen(!isToolsOpen)}
+            className="h-9 w-9 bg-white/95 backdrop-blur-sm border border-slate-200/90 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg shadow-lg flex items-center justify-center transition-all cursor-pointer relative"
+            title="快捷工具箱"
           >
-            下一步
-            <ChevronsRight className="w-4 h-4 ml-1" />
-          </button>
-          <button className="px-4 py-1.5 border border-blue-200 text-blue-500 hover:bg-blue-50 rounded text-sm flex items-center transition-colors bg-blue-50/30 cursor-pointer">
-            <ArrowLeft className="w-4 h-4 mr-1 rotate-90" />
-            上报本节
-          </button>
-          <button className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-colors shadow-xs cursor-pointer">
-            提交任务
+            <Wrench className="w-4 h-4 text-blue-600" />
           </button>
         </div>
-      </header>
+      )}
 
       {/* 主体工作区 */}
       <div className="flex flex-1 overflow-hidden relative">
         
         {/* 左侧垂直菜单栏（目录、笔记、资源、AI） */}
-        <aside className="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-4 shrink-0 z-50 select-none shadow-[2px_0_6px_rgba(0,0,0,0.03)]">
-          {/* 1. 目录 */}
-          <button 
-            type="button"
-            onClick={() => setFloatingDrawer(floatingDrawer === 'directory' ? null : 'directory')}
-            className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-3 transition-colors cursor-pointer ${
-              floatingDrawer === 'directory' 
-                ? 'text-blue-600 bg-blue-50 font-medium shadow-xs' 
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-            }`}
-            title="课程目录"
-          >
-            <AlignLeft className="w-5 h-5 mb-1 pointer-events-none" />
-            <span className="text-[10px] pointer-events-none">目录</span>
-          </button>
-          
-          {/* 2. 笔记 */}
-          <button 
-            type="button"
-            onClick={() => setFloatingDrawer(floatingDrawer === 'notes' ? null : 'notes')}
-            className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-3 transition-colors cursor-pointer ${
-              floatingDrawer === 'notes' 
-                ? 'text-[#4f46e5] bg-[#eef2ff] font-medium shadow-xs' 
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-            }`}
-            title="随堂笔记"
-          >
-            <BookMarked className="w-5 h-5 mb-1 pointer-events-none" />
-            <span className="text-[10px] pointer-events-none">笔记</span>
-          </button>
-          
-          {/* 3. 资源 */}
-          <button 
-            type="button"
-            onClick={() => {
-              if (isResourceOpen) {
-                setIsResourceOpen(false);
-              } else {
-                setIsResourceOpen(true);
-                setFloatingDrawer(null);
-              }
-            }}
-            className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-6 transition-colors cursor-pointer ${
-              isResourceOpen 
-                ? 'text-blue-600 bg-blue-50 font-medium shadow-xs' 
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-            }`}
-            title="课程资源"
-          >
-            <Film className="w-5 h-5 mb-1 pointer-events-none" />
-            <span className="text-[10px] pointer-events-none">资源</span>
-          </button>
-          
-          {/* 4. AI */}
-          <button 
-            id="btn-ai-drawer"
-            type="button"
-            onClick={() => setFloatingDrawer(floatingDrawer === 'ai' ? null : 'ai')}
-            className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-2 cursor-pointer transition-all active:scale-95 ${
-              floatingDrawer === 'ai'
-                ? 'bg-[#eef2ff] text-[#4f46e5] font-medium shadow-xs ring-1 ring-indigo-300'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-            }`}
-            title="AI学伴"
-          >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-xs pointer-events-none">
-              AI
-            </div>
-            <span className="text-[10px] pointer-events-none mt-0.5">AI</span>
-          </button>
-
-          {/* 5. 左下角快捷工具箱（截图、全屏快捷操作） */}
-          <div className="mt-auto relative w-full flex flex-col items-center">
+        {!isLeftNavHidden && (
+          <aside className="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-4 shrink-0 z-50 select-none shadow-[2px_0_6px_rgba(0,0,0,0.03)] pointer-events-auto">
+            {/* 1. 目录 */}
             <button 
               type="button"
-              onClick={() => setIsToolsOpen(!isToolsOpen)}
-              className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg transition-all cursor-pointer ${
-                isToolsOpen 
-                  ? 'text-blue-600 bg-blue-50 font-medium shadow-xs ring-1 ring-blue-300' 
+              onClick={() => setFloatingDrawer(floatingDrawer === 'directory' ? null : 'directory')}
+              className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-3 transition-colors cursor-pointer relative z-10 pointer-events-auto ${
+                floatingDrawer === 'directory' 
+                  ? 'text-blue-600 bg-blue-50 font-medium shadow-xs' 
                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
               }`}
-              title="快捷工具箱（截图、全屏）"
+              title="课程目录"
             >
-              <Wrench className="w-5 h-5 mb-1 pointer-events-none" />
-              <span className="text-[10px] pointer-events-none">工具</span>
+              <AlignLeft className="w-5 h-5 mb-1 shrink-0" />
+              <span className="text-[10px] leading-none">目录</span>
+            </button>
+            
+            {/* 2. 笔记 */}
+            <button 
+              type="button"
+              onClick={() => setFloatingDrawer(floatingDrawer === 'notes' ? null : 'notes')}
+              className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-3 transition-colors cursor-pointer relative z-10 pointer-events-auto ${
+                floatingDrawer === 'notes' 
+                  ? 'text-[#4f46e5] bg-[#eef2ff] font-medium shadow-xs' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+              }`}
+              title="随堂笔记"
+            >
+              <BookMarked className="w-5 h-5 mb-1 shrink-0" />
+              <span className="text-[10px] leading-none">笔记</span>
+            </button>
+            
+            {/* 3. 资源 */}
+            <button 
+              type="button"
+              onClick={() => {
+                if (isResourceOpen) {
+                  setIsResourceOpen(false);
+                } else {
+                  setIsResourceOpen(true);
+                  setFloatingDrawer(null);
+                }
+              }}
+              className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-6 transition-colors cursor-pointer relative z-10 pointer-events-auto ${
+                isResourceOpen 
+                  ? 'text-blue-600 bg-blue-50 font-medium shadow-xs' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+              }`}
+              title="课程资源"
+            >
+              <Film className="w-5 h-5 mb-1 shrink-0" />
+              <span className="text-[10px] leading-none">资源</span>
+            </button>
+            
+            {/* 4. AI */}
+            <button 
+              id="btn-ai-drawer"
+              type="button"
+              onClick={() => setFloatingDrawer(floatingDrawer === 'ai' ? null : 'ai')}
+              className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-2 cursor-pointer transition-all active:scale-95 relative z-10 pointer-events-auto ${
+                floatingDrawer === 'ai'
+                  ? 'bg-[#eef2ff] text-[#4f46e5] font-medium shadow-xs ring-1 ring-indigo-300'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+              }`}
+              title="AI学伴"
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-xs mb-0.5">
+                AI
+              </div>
+              <span className="text-[10px] leading-none">AI</span>
             </button>
 
-            {/* 点击工具后弹出的快捷操作气泡面板 */}
-            {isToolsOpen && (
-              <>
-                {/* 点击外部关闭遮罩 */}
-                <div 
-                  className="fixed inset-0 z-40 bg-transparent" 
-                  onClick={() => setIsToolsOpen(false)} 
-                />
+            {/* 5. 左下角快捷工具箱（截图、全屏、隐藏导航、隐藏手册、隐藏顶部） */}
+            <div className="mt-auto relative w-full flex flex-col items-center pointer-events-auto">
+              <button 
+                type="button"
+                onClick={() => setIsToolsOpen(!isToolsOpen)}
+                className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg transition-all cursor-pointer relative z-10 pointer-events-auto ${
+                  isToolsOpen 
+                    ? 'text-blue-600 bg-blue-50 font-medium shadow-xs ring-1 ring-blue-300' 
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                }`}
+                title="快捷工具箱（截图、全屏、隐藏导航/手册/顶部）"
+              >
+                <Wrench className="w-5 h-5 mb-1 shrink-0" />
+                <span className="text-[10px] leading-none">工具</span>
+              </button>
 
-                <div className="absolute left-16 bottom-0 ml-2 w-52 bg-white rounded-xl shadow-[0_10px_35px_rgba(0,0,0,0.14)] border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-left-2 duration-150 select-none">
-                  <div className="px-3.5 pb-2 mb-1 border-b border-slate-100 flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800 flex items-center">
-                      <Wrench className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
-                      快捷工具箱
-                    </span>
-                    <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">实训助手</span>
-                  </div>
+              {/* 点击工具后弹出的快捷操作气泡面板 */}
+              {isToolsOpen && (
+                <>
+                  {/* 点击外部关闭遮罩 */}
+                  <div 
+                    className="fixed inset-0 z-40 bg-transparent" 
+                    onClick={() => setIsToolsOpen(false)} 
+                  />
 
-                  <div className="px-1 space-y-1">
-                    {/* 页面截图快捷方式 */}
-                    <button
-                      type="button"
-                      onClick={handleCaptureScreen}
-                      className="w-full px-2.5 py-2 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg flex items-center space-x-2.5 transition-colors cursor-pointer group"
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-2xs">
-                        <Camera className="w-4 h-4 stroke-[2]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-slate-800 group-hover:text-blue-600 leading-tight">截屏快照</div>
-                        <div className="text-[11px] text-slate-400 group-hover:text-blue-500/80 truncate">快速截取当前学习界面</div>
-                      </div>
-                    </button>
+                  <div className="absolute left-16 bottom-0 ml-2 w-56 bg-white rounded-xl shadow-[0_10px_35px_rgba(0,0,0,0.14)] border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-left-2 duration-150 select-none">
+                    <div className="px-3.5 pb-2 mb-1 border-b border-slate-100 flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 flex items-center">
+                        <Wrench className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
+                        快捷工具箱
+                      </span>
+                      <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">实训助手</span>
+                    </div>
 
-                    {/* 全屏快捷方式 */}
-                    <button
-                      type="button"
-                      onClick={toggleFullScreen}
-                      className="w-full px-2.5 py-2 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg flex items-center space-x-2.5 transition-colors cursor-pointer group"
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-2xs">
-                        {isFullScreen ? (
-                          <Minimize className="w-4 h-4 stroke-[2]" />
-                        ) : (
-                          <Maximize className="w-4 h-4 stroke-[2]" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-slate-800 group-hover:text-blue-600 leading-tight">
-                          {isFullScreen ? '退出全屏' : '全屏显示'}
+                    <div className="px-1 space-y-0.5">
+                      {/* 1. 隐藏/显示导航（对应隐藏左侧导航） */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsLeftNavHidden(!isLeftNavHidden);
+                          setIsToolsOpen(false);
+                          triggerSwitchToast('界面布局', !isLeftNavHidden ? '已隐藏左侧导航，可通过悬浮按钮随时恢复' : '已恢复显示左侧导航');
+                        }}
+                        className="w-full px-2.5 py-2 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg flex items-center space-x-2.5 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-2xs">
+                          {isLeftNavHidden ? <PanelLeftOpen className="w-4 h-4 stroke-[2]" /> : <PanelLeftClose className="w-4 h-4 stroke-[2]" />}
                         </div>
-                        <div className="text-[11px] text-slate-400 group-hover:text-blue-500/80 truncate">
-                          {isFullScreen ? '还原常规窗口模式' : '进入沉浸式实训视窗'}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-slate-800 group-hover:text-blue-600 leading-tight">
+                            {isLeftNavHidden ? '显示导航' : '隐藏导航'}
+                          </div>
+                          <div className="text-[11px] text-slate-400 group-hover:text-blue-500/80 truncate">
+                            {isLeftNavHidden ? '展开左侧功能菜单栏' : '隐藏左侧功能导航栏'}
+                          </div>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+
+                      {/* 2. 隐藏/显示手册（对应右侧资源显示的面板） */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsResourceOpen(!isResourceOpen);
+                          setIsToolsOpen(false);
+                          triggerSwitchToast('界面布局', isResourceOpen ? '已隐藏手册资源面板' : '已展开手册资源面板');
+                        }}
+                        className="w-full px-2.5 py-2 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg flex items-center space-x-2.5 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-2xs">
+                          <BookOpen className="w-4 h-4 stroke-[2]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-slate-800 group-hover:text-blue-600 leading-tight">
+                            {isResourceOpen ? '隐藏手册' : '显示手册'}
+                          </div>
+                          <div className="text-[11px] text-slate-400 group-hover:text-blue-500/80 truncate">
+                            {isResourceOpen ? '收起右侧手册资源面板' : '展开右侧手册资源面板'}
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* 3. 隐藏/显示顶部 */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsHeaderHidden(!isHeaderHidden);
+                          setIsToolsOpen(false);
+                          triggerSwitchToast('界面布局', !isHeaderHidden ? '已隐藏顶部导航，可通过悬浮把手随时恢复' : '已恢复显示顶部导航');
+                        }}
+                        className="w-full px-2.5 py-2 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg flex items-center space-x-2.5 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-2xs">
+                          {isHeaderHidden ? <PanelTopOpen className="w-4 h-4 stroke-[2]" /> : <PanelTopClose className="w-4 h-4 stroke-[2]" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-slate-800 group-hover:text-blue-600 leading-tight">
+                            {isHeaderHidden ? '显示顶部' : '隐藏顶部'}
+                          </div>
+                          <div className="text-[11px] text-slate-400 group-hover:text-blue-500/80 truncate">
+                            {isHeaderHidden ? '展开顶部标题与状态栏' : '隐藏顶部标题与状态栏'}
+                          </div>
+                        </div>
+                      </button>
+
+                      <div className="h-px bg-slate-100 my-1"></div>
+
+                      {/* 4. 页面截图快捷方式 */}
+                      <button
+                        type="button"
+                        onClick={handleCaptureScreen}
+                        className="w-full px-2.5 py-2 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg flex items-center space-x-2.5 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-2xs">
+                          <Camera className="w-4 h-4 stroke-[2]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-slate-800 group-hover:text-blue-600 leading-tight">截屏快照</div>
+                          <div className="text-[11px] text-slate-400 group-hover:text-blue-500/80 truncate">快速截取当前学习界面</div>
+                        </div>
+                      </button>
+
+                      {/* 5. 全屏快捷方式 */}
+                      <button
+                        type="button"
+                        onClick={toggleFullScreen}
+                        className="w-full px-2.5 py-2 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg flex items-center space-x-2.5 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-2xs">
+                          {isFullScreen ? (
+                            <Minimize className="w-4 h-4 stroke-[2]" />
+                          ) : (
+                            <Maximize className="w-4 h-4 stroke-[2]" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-slate-800 group-hover:text-blue-600 leading-tight">
+                            {isFullScreen ? '退出全屏' : '全屏显示'}
+                          </div>
+                          <div className="text-[11px] text-slate-400 group-hover:text-blue-500/80 truncate">
+                            {isFullScreen ? '还原常规窗口模式' : '进入沉浸式实训视窗'}
+                          </div>
+                        </div>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        </aside>
+                </>
+              )}
+            </div>
+          </aside>
+        )}
 
         {/* 1. 目录浮动抽屉（支持横向拖拽改变窗口大小、折叠章节；当资源面板打开时浮动覆盖在其上方） */}
         {floatingDrawer === 'directory' && (
           <aside 
             style={{ width: `${drawerWidth}px` }}
-            className="absolute top-0 left-16 bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150"
+            className={`absolute top-0 ${isLeftNavHidden ? 'left-0' : 'left-16'} bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150`}
           >
             {/* 顶部控制栏 */}
             <div className="h-11 flex items-center justify-between px-4 border-b border-slate-100 shrink-0 bg-white">
@@ -1388,7 +1648,7 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
         {floatingDrawer === 'notes' && (
           <aside 
             style={{ width: `${drawerWidth}px` }}
-            className="absolute top-0 left-16 bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150"
+            className={`absolute top-0 ${isLeftNavHidden ? 'left-0' : 'left-16'} bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150`}
           >
             {/* 笔记顶部标题与控制操作栏 */}
             <div className="px-3.5 py-2.5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white overflow-hidden">
@@ -1499,7 +1759,7 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
         {floatingDrawer === 'ai' && (
           <aside 
             style={{ width: `${drawerWidth}px` }}
-            className="absolute top-0 left-16 bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150 overflow-hidden"
+            className={`absolute top-0 ${isLeftNavHidden ? 'left-0' : 'left-16'} bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150 overflow-hidden`}
           >
             {/* 顶部控制栏（分栏扩展、全屏放大、关闭） */}
             <div className="h-10 flex items-center justify-end px-3.5 border-b border-slate-100/90 shrink-0 bg-white text-[#4f6ef7] space-x-2">
@@ -2849,6 +3109,340 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
                 </div>
               </div>
             )
+          ) : activeStep.type === 'report' || activeStep.tag === '报告' ? (
+            /* ================== 场景 D：实验报告类型步骤（高精度参考用户截图） ================== */
+            <div className={`flex-1 flex flex-col bg-white overflow-hidden relative ${isReportFullscreen ? 'fixed inset-0 z-50' : ''}`}>
+              
+              {/* 报告工作区主体：左侧可折叠大纲，右侧双栏编辑器 */}
+              <div className="flex-1 flex overflow-hidden relative">
+                
+                {/* 1. 左侧实验报告大纲侧栏（支持折叠/展开，带把手） */}
+                {reportSidebarOpen ? (
+                  <div className="w-60 sm:w-64 bg-[#fcfdfe] border-r border-slate-200/90 flex flex-col shrink-0 relative select-none animate-in fade-in duration-150">
+                    {/* 顶部灰白色小条：“实验报告” */}
+                    <div className="h-10 bg-[#f4f6f9] border-b border-slate-200/90 flex items-center px-4 text-xs font-semibold text-slate-700 shrink-0">
+                      <span>实验报告</span>
+                    </div>
+
+                    {/* 实验报告各模块大纲 */}
+                    <div className="flex-1 overflow-y-auto p-3 space-y-1 text-xs custom-scrollbar">
+                      <div className="text-[11px] font-bold text-slate-400 px-2 py-1 uppercase tracking-wider">
+                        报告大纲导航
+                      </div>
+                      {[
+                        { title: '一、实验目的与要求', template: '# 一、实验目的与要求\n\n1. 掌握 Python 数据可视化的核心设计思路。\n2. 熟悉 Matplotlib 与 Seaborn 基础图表绘制流程。\n' },
+                        { title: '二、实验环境与数据源', template: '## 二、实验环境与数据源\n\n- **运行环境**：Python 3.10 / JupyterLab\n- **数据集**：中文自然语言与酒店评论样本库\n' },
+                        { title: '三、核心算法与模型设计', template: '## 三、核心算法与模型设计\n\n> 采用 TF-IDF 特征提取与朴素贝叶斯分类器联合建模。\n' },
+                        { title: '四、实验核心代码与执行', template: '## 四、实验核心代码与执行\n\n```python\nimport matplotlib.pyplot as plt\nimport numpy as np\n\n# 核心可视化代码实现\nplt.figure(figsize=(10, 6))\n```\n' },
+                        { title: '五、实验结果与图表分析', template: '## 五、实验结果与图表分析\n\n- 模型准确率达 92.4%\n- 损失函数在第 15 个 Epoch 稳定收敛\n' },
+                        { title: '六、思考题与实验总结', template: '## 六、思考题与实验总结\n\n通过本次实验实训，深入理解了数据预处理与特征工程对最终可视化呈现的决定性作用。\n' },
+                      ].map((item, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            if (!reportContent) {
+                              setReportContent(item.template);
+                            } else {
+                              handleInsertReportTag(`\n\n${item.template}`);
+                            }
+                            triggerSwitchToast('实验报告', `已定位/插入【${item.title}】模块`);
+                          }}
+                          className="px-3 py-2 rounded-lg text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer flex items-center justify-between group"
+                        >
+                          <span className="truncate">{item.title}</span>
+                          <span className="text-[10px] text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">插入</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 边缘折叠按钮（小白底圆角把手标签，上面有 (( 符号，完全还原截图） */}
+                    <button
+                      type="button"
+                      onClick={() => setReportSidebarOpen(false)}
+                      className="absolute -right-3 top-1/2 -translate-y-1/2 z-30 bg-white border border-slate-200 shadow-md rounded-full w-6 h-12 flex items-center justify-center cursor-pointer hover:bg-slate-50 text-slate-400 hover:text-slate-700 transition-all"
+                      title="折叠实验报告大纲栏"
+                    >
+                      <span className="text-[11px] font-bold tracking-tighter select-none">((</span>
+                    </button>
+                  </div>
+                ) : (
+                  /* 折叠状态下的唤出把手 */
+                  <div className="relative shrink-0 z-30">
+                    <button
+                      type="button"
+                      onClick={() => setReportSidebarOpen(true)}
+                      className="absolute left-0 top-1/2 -translate-y-1/2 bg-white border border-slate-200 border-l-0 shadow-md rounded-r-full w-5 h-12 flex items-center justify-center cursor-pointer hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-all"
+                      title="展开实验报告大纲栏"
+                    >
+                      <span className="text-[11px] font-bold tracking-tighter select-none">))</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* 2. 右侧 Markdown 双栏编辑器主体 */}
+                <div className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden">
+                  
+                  {/* 顶部工具栏 Toolbar（精细对齐截图） */}
+                  <div className="h-10 bg-[#fafbfe] border-b border-slate-200/90 flex items-center justify-between px-3 shrink-0 text-slate-600 select-none">
+                    
+                    {/* 左侧富文本与 Markdown 操作工具图标 */}
+                    <div className="flex items-center space-x-0.5 sm:space-x-1 overflow-x-auto no-scrollbar py-1">
+                      
+                      {/* B 加粗 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('**', '**')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+                        title="加粗"
+                      >
+                        <Bold className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* U 下划线 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('<u>', '</u>')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="下划线"
+                      >
+                        <Underline className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* I 斜体 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('*', '*')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="斜体"
+                      >
+                        <Italic className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* S 删除线 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('~~', '~~')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="删除线"
+                      >
+                        <Strikethrough className="w-3.5 h-3.5" />
+                      </button>
+
+                      <div className="h-4 w-px bg-slate-200 mx-1"></div>
+
+                      {/* H 标题 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('## ')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+                        title="插入标题"
+                      >
+                        H
+                      </button>
+
+                      {/* x2 下标 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('<sub>', '</sub>')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="下标"
+                      >
+                        <Subscript className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* x^2 上标 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('<sup>', '</sup>')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="上标"
+                      >
+                        <Superscript className="w-3.5 h-3.5" />
+                      </button>
+
+                      <div className="h-4 w-px bg-slate-200 mx-1"></div>
+
+                      {/* 引用 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('> ')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="引用"
+                      >
+                        <Quote className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* 无序列表 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('- ')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="无序列表"
+                      >
+                        <List className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* 有序列表 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('1. ')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="有序列表"
+                      >
+                        <ListOrdered className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* 代办清单 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('- [ ] ')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="任务清单"
+                      >
+                        <ListTodo className="w-3.5 h-3.5" />
+                      </button>
+
+                      <div className="h-4 w-px bg-slate-200 mx-1"></div>
+
+                      {/* 代码块 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('```python\n', '\n```')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="代码块"
+                      >
+                        <Code className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* 图片 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('![图片说明](', ')')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="插入图片"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* 链接 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('[链接文本](', ')')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="插入超链接"
+                      >
+                        <Link className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* 表格 */}
+                      <button 
+                        type="button" 
+                        onClick={() => handleInsertReportTag('\n| 表头1 | 表头2 | 表头3 |\n| --- | --- | --- |\n| 数据1 | 数据2 | 数据3 |\n')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="插入表格"
+                      >
+                        <Table className="w-3.5 h-3.5" />
+                      </button>
+
+                      <div className="h-4 w-px bg-slate-200 mx-1"></div>
+
+                      {/* 撤销 / 重做 */}
+                      <button 
+                        type="button" 
+                        onClick={() => document.execCommand('undo')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="撤销"
+                      >
+                        <Undo2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button 
+                        type="button" 
+                        onClick={() => document.execCommand('redo')}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 text-slate-700 text-xs cursor-pointer transition-colors"
+                        title="重做"
+                      >
+                        <Redo2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* 右侧视图控制：预览切换、双栏分屏、全屏 */}
+                    <div className="flex items-center space-x-1 shrink-0 pl-2">
+                      <button
+                        type="button"
+                        onClick={() => setReportViewMode(reportViewMode === 'preview' ? 'both' : 'preview')}
+                        className={`p-1.5 rounded hover:bg-slate-200/70 cursor-pointer transition-colors ${reportViewMode === 'preview' ? 'text-blue-600 bg-blue-50' : 'text-slate-500'}`}
+                        title={reportViewMode === 'preview' ? '退出仅预览' : '仅预览模式'}
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setReportViewMode(reportViewMode === 'both' ? 'edit' : 'both')}
+                        className={`p-1.5 rounded hover:bg-slate-200/70 cursor-pointer transition-colors ${reportViewMode === 'both' ? 'text-blue-600 bg-blue-50' : 'text-slate-500'}`}
+                        title={reportViewMode === 'both' ? '仅编辑模式' : '左右双栏分屏模式'}
+                      >
+                        <Columns2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsReportFullscreen(!isReportFullscreen)}
+                        className={`p-1.5 rounded hover:bg-slate-200/70 cursor-pointer transition-colors ${isReportFullscreen ? 'text-blue-600 bg-blue-50' : 'text-slate-500'}`}
+                        title={isReportFullscreen ? '退出全屏' : '全屏编辑器'}
+                      >
+                        {isReportFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 核心双栏编辑与预览区（高精度对齐用户截图） */}
+                  <div className="flex-1 flex overflow-hidden">
+                    {/* 左栏：文本输入区 */}
+                    {(reportViewMode === 'both' || reportViewMode === 'edit') && (
+                      <div className="flex-1 flex flex-col overflow-hidden bg-white p-6 relative">
+                        <textarea
+                          id="report-editor-textarea"
+                          value={reportContent}
+                          onChange={(e) => setReportContent(e.target.value)}
+                          placeholder="请输入正文"
+                          className="w-full h-full resize-none outline-none border-none text-slate-800 placeholder:text-slate-300 text-sm leading-relaxed font-sans custom-scrollbar"
+                          spellCheck={false}
+                        />
+                      </div>
+                    )}
+
+                    {/* 中间分隔线（双栏模式下显示） */}
+                    {reportViewMode === 'both' && (
+                      <div className="w-px bg-slate-200/90 shrink-0 select-none"></div>
+                    )}
+
+                    {/* 右栏：Markdown 实时排版预览区 */}
+                    {(reportViewMode === 'both' || reportViewMode === 'preview') && (
+                      <div className="flex-1 overflow-hidden bg-white flex flex-col">
+                        <ReportMarkdownPreview content={reportContent} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 底部状态栏 */}
+                  <div className="h-7 bg-[#fafbfe] border-t border-slate-200/80 px-4 flex items-center justify-between text-[11px] text-slate-400 shrink-0 select-none">
+                    <div className="flex items-center space-x-3">
+                      <span>字符数: {reportContent.length}</span>
+                      <span>|</span>
+                      <span>行数: {reportContent ? reportContent.split('\n').length : 0}</span>
+                    </div>
+                    <div className="flex items-center space-x-3 text-slate-500">
+                      <span className="flex items-center text-emerald-600">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        已自动保存草稿
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : (
             
             /* 场景 C：图文步骤类型（原 PPT / 课件浏览） */

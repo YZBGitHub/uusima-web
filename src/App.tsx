@@ -44,15 +44,15 @@ export default function App() {
     | "teaching-management"
     | "course-learning"
     | "course-study"
-  >((new URLSearchParams(window.location.search).get("view") as any) || "teaching-management");
+  >((new URLSearchParams(window.location.search).get("view") as any) || "personal");
   const [isNavOpen, setIsNavOpen] = useState(false);
 
   const navItems = [
     { id: "course-hall", label: "课程大厅" },
     { id: "login", label: "登录" },
     { id: "registration", label: "用户注册" },
+    { id: "personal", label: "我的主页" },
     { id: "config", label: "系统管理" },
-    { id: "personal", label: "个人中心" },
     { id: "forgot-password", label: "找回密码" },
     { id: "tenant", label: "租户管理" },
     { id: "personal-tenant", label: "个人租户" },
@@ -61,14 +61,13 @@ export default function App() {
     { id: "school", label: "学校库" },
     { id: "mobile-success", label: "移动端注册成功" },
     { id: "platform-operation", label: "平台运营" },
-    { id: "teaching-management", label: "管理员主页" },
     { id: "course-study", label: "课程学习界面" },
   ] as const;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       {/* 侧边原型的全局快速导航 */}
-      <div className="fixed left-0 bottom-4 z-[100] flex items-end drop-shadow-xl">
+      <div className="fixed left-0 bottom-[20%] z-[100] flex items-end drop-shadow-xl">
         <div
           className={`bg-white border-y border-r border-slate-200 rounded-tr-xl rounded-br-xl transition-all duration-300 overflow-hidden flex flex-col shadow-inner ${isNavOpen ? "w-48 opacity-100" : "w-0 opacity-0 pointer-events-none"}`}
         >
@@ -120,7 +119,7 @@ export default function App() {
         {activeView === "config" && (
           <ConfigManagement onNavigate={(view) => setActiveView(view as any)} />
         )}
-        {activeView === "personal" && (
+        {(activeView === "personal" || (activeView as string) === "teaching-management") && (
           <Personal onNavigate={(view) => setActiveView(view as any)} />
         )}
         {activeView === "forgot-password" && (
@@ -143,9 +142,6 @@ export default function App() {
         )}
         {activeView === "lab-hall" && (
           <LabHall onNavigate={(view) => setActiveView(view as any)} />
-        )}
-        {activeView === "teaching-management" && (
-          <TeachingManagement onNavigate={(view) => setActiveView(view as any)} />
         )}
         {activeView === "course-learning" && (
           <CourseLearning onNavigate={(view) => setActiveView(view as any)} />
