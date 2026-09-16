@@ -46,7 +46,16 @@ import {
   RefreshCw,
   FolderPlus,
   Upload,
-  Minimize2
+  Minimize2,
+  ArrowRight,
+  Clock,
+  Plus,
+  Bookmark,
+  ArrowUp,
+  Wrench,
+  Camera,
+  Minimize,
+  Paperclip
 } from 'lucide-react';
 
 // 四叶彩色气泡章节徽标（高精度还原截图）
@@ -177,14 +186,27 @@ interface ChapterData {
 }
 
 export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string) => void }) {
-  // 左侧导航激活状态：'directory' | 'notes' | 'resources' | null
-  const [activeSidebar, setActiveSidebar] = useState<'directory' | 'notes' | 'resources' | null>('directory');
+  // 浮动抽屉激活状态：'directory'(目录) | 'notes'(笔记) | 'ai'(AI学伴) | null
+  const [floatingDrawer, setFloatingDrawer] = useState<'directory' | 'notes' | 'ai' | null>('directory');
   
-  // 浮动窗口宽度控制（支持横向拖拽改变大小，默认 420px，最小 300px，最大 960px）
+  // 资源面板展示状态（与右侧内容共享界面，可与浮动抽屉并存，浮动抽屉将覆盖在资源面板上）
+  const [isResourceOpen, setIsResourceOpen] = useState<boolean>(false);
+  
+  // 浮动窗口宽度控制（支持横向拖拽改变大小，用于目录、笔记抽屉）
   const [drawerWidth, setDrawerWidth] = useState<number>(420);
+  
+  // 资源面板宽度控制（与右侧内容共享界面并排展示，支持拖拽改变左右两块内容占比，默认 460px）
+  const [resourcePanelWidth, setResourcePanelWidth] = useState<number>(460);
+  const [isDraggingResource, setIsDraggingResource] = useState<boolean>(false);
   
   // 资源面板内 4 个 Tab：'text'(图文) | 'video'(视频) | 'manual'(手册) | 'file'(文件)
   const [activeResourceTab, setActiveResourceTab] = useState<'text' | 'video' | 'manual' | 'file'>('text');
+  
+  // 打开的手册阅读器状态（非 null 时在资源面板中展示如截图所示的实训指导书阅读器）
+  const [openedManualBook, setOpenedManualBook] = useState<{ title: string; subtitle?: string } | null>(null);
+  const [manualPageNum, setManualPageNum] = useState<number>(1);
+  const [manualTotalPages, setManualTotalPages] = useState<number>(10);
+  const [manualZoom, setManualZoom] = useState<number>(100);
   
   // 目录折叠状态控制：各个章节独立折叠/展开
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({
@@ -217,6 +239,134 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
 
   // 资源预览弹窗
   const [previewItem, setPreviewItem] = useState<ResourceTaskItem | null>(null);
+
+  // AI学伴浮动窗口会话与输入状态（参考截图功能）
+  const [aiInputText, setAiInputText] = useState<string>('');
+  const [isAiHistoryOpen, setIsAiHistoryOpen] = useState<boolean>(false);
+  const [aiChatMessages, setAiChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; time?: string }>>([]);
+  const [isAiThinking, setIsAiThinking] = useState<boolean>(false);
+
+  // 预设历史会话
+  const aiHistoryList = [
+    { id: '1', title: 'Python 数据可视化课程导学', time: '10:30' },
+    { id: '2', title: 'Matplotlib 柱状图与折线图参数调优', time: '昨天' },
+    { id: '3', title: 'Jupyter 虚拟实训环境配置指引', time: '前天' },
+  ];
+
+  // 发送问题处理
+  const handleSendAiMessage = (question: string) => {
+    if (!question.trim()) return;
+    const userMsg = question.trim();
+    setAiInputText('');
+    setAiChatMessages(prev => [...prev, { role: 'user', content: userMsg, time: '刚刚' }]);
+    setIsAiThinking(true);
+
+    setTimeout(() => {
+      setIsAiThinking(false);
+      let reply = '这门课程主要涵盖了数据分析与可视化的基础理论及实操技能，帮助你掌握 Matplotlib、Seaborn 等常用库的实际应用。';
+      if (userMsg.includes('主要内容') || userMsg.includes('介绍')) {
+        reply = '《Python 数据可视化》课程主要培养学生对海量数据的清洗、统计与图表呈现能力。通过项目式实训，循序渐进掌握折线图、散点图、柱状图、箱线图、热力图等可视化图表的绘制与美化技巧。';
+      } else if (userMsg.includes('大纲') || userMsg.includes('目录')) {
+        reply = '课程主要分为四大模块：\n1. 数据可视化基础与环境准备（JupyterLab+Numpy）\n2. 核心图表绘制与参数调优（折线/柱状/饼图）\n3. 高级统计图表与动态交互呈现\n4. 行业综合实训与商业看板报告输出。';
+      } else if (userMsg.includes('技术栈')) {
+        reply = '主要技术栈包括：Python 3.10+、NumPy、Pandas、Matplotlib、Seaborn、JupyterLab，以及配套的交互式云端实验容器。';
+      }
+      setAiChatMessages(prev => [...prev, { role: 'assistant', content: reply, time: '刚刚' }]);
+    }, 500);
+  };
+
+  const handleNewAiChat = () => {
+    setAiChatMessages([]);
+    setAiInputText('');
+    setIsAiHistoryOpen(false);
+  };
+
+  // 左下角快捷工具箱状态与方法（截图、全屏）
+  const [isToolsOpen, setIsToolsOpen] = useState<boolean>(false);
+  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
+  const [isScreenFlashing, setIsScreenFlashing] = useState<boolean>(false);
+
+  // 监听浏览器全屏状态变化
+  useEffect(() => {
+    const onFullScreenChange = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', onFullScreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullScreenChange);
+  }, []);
+
+  // 全屏切换操作
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullScreen(true);
+        triggerSwitchToast('快捷工具', '已进入沉浸式全屏学习模式');
+      }).catch(() => {
+        triggerSwitchToast('快捷工具', '当前浏览器禁止自动全屏，请使用 F11 键');
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().then(() => {
+          setIsFullScreen(false);
+          triggerSwitchToast('快捷工具', '已退出全屏模式');
+        }).catch(() => {});
+      }
+    }
+    setIsToolsOpen(false);
+  };
+
+  // 截图快捷操作
+  const handleCaptureScreen = () => {
+    setIsToolsOpen(false);
+    // 触发快门闪白动画
+    setIsScreenFlashing(true);
+    setTimeout(() => setIsScreenFlashing(false), 300);
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = window.innerWidth || 1280;
+      canvas.height = window.innerHeight || 720;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // 绘制科技感深蓝背景
+        const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        grad.addColorStop(0, '#0f172a');
+        grad.addColorStop(1, '#1e293b');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 水印卡片
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 26px sans-serif';
+        ctx.fillText('UUSIMA 智慧实训平台 · 课程学习快照', 60, 90);
+
+        ctx.font = '16px sans-serif';
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillText(`课程：自然语言处理技术与应用 / Python 数据可视化 · 当前步骤：${activeStep.title}`, 60, 140);
+        ctx.fillText(`快照时间：${new Date().toLocaleString()}`, 60, 175);
+
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(60, 205);
+        ctx.lineTo(canvas.width - 60, 205);
+        ctx.stroke();
+
+        ctx.fillStyle = '#10b981';
+        ctx.font = '15px sans-serif';
+        ctx.fillText('✓ 截图已记录至学生实验操作日志与学情分析系统', 60, 250);
+
+        const a = document.createElement('a');
+        a.download = `实训截图_${new Date().toISOString().slice(0, 10)}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    triggerSwitchToast('快捷截屏', '截图成功！已自动保存并记录到本地');
+  };
 
   // 课件查看器页码控制
   const [currentPage, setCurrentPage] = useState(1);
@@ -346,6 +496,35 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
     };
 
     const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  // 资源面板左右分栏拖拽手柄事件监听处理（实时改变左侧资源与右侧内容占比）
+  const handleResourceMouseDownResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingResource(true);
+    const startX = e.clientX;
+    const startWidth = resourcePanelWidth;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      // 限制左侧资源面板最小 300px，右侧内容区至少保留 380px，最大宽度受工作区总宽保护
+      const maxWidth = Math.max(450, window.innerWidth - 64 - 380);
+      const newWidth = Math.max(300, Math.min(maxWidth, startWidth + deltaX));
+      setResourcePanelWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      setIsDraggingResource(false);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       document.body.style.cursor = '';
@@ -838,13 +1017,27 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
     setNoteContent(prev => prev ? `${prev}\n${prefix}${suffix}` : `${prefix}${suffix}`);
   };
 
-  // 步骤切换操作（附带 Toast 提示）
+  // 步骤切换操作（附带 Toast 提示；当切换到实验类型时，自动打开资源面板切换到手册并打开手册查看器）
   const handleSelectStep = (chapterTitle: string, step: DirectoryStepItem) => {
     setCurrentStepId(step.id);
     if (step.type === 'video') {
       setIsPlaying(true);
     }
-    triggerSwitchToast(chapterTitle, step.title);
+
+    // 需求：如果在目录中切换的步骤章节类型是实验类型，要自动打开资源并且切换到对应章节的手册并打开手册
+    if (step.type === 'lab' || step.tag === '实验') {
+      setIsResourceOpen(true);
+      setActiveResourceTab('manual');
+      setOpenedManualBook({
+        title: 'Python 数据可视化实训指导书',
+        subtitle: `${chapterTitle} · ${step.title}`
+      });
+      // 收起浮动的目录抽屉，让出视线直接展示左侧手册与右侧实验
+      setFloatingDrawer(null);
+      triggerSwitchToast(chapterTitle, `已自动打开【${step.title}】实训指导书手册`);
+    } else {
+      triggerSwitchToast(chapterTitle, step.title);
+    }
   };
 
   return (
@@ -933,14 +1126,14 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
       <div className="flex flex-1 overflow-hidden relative">
         
         {/* 左侧垂直菜单栏（目录、笔记、资源、AI） */}
-        <aside className="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-4 shrink-0 z-40 select-none shadow-[2px_0_6px_rgba(0,0,0,0.03)]">
+        <aside className="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-4 shrink-0 z-50 select-none shadow-[2px_0_6px_rgba(0,0,0,0.03)]">
           {/* 1. 目录 */}
           <button 
             type="button"
-            onClick={() => setActiveSidebar(activeSidebar === 'directory' ? null : 'directory')}
+            onClick={() => setFloatingDrawer(floatingDrawer === 'directory' ? null : 'directory')}
             className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-3 transition-colors cursor-pointer ${
-              activeSidebar === 'directory' 
-                ? 'text-blue-600 bg-blue-50 font-medium' 
+              floatingDrawer === 'directory' 
+                ? 'text-blue-600 bg-blue-50 font-medium shadow-xs' 
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
             }`}
             title="课程目录"
@@ -952,9 +1145,9 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
           {/* 2. 笔记 */}
           <button 
             type="button"
-            onClick={() => setActiveSidebar(activeSidebar === 'notes' ? null : 'notes')}
+            onClick={() => setFloatingDrawer(floatingDrawer === 'notes' ? null : 'notes')}
             className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-3 transition-colors cursor-pointer ${
-              activeSidebar === 'notes' 
+              floatingDrawer === 'notes' 
                 ? 'text-[#4f46e5] bg-[#eef2ff] font-medium shadow-xs' 
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
             }`}
@@ -967,9 +1160,16 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
           {/* 3. 资源 */}
           <button 
             type="button"
-            onClick={() => setActiveSidebar(activeSidebar === 'resources' ? null : 'resources')}
+            onClick={() => {
+              if (isResourceOpen) {
+                setIsResourceOpen(false);
+              } else {
+                setIsResourceOpen(true);
+                setFloatingDrawer(null);
+              }
+            }}
             className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-6 transition-colors cursor-pointer ${
-              activeSidebar === 'resources' 
+              isResourceOpen 
                 ? 'text-blue-600 bg-blue-50 font-medium shadow-xs' 
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
             }`}
@@ -981,25 +1181,106 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
           
           {/* 4. AI */}
           <button 
+            id="btn-ai-drawer"
             type="button"
-            onClick={() => {
-              const smartBtn = document.querySelector('[data-smart-assistant-btn]') as HTMLButtonElement;
-              if (smartBtn) smartBtn.click();
-            }}
-            className="w-12 h-12 flex flex-col items-center justify-center text-slate-500 hover:bg-slate-50 rounded-lg mb-2 cursor-pointer transition-transform active:scale-95"
+            onClick={() => setFloatingDrawer(floatingDrawer === 'ai' ? null : 'ai')}
+            className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-2 cursor-pointer transition-all active:scale-95 ${
+              floatingDrawer === 'ai'
+                ? 'bg-[#eef2ff] text-[#4f46e5] font-medium shadow-xs ring-1 ring-indigo-300'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+            }`}
             title="AI学伴"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-xs">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-xs pointer-events-none">
               AI
             </div>
+            <span className="text-[10px] pointer-events-none mt-0.5">AI</span>
           </button>
+
+          {/* 5. 左下角快捷工具箱（截图、全屏快捷操作） */}
+          <div className="mt-auto relative w-full flex flex-col items-center">
+            <button 
+              type="button"
+              onClick={() => setIsToolsOpen(!isToolsOpen)}
+              className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg transition-all cursor-pointer ${
+                isToolsOpen 
+                  ? 'text-blue-600 bg-blue-50 font-medium shadow-xs ring-1 ring-blue-300' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+              }`}
+              title="快捷工具箱（截图、全屏）"
+            >
+              <Wrench className="w-5 h-5 mb-1 pointer-events-none" />
+              <span className="text-[10px] pointer-events-none">工具</span>
+            </button>
+
+            {/* 点击工具后弹出的快捷操作气泡面板 */}
+            {isToolsOpen && (
+              <>
+                {/* 点击外部关闭遮罩 */}
+                <div 
+                  className="fixed inset-0 z-40 bg-transparent" 
+                  onClick={() => setIsToolsOpen(false)} 
+                />
+
+                <div className="absolute left-16 bottom-0 ml-2 w-52 bg-white rounded-xl shadow-[0_10px_35px_rgba(0,0,0,0.14)] border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-left-2 duration-150 select-none">
+                  <div className="px-3.5 pb-2 mb-1 border-b border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 flex items-center">
+                      <Wrench className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
+                      快捷工具箱
+                    </span>
+                    <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">实训助手</span>
+                  </div>
+
+                  <div className="px-1 space-y-1">
+                    {/* 页面截图快捷方式 */}
+                    <button
+                      type="button"
+                      onClick={handleCaptureScreen}
+                      className="w-full px-2.5 py-2 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg flex items-center space-x-2.5 transition-colors cursor-pointer group"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-2xs">
+                        <Camera className="w-4 h-4 stroke-[2]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-slate-800 group-hover:text-blue-600 leading-tight">截屏快照</div>
+                        <div className="text-[11px] text-slate-400 group-hover:text-blue-500/80 truncate">快速截取当前学习界面</div>
+                      </div>
+                    </button>
+
+                    {/* 全屏快捷方式 */}
+                    <button
+                      type="button"
+                      onClick={toggleFullScreen}
+                      className="w-full px-2.5 py-2 text-left text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg flex items-center space-x-2.5 transition-colors cursor-pointer group"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-2xs">
+                        {isFullScreen ? (
+                          <Minimize className="w-4 h-4 stroke-[2]" />
+                        ) : (
+                          <Maximize className="w-4 h-4 stroke-[2]" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-slate-800 group-hover:text-blue-600 leading-tight">
+                          {isFullScreen ? '退出全屏' : '全屏显示'}
+                        </div>
+                        <div className="text-[11px] text-slate-400 group-hover:text-blue-500/80 truncate">
+                          {isFullScreen ? '还原常规窗口模式' : '进入沉浸式实训视窗'}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </aside>
 
-        {/* 1. 目录浮动抽屉（支持横向拖拽改变窗口大小、折叠章节、各步骤类型标签、点击切换并触发Toast） */}
-        {activeSidebar === 'directory' && (
+        {/* 1. 目录浮动抽屉（支持横向拖拽改变窗口大小、折叠章节；当资源面板打开时浮动覆盖在其上方） */}
+        {floatingDrawer === 'directory' && (
           <aside 
             style={{ width: `${drawerWidth}px` }}
-            className="absolute top-0 left-16 bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-30 shadow-[8px_0_30px_rgba(0,0,0,0.1)] transition-none animate-in fade-in duration-150"
+            className="absolute top-0 left-16 bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150"
           >
             {/* 顶部控制栏 */}
             <div className="h-11 flex items-center justify-between px-4 border-b border-slate-100 shrink-0 bg-white">
@@ -1023,7 +1304,7 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
                   <Maximize2 className="w-[17px] h-[17px] stroke-[2.2]" />
                 </button>
                 <button 
-                  onClick={() => setActiveSidebar(null)}
+                  onClick={() => setFloatingDrawer(null)}
                   className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
                   title="关闭"
                 >
@@ -1103,11 +1384,11 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
           </aside>
         )}
 
-        {/* 2. 笔记浮动抽屉 */}
-        {activeSidebar === 'notes' && (
+        {/* 2. 笔记浮动抽屉（当资源面板打开时浮动覆盖在其上方） */}
+        {floatingDrawer === 'notes' && (
           <aside 
             style={{ width: `${drawerWidth}px` }}
-            className="absolute top-0 left-16 bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-30 shadow-[8px_0_30px_rgba(0,0,0,0.1)] transition-none animate-in fade-in duration-150"
+            className="absolute top-0 left-16 bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150"
           >
             {/* 笔记顶部标题与控制操作栏 */}
             <div className="px-3.5 py-2.5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white overflow-hidden">
@@ -1151,7 +1432,7 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
                 </button>
 
                 <button 
-                  onClick={() => setActiveSidebar(null)}
+                  onClick={() => setFloatingDrawer(null)}
                   className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer shrink-0"
                   title="关闭"
                 >
@@ -1214,119 +1495,226 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
           </aside>
         )}
 
-        {/* 3. 资源浮动抽屉 */}
-        {activeSidebar === 'resources' && (
+        {/* 4. AI学伴浮动抽屉（参考截图高精度还原：科技徽标、欢迎标语、推荐问题药丸卡片与专属输入框，浮动在上方与目录、笔记一致） */}
+        {floatingDrawer === 'ai' && (
           <aside 
             style={{ width: `${drawerWidth}px` }}
-            className="absolute top-0 left-16 bottom-0 bg-[#fafbfe] border-r border-slate-200/90 flex flex-col z-30 shadow-[8px_0_30px_rgba(0,0,0,0.1)] transition-none animate-in fade-in duration-150"
+            className="absolute top-0 left-16 bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150 overflow-hidden"
           >
-            {/* 顶部控制栏 */}
-            <div className="h-10 flex items-center justify-end px-3.5 space-x-2 text-[#4f6ef7] shrink-0 pt-2">
+            {/* 顶部控制栏（分栏扩展、全屏放大、关闭） */}
+            <div className="h-10 flex items-center justify-end px-3.5 border-b border-slate-100/90 shrink-0 bg-white text-[#4f6ef7] space-x-2">
               <button 
                 onClick={() => setDrawerWidth(drawerWidth === 560 ? 420 : 560)}
-                className="p-1 rounded hover:bg-blue-50/80 transition-colors cursor-pointer"
-                title="分栏/扩展宽度"
+                className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                title="分栏扩展"
               >
                 <Columns2 className="w-[17px] h-[17px] stroke-[2.2]" />
               </button>
-              
               <button 
                 onClick={() => setDrawerWidth(drawerWidth === 840 ? 420 : 840)}
-                className="p-1 rounded hover:bg-blue-50/80 transition-colors cursor-pointer"
-                title="最大化全屏"
+                className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                title="全屏放大"
               >
                 <Maximize2 className="w-[17px] h-[17px] stroke-[2.2]" />
               </button>
-
               <button 
-                onClick={() => setActiveSidebar(null)}
-                className="p-1 rounded hover:bg-blue-50/80 transition-colors cursor-pointer"
+                onClick={() => setFloatingDrawer(null)}
+                className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
                 title="关闭"
               >
                 <X className="w-[17px] h-[17px] stroke-[2.2]" />
               </button>
             </div>
 
-            {/* 顶部 Tab 栏：4 个 Tab */}
-            <div className="px-4 pt-1 pb-2 shrink-0">
-              <div className="flex bg-[#f1f4fa] rounded-t-xl overflow-hidden p-1 shadow-inner">
-                {[
-                  { key: 'text', label: '图文' },
-                  { key: 'video', label: '视频' },
-                  { key: 'manual', label: '手册' },
-                  { key: 'file', label: '文件' },
-                ].map(tab => (
-                  <button 
-                    key={tab.key}
-                    onClick={() => setActiveResourceTab(tab.key as any)}
-                    className={`flex-1 py-1.5 text-[13px] text-center relative font-medium transition-all cursor-pointer rounded-lg ${
-                      activeResourceTab === tab.key 
-                        ? 'text-slate-800 bg-white shadow-xs' 
-                        : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
-                    }`}
-                  >
-                    {tab.label}
-                    {activeResourceTab === tab.key && (
-                      <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-6 h-[2.5px] bg-[#2f80ed] rounded-full"></div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 章节与资源条目列表 */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-3 space-y-7">
-              {currentChapters.map((chapter) => (
-                <div key={chapter.id} className="space-y-4">
-                  {/* 章节标题栏 */}
-                  <div className="flex items-center">
-                    <ChapterBubbleIcon />
-                    <h3 className="text-[14px] font-bold text-slate-800 tracking-tight">
-                      {chapter.chapterTitle}
-                    </h3>
+            {/* 抽屉内容主体区域 */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-6 flex flex-col justify-between">
+              
+              {/* 会话列表浮层（点击“会话列表”按钮后展开切换） */}
+              {isAiHistoryOpen ? (
+                <div className="space-y-3 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-700 flex items-center">
+                      <Clock className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
+                      历史会话列表
+                    </span>
+                    <button 
+                      onClick={() => setIsAiHistoryOpen(false)}
+                      className="text-xs text-blue-600 hover:underline cursor-pointer"
+                    >
+                      返回当前对话
+                    </button>
                   </div>
-
-                  {/* 章节任务条目 */}
-                  <div className="space-y-3.5 pl-8">
-                    {chapter.items.map((item) => (
+                  <div className="space-y-1.5">
+                    {aiHistoryList.map(item => (
                       <div 
                         key={item.id}
-                        className="flex items-center justify-between group hover:bg-blue-50/40 p-1 -m-1 rounded-md transition-colors"
+                        onClick={() => {
+                          setIsAiHistoryOpen(false);
+                          handleSendAiMessage(item.title);
+                        }}
+                        className="p-3 rounded-lg border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all cursor-pointer flex items-center justify-between group"
                       >
-                        <span 
-                          className="text-[13px] text-slate-700 leading-snug truncate max-w-[210px] font-normal" 
-                          title={item.fullTitle}
-                        >
-                          {item.name}
+                        <span className="text-xs text-slate-700 group-hover:text-blue-600 font-medium truncate">
+                          {item.title}
                         </span>
-
-                        <div className="flex-1 border-b border-dotted border-blue-200/90 mx-2 min-w-[20px] opacity-70"></div>
-
-                        <button 
-                          onClick={() => {
-                            if (item.type === 'video') {
-                              setCurrentStepId('1-4');
-                              setIsPlaying(true);
-                              triggerSwitchToast(chapter.chapterTitle, item.fullTitle);
-                            } else {
-                              setPreviewItem(item);
-                            }
-                          }}
-                          className="px-3.5 py-0.5 text-xs text-[#2f80ed] border border-[#2f80ed] hover:bg-[#2f80ed] hover:text-white rounded-full transition-all duration-150 shrink-0 font-normal bg-white shadow-2xs active:scale-95 cursor-pointer"
-                        >
-                          {item.type === 'video' ? '播放' : (item.type === 'file' ? '下载' : '查看')}
-                        </button>
+                        <span className="text-[11px] text-slate-400 shrink-0 ml-2">{item.time}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* 顶部科技六边立方体 Logo 与课程标题（100%还原截图） */}
+                  <div className="flex flex-col items-center pt-3 pb-1">
+                    <div className="w-13 h-13 flex items-center justify-center mb-3">
+                      <svg viewBox="0 0 54 54" className="w-12 h-12" fill="none">
+                        <polygon points="27,4 47,15 47,39 27,50 7,39 7,15" stroke="#104db8" strokeWidth="5.2" strokeLinejoin="round" fill="none" />
+                        <polygon points="27,17 38,23 38,36 27,42 16,36 16,23" fill="#1877f2" />
+                        <line x1="27" y1="4" x2="27" y2="17" stroke="#104db8" strokeWidth="3.8" />
+                        <line x1="47" y1="15" x2="38" y2="23" stroke="#104db8" strokeWidth="3.8" />
+                        <line x1="47" y1="39" x2="38" y2="36" stroke="#104db8" strokeWidth="3.8" />
+                        <line x1="27" y1="50" x2="27" y2="42" stroke="#104db8" strokeWidth="3.8" />
+                        <line x1="7" y1="39" x2="16" y2="36" stroke="#104db8" strokeWidth="3.8" />
+                        <line x1="7" y1="15" x2="16" y2="23" stroke="#104db8" strokeWidth="3.8" />
+                      </svg>
+                    </div>
+                    <h2 className="text-[16px] sm:text-[17px] font-bold text-slate-900 tracking-tight text-center">
+                      AI学伴（演示）-Python 数据可视化
+                    </h2>
+                  </div>
 
-            {/* 抽屉底部统计信息 */}
-            <div className="px-5 py-2.5 border-t border-slate-100 bg-white/70 text-[11px] text-slate-400 flex items-center justify-between shrink-0">
-              <span>共 {currentChapters.reduce((acc, c) => acc + c.items.length, 0)} 项资源</span>
-              <span className="text-blue-500">点击按钮在线交互</span>
+                  {/* 欢迎语及推荐问题卡片（与截图完全一致） */}
+                  {aiChatMessages.length === 0 ? (
+                    <div className="space-y-4 pt-1">
+                      {/* 欢迎语行：机器人头像 + 彩色渐变字 */}
+                      <div className="flex items-center space-x-2.5">
+                        {/* 浅蓝圆形科技机器人头像 */}
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#2563eb] via-[#4f46e5] to-[#38bdf8] p-0.5 shadow-sm shrink-0 flex items-center justify-center">
+                          <div className="w-full h-full rounded-full bg-white flex items-center justify-center relative overflow-hidden">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-b from-[#1d4ed8] to-[#4338ca] flex flex-col items-center justify-center text-white">
+                              <span className="text-[8px] font-black tracking-tighter leading-none">AI</span>
+                              <div className="w-2 h-0.5 bg-cyan-300 rounded-full mt-0.5"></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <h3 className="text-[15px] sm:text-[16px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#2f6bf6] to-[#6366f1] tracking-tight">
+                          欢迎来到多模态智能实训平台~
+                        </h3>
+                      </div>
+
+                      {/* 3 个推荐提问气泡药丸卡片 */}
+                      <div className="space-y-2.5 pl-10">
+                        {[
+                          '请介绍下这门课程的主要内容',
+                          '这门课程的主要大纲内容有哪些',
+                          '请介绍下这门课程的技术栈有哪些',
+                        ].map((promptText) => (
+                          <button 
+                            key={promptText}
+                            onClick={() => handleSendAiMessage(promptText)}
+                            className="w-fit max-w-[95%] px-4 py-2.5 bg-[#f1f3f7] hover:bg-[#e7ebf2] active:scale-[0.98] text-slate-700 hover:text-slate-900 text-xs sm:text-[13px] rounded-xl flex items-center space-x-2 transition-all cursor-pointer text-left shadow-2xs group"
+                          >
+                            <span>{promptText}</span>
+                            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    /* 消息对话记录 */
+                    <div className="space-y-4 pt-1">
+                      {aiChatMessages.map((msg, idx) => (
+                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          {msg.role === 'assistant' && (
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-[9px] font-bold shrink-0 mr-2 shadow-2xs">
+                              AI
+                            </div>
+                          )}
+                          <div 
+                            className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap ${
+                              msg.role === 'user' 
+                                ? 'bg-[#2f80ed] text-white rounded-br-xs shadow-xs' 
+                                : 'bg-[#f1f3f7] text-slate-800 rounded-bl-xs'
+                            }`}
+                          >
+                            {msg.content}
+                          </div>
+                        </div>
+                      ))}
+                      {isAiThinking && (
+                        <div className="flex items-center space-x-2 text-slate-400 text-xs pl-9">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce"></div>
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.2s]"></div>
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.4s]"></div>
+                          <span>AI学伴正在思考...</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 底部操作区（会话列表/新建会话 + 大圆角输入框，100%还原截图） */}
+              <div className="space-y-2.5 pt-4 shrink-0">
+                {/* 会话列表 & 新建会话按钮 */}
+                <div className="flex items-center justify-between">
+                  <button 
+                    onClick={() => setIsAiHistoryOpen(!isAiHistoryOpen)}
+                    className="px-3 py-1.5 border border-[#8ea4fc] text-[#4f6ef7] hover:bg-blue-50/70 rounded-md text-xs font-medium flex items-center space-x-1.5 transition-colors cursor-pointer bg-white shadow-2xs"
+                  >
+                    <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
+                    <span>会话列表</span>
+                  </button>
+
+                  <button 
+                    onClick={handleNewAiChat}
+                    className="px-3 py-1.5 border border-[#8ea4fc] text-[#4f6ef7] hover:bg-blue-50/70 rounded-md text-xs font-medium flex items-center space-x-1.5 transition-colors cursor-pointer bg-white shadow-2xs"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>新建会话</span>
+                  </button>
+                </div>
+
+                {/* 提问输入框 */}
+                <div className="border border-slate-200/90 rounded-2xl bg-white p-3 shadow-2xs focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all flex flex-col justify-between min-h-[96px]">
+                  <textarea 
+                    value={aiInputText}
+                    onChange={(e) => setAiInputText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendAiMessage(aiInputText);
+                      }
+                    }}
+                    placeholder="点击这里开始提问"
+                    className="w-full resize-none outline-none border-none text-xs sm:text-[13px] text-slate-800 placeholder-slate-400 leading-relaxed font-sans bg-transparent"
+                    rows={2}
+                  />
+                  <div className="flex items-center justify-between pt-1">
+                    <div></div>
+                    <div className="flex items-center space-x-2">
+                      <button className="text-slate-400 hover:text-slate-600 p-1 transition-colors cursor-pointer" title="常用提示词">
+                        <Bookmark className="w-4 h-4 stroke-[2]" />
+                      </button>
+                      <button className="text-slate-400 hover:text-slate-600 p-1 transition-colors cursor-pointer" title="上传附件">
+                        <Paperclip className="w-4 h-4 stroke-[2]" />
+                      </button>
+                      <button 
+                        onClick={() => handleSendAiMessage(aiInputText)}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                          aiInputText.trim() 
+                            ? 'bg-[#6366f1] hover:bg-[#4f46e5] text-white shadow-xs' 
+                            : 'bg-[#818cf8] text-white hover:opacity-95'
+                        }`}
+                        title="发送提问"
+                      >
+                        <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* 拖拽手柄 */}
@@ -1334,8 +1722,314 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
           </aside>
         )}
 
-        {/* 主视窗区域：隔离在独立层级 z-0，绝对无法穿透覆盖外部抽屉 */}
-        <div className="flex-1 flex flex-col relative z-0 bg-[#181a20] overflow-hidden">
+        {/* 3. 资源面板（与右侧内容共享界面，非浮动覆盖，支持鼠标拖拽改变左右两块内容占比；笔记与目录可覆盖在其上方） */}
+        {isResourceOpen && (
+          <>
+            <aside 
+              style={{ width: `${resourcePanelWidth}px` }}
+              className="relative h-full shrink-0 bg-[#fafbfe] border-r border-slate-200/90 flex flex-col z-10 animate-in fade-in duration-150 overflow-hidden"
+            >
+              {/* 顶部控制栏 */}
+              <div className="h-10 flex items-center justify-between px-3.5 text-[#4f6ef7] shrink-0 pt-1 border-b border-slate-100/90 bg-white">
+                {openedManualBook ? (
+                  <button 
+                    onClick={() => setOpenedManualBook(null)}
+                    className="flex items-center text-xs text-blue-600 hover:text-blue-700 font-medium py-1 px-1.5 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                    title="返回资源列表"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                    <span>返回手册列表</span>
+                  </button>
+                ) : (
+                  <span className="text-xs font-bold text-slate-700 flex items-center">
+                    <Film className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
+                    课程资源
+                  </span>
+                )}
+
+                <div className="flex items-center space-x-1">
+                  <button 
+                    onClick={() => {
+                      const halfWidth = Math.round((window.innerWidth - 64) * 0.5);
+                      setResourcePanelWidth(resourcePanelWidth === halfWidth ? 460 : halfWidth);
+                    }}
+                    className="p-1 rounded hover:bg-blue-50/80 transition-colors cursor-pointer"
+                    title="5:5 均分左右占比"
+                  >
+                    <Columns2 className="w-[17px] h-[17px] stroke-[2.2]" />
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      const largeWidth = Math.round((window.innerWidth - 64) * 0.68);
+                      setResourcePanelWidth(resourcePanelWidth === largeWidth ? 460 : largeWidth);
+                    }}
+                    className="p-1 rounded hover:bg-blue-50/80 transition-colors cursor-pointer"
+                    title="扩展左侧占比"
+                  >
+                    <Maximize2 className="w-[17px] h-[17px] stroke-[2.2]" />
+                  </button>
+
+                  <button 
+                    onClick={() => setIsResourceOpen(false)}
+                    className="p-1 rounded hover:bg-blue-50/80 transition-colors cursor-pointer"
+                    title="关闭资源面板"
+                  >
+                    <X className="w-[17px] h-[17px] stroke-[2.2]" />
+                  </button>
+                </div>
+              </div>
+
+              {/* 当处于打开手册阅读模式时，渲染实训指导书手册阅读器（100%还原截图） */}
+              {openedManualBook ? (
+                <div className="flex-1 flex flex-col overflow-hidden bg-slate-100">
+                  {/* 手册阅读器顶栏工具条（精细还原截图） */}
+                  <div className="h-9 bg-[#fbfcfd] border-b border-slate-200/90 flex items-center justify-between px-3 shrink-0 text-xs text-slate-600 select-none">
+                    {/* 左侧控制：缩略图、搜索、页码输入、缩放控制 */}
+                    <div className="flex items-center space-x-2">
+                      <button className="text-slate-500 hover:text-slate-800 p-1 hover:bg-slate-100 rounded cursor-pointer" title="页面缩略图">
+                        <Columns2 className="w-3.5 h-3.5 rotate-90" />
+                      </button>
+                      <button className="text-slate-500 hover:text-slate-800 p-1 hover:bg-slate-100 rounded cursor-pointer" title="全文检索">
+                        <Search className="w-3.5 h-3.5" />
+                      </button>
+                      
+                      <div className="flex items-center space-x-1.5 text-xs text-slate-600">
+                        <input 
+                          type="text" 
+                          value={manualPageNum}
+                          onChange={(e) => setManualPageNum(Number(e.target.value) || 1)}
+                          className="w-10 h-6 text-center border border-slate-300 rounded bg-white text-xs font-mono shadow-2xs outline-none focus:border-blue-500" 
+                        />
+                        <span className="text-slate-400 font-mono text-[11px]">/ {manualTotalPages}</span>
+                      </div>
+
+                      <div className="h-3.5 w-px bg-slate-300 mx-0.5"></div>
+
+                      <div className="flex items-center space-x-1 text-slate-500 font-mono">
+                        <button 
+                          onClick={() => setManualZoom(prev => Math.max(70, prev - 10))}
+                          className="w-5 h-5 flex items-center justify-center hover:bg-slate-200/70 rounded text-slate-700 font-bold cursor-pointer"
+                          title="缩小"
+                        >
+                          -
+                        </button>
+                        <span className="text-[10px] text-slate-400 w-7 text-center">{manualZoom}%</span>
+                        <button 
+                          onClick={() => setManualZoom(prev => Math.min(150, prev + 10))}
+                          className="w-5 h-5 flex items-center justify-center hover:bg-slate-200/70 rounded text-slate-700 font-bold cursor-pointer"
+                          title="放大"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 右侧批注工具组（画笔、T字、荧光笔、插入图像、更多扩展） */}
+                    <div className="flex items-center space-x-1 text-slate-500">
+                      <button className="p-1 hover:bg-slate-100 hover:text-blue-600 rounded cursor-pointer" title="画笔批注"><PenTool className="w-3.5 h-3.5" /></button>
+                      <button className="p-1 hover:bg-slate-100 hover:text-blue-600 rounded font-serif font-bold text-xs cursor-pointer" title="文本标注"><Type className="w-3.5 h-3.5" /></button>
+                      <button className="p-1 hover:bg-slate-100 hover:text-blue-600 rounded cursor-pointer" title="高亮标记"><Edit2 className="w-3.5 h-3.5" /></button>
+                      <button className="p-1 hover:bg-slate-100 hover:text-blue-600 rounded cursor-pointer" title="插入图像"><ImageIcon className="w-3.5 h-3.5" /></button>
+                      <button className="p-1 hover:bg-slate-100 hover:text-blue-600 rounded cursor-pointer" title="更多工具"><ChevronsRight className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </div>
+
+                  {/* 手册多页纸张阅读流（灰色背景、居中白色纸张，100%还原用户截图） */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#c8ced8] p-4 sm:p-5 space-y-6">
+                    {/* 第一页：封面（高精度还原截图） */}
+                    <div 
+                      style={{ transform: `scale(${manualZoom / 100})`, transformOrigin: 'top center' }}
+                      className="bg-white shadow-[0_4px_24px_rgba(0,0,0,0.18)] mx-auto w-full max-w-[520px] aspect-[1/1.414] p-8 sm:p-10 flex flex-col justify-between relative select-text transition-transform duration-150 rounded-xs"
+                    >
+                      {/* 顶部公司抬头细线 */}
+                      <div>
+                        <div className="flex items-center justify-end pb-1 border-b border-slate-400/80">
+                          <span className="text-[10px] text-slate-600 font-sans tracking-tight">北京新大陆时代科技有限公司</span>
+                        </div>
+                      </div>
+
+                      {/* 居中 Logo 与标题 */}
+                      <div className="flex flex-col items-center my-auto pt-4 pb-8">
+                        {/* 新大陆经典蓝色几何条纹 Logo */}
+                        <div className="flex items-center space-x-3 mb-12">
+                          <div className="w-13 h-13 flex items-center justify-center">
+                            <svg viewBox="0 0 60 60" className="w-12 h-12" fill="none">
+                              <polygon points="30,4 56,30 30,56 4,30" fill="#0c63c9" />
+                              <line x1="12" y1="26" x2="24" y2="38" stroke="white" strokeWidth="2.5" />
+                              <line x1="16" y1="20" x2="32" y2="36" stroke="white" strokeWidth="2.5" />
+                              <line x1="22" y1="14" x2="42" y2="34" stroke="white" strokeWidth="2.5" />
+                              <line x1="28" y1="8" x2="48" y2="28" stroke="white" strokeWidth="2.5" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="text-[20px] font-black text-[#0c63c9] tracking-wider font-sans leading-none">新大陆时代科技</div>
+                            <div className="text-[9px] font-bold text-[#0c63c9] tracking-[0.2em] font-sans leading-none mt-1.5 uppercase">Newland Era Hi-Tech</div>
+                          </div>
+                        </div>
+
+                        {/* 指导书大标题 */}
+                        <h1 className="text-[22px] sm:text-[24px] font-black text-[#0c63c9] tracking-wide text-center font-sans">
+                          Python 数据可视化实训指导书
+                        </h1>
+                      </div>
+
+                      {/* 底部两行蓝色口号 */}
+                      <div className="flex flex-col items-center text-center pb-2">
+                        <p className="text-[11px] text-[#2f6ce5] font-sans font-medium tracking-wide">
+                          The wise lead The willing follow
+                        </p>
+                        <p className="text-[11px] text-[#2f6ce5] font-sans font-medium tracking-wide mt-1">
+                          让学习者与优秀者同行
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 第二页：内容简介（高精度还原截图） */}
+                    <div 
+                      style={{ transform: `scale(${manualZoom / 100})`, transformOrigin: 'top center' }}
+                      className="bg-white shadow-[0_4px_24px_rgba(0,0,0,0.18)] mx-auto w-full max-w-[520px] aspect-[1/1.414] p-8 sm:p-10 flex flex-col justify-between relative select-text transition-transform duration-150 rounded-xs"
+                    >
+                      {/* 顶部公司抬头细线 */}
+                      <div>
+                        <div className="flex items-center justify-end pb-1 border-b border-slate-400/80 mb-8">
+                          <span className="text-[10px] text-slate-600 font-sans tracking-tight">北京新大陆时代科技有限公司</span>
+                        </div>
+
+                        {/* 内容简介标题 */}
+                        <h2 className="text-[18px] sm:text-[19px] font-black text-[#0c63c9] tracking-widest text-center mb-8 font-sans">
+                          内容简介
+                        </h2>
+
+                        {/* 正文内容 */}
+                        <div className="space-y-4 text-slate-800 font-sans text-[12px] leading-[2.1] text-justify indent-7">
+                          <p>
+                            本实训指导书以 <span className="font-bold">Python 数据可视化核心库 Matplotlib</span> 为载体，围绕散点图这一基础图型，设计了从环境准备、参数理解、颜色映射到综合案例的完整训练路径。学习者将在 <span className="font-bold">Jupyter Notebook</span> 中以逐格运行的方式，完成 <span className="font-mono font-bold">scatter()</span> 函数核心参数、气泡图、多子图布局与趋势分析的系统训练。
+                          </p>
+                          <p>
+                            本实训指导书在内容组织上以工程项目为主线，以「气温与冷饮销量」真实业务场景为载体，突出编程实践能力与数据思维培养，可作为高等职业院校大数据、人工智能等专业的实训教材，也可供数据可视化初学者自学使用。
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* 底部页码 */}
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100 pt-2.5">
+                        <span>第 2 页</span>
+                        <span>实训指导书 · 核心基础篇</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* 常规资源 Tab 与章节资源列表 */
+                <>
+                  {/* 顶部 Tab 栏：4 个 Tab */}
+                  <div className="px-4 pt-2 pb-2 shrink-0 bg-white border-b border-slate-100">
+                    <div className="flex bg-[#f1f4fa] rounded-lg overflow-hidden p-1 shadow-inner">
+                      {[
+                        { key: 'text', label: '图文' },
+                        { key: 'video', label: '视频' },
+                        { key: 'manual', label: '手册' },
+                        { key: 'file', label: '文件' },
+                      ].map(tab => (
+                        <button 
+                          key={tab.key}
+                          onClick={() => setActiveResourceTab(tab.key as any)}
+                          className={`flex-1 py-1 text-[12px] sm:text-[13px] text-center relative font-medium transition-all cursor-pointer rounded-md ${
+                            activeResourceTab === tab.key 
+                              ? 'text-slate-800 bg-white shadow-xs font-bold' 
+                              : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
+                          }`}
+                        >
+                          {tab.label}
+                          {activeResourceTab === tab.key && (
+                            <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-5 h-[2px] bg-[#2f80ed] rounded-full"></div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 章节与资源条目列表 */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-5 py-3 space-y-6">
+                    {currentChapters.map((chapter) => (
+                      <div key={chapter.id} className="space-y-3.5">
+                        {/* 章节标题栏 */}
+                        <div className="flex items-center">
+                          <ChapterBubbleIcon />
+                          <h3 className="text-[13px] sm:text-[14px] font-bold text-slate-800 tracking-tight truncate">
+                            {chapter.chapterTitle}
+                          </h3>
+                        </div>
+
+                        {/* 章节任务条目 */}
+                        <div className="space-y-3 pl-8">
+                          {chapter.items.map((item) => (
+                            <div 
+                              key={item.id}
+                              className="flex items-center justify-between group hover:bg-blue-50/50 p-1 -m-1 rounded-md transition-colors"
+                            >
+                              <span 
+                                className="text-[12px] sm:text-[13px] text-slate-700 leading-snug truncate flex-1 pr-2 font-normal" 
+                                title={item.fullTitle}
+                              >
+                                {item.name}
+                              </span>
+
+                              <div className="w-8 border-b border-dotted border-blue-200/90 mx-1.5 opacity-70 shrink-0"></div>
+
+                              <button 
+                                onClick={() => {
+                                  if (item.type === 'video') {
+                                    setCurrentStepId('1-4');
+                                    setIsPlaying(true);
+                                    triggerSwitchToast(chapter.chapterTitle, item.fullTitle);
+                                  } else if (item.type === 'manual') {
+                                    setOpenedManualBook({
+                                      title: item.fullTitle || item.name,
+                                      subtitle: chapter.chapterTitle
+                                    });
+                                  } else {
+                                    setPreviewItem(item);
+                                  }
+                                }}
+                                className="px-3 py-0.5 text-xs text-[#2f80ed] border border-[#2f80ed] hover:bg-[#2f80ed] hover:text-white rounded-full transition-all duration-150 shrink-0 font-normal bg-white shadow-2xs active:scale-95 cursor-pointer"
+                              >
+                                {item.type === 'video' ? '播放' : (item.type === 'file' ? '下载' : '查看')}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 抽屉底部统计信息 */}
+                  <div className="px-4 py-2.5 border-t border-slate-100 bg-white/80 text-[11px] text-slate-400 flex items-center justify-between shrink-0">
+                    <span>共 {currentChapters.reduce((acc, c) => acc + c.items.length, 0)} 项资源</span>
+                    <span className="text-blue-500">点击按钮在线交互</span>
+                  </div>
+                </>
+              )}
+            </aside>
+
+            {/* 左右分栏拖拽手柄：按住鼠标左右拖动改变左右两块内容占比 */}
+            <div 
+              onMouseDown={handleResourceMouseDownResize}
+              className={`w-2 -ml-1 -mr-1 z-30 cursor-col-resize flex items-center justify-center select-none group transition-colors hover:bg-blue-500/20 active:bg-blue-600/30 ${
+                isDraggingResource ? 'bg-blue-500/30' : ''
+              }`}
+              title="按住鼠标左右拖动，调整资源面板与右侧内容占比"
+            >
+              <div className={`w-[3px] h-12 rounded-full transition-colors shadow-xs ${
+                isDraggingResource ? 'bg-blue-600' : 'bg-slate-300 group-hover:bg-blue-500'
+              }`} />
+            </div>
+          </>
+        )}
+
+        {/* 主视窗区域：与左侧打开的资源面板共享视窗空间，自适应伸缩 */}
+        <div className="flex-1 min-w-0 flex flex-col relative z-0 bg-[#181a20] overflow-hidden">
           
           {/* 场景 A：视频步骤类型（当前选中的是 1-4 等视频任务）—— 完美参考截图呈现 JupyterLab 实操视频播放器 */}
           {activeStep.type === 'video' ? (
@@ -2163,7 +2857,7 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
               <div className="h-12 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 shadow-xs z-10">
                 <div className="flex items-center space-x-2">
                   <button 
-                    onClick={() => setActiveSidebar(activeSidebar ? null : 'directory')}
+                    onClick={() => setFloatingDrawer(floatingDrawer === 'directory' ? null : 'directory')}
                     className="p-1.5 text-slate-500 hover:bg-slate-100 rounded cursor-pointer" 
                     title="展开/收起目录"
                   >
@@ -2391,6 +3085,16 @@ for word, weight in keywords:
         </div>
       )}
       
+      {/* 资源面板拖拽中的防穿透全屏遮罩 */}
+      {isDraggingResource && (
+        <div className="fixed inset-0 z-[9999] cursor-col-resize select-none pointer-events-auto" />
+      )}
+
+      {/* 截图快门白光微闪动画 */}
+      {isScreenFlashing && (
+        <div className="fixed inset-0 z-[9999] bg-white/70 pointer-events-none transition-opacity duration-200" />
+      )}
+
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 5px;
