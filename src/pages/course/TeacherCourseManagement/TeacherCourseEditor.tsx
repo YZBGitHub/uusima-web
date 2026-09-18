@@ -28,7 +28,8 @@ import {
   PieChart,
   GitFork,
   X,
-  Image as ImageIcon
+  Image as ImageIcon,
+  UploadCloud
 } from 'lucide-react';
 import TeacherStepEditorModal, { TeacherTask, TeacherChapter } from './TeacherStepEditorModal';
 

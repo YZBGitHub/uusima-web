@@ -1,26 +1,40 @@
 import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
-import CourseHall from "./pages/CourseHall";
-import Login from "./pages/Login";
-import Registration from "./pages/Registration";
-import ConfigManagement from "./pages/ConfigManagement";
-import PlatformOperation from "./pages/PlatformOperation";
-import Personal from "./pages/Personal";
-import ForgotPassword from "./pages/ForgotPassword";
-import Profile from "./pages/Profile";
-import SchoolLibrary from "./pages/SchoolLibrary";
-import TenantManagement from "./pages/TenantManagement";
-import PersonalTenantManagement from "./pages/PersonalTenantManagement";
-import JoinOrg from "./pages/JoinOrg";
-import InviteLanding from "./pages/InviteLanding";
-import InviteRecords from "./pages/InviteRecords";
-import MobileRegistrationSuccess from "./pages/MobileRegistrationSuccess";
-import DatasetHall from "./pages/DatasetHall";
-import LabHall from "./pages/LabHall";
+
+// 1. 认证模块
+import {
+  Login,
+  Registration,
+  ForgotPassword,
+  MobileRegistrationSuccess,
+  InviteLanding,
+  JoinOrg
+} from "./pages/auth";
+
+// 2. 门户大厅模块
+import { CourseHall, LabHall, DatasetHall } from "./pages/hall";
+
+// 3. 课程研学模块
+import { CourseLearning, CourseStudy, TeachingManagement } from "./pages/course";
+
+// 4. 个人中心模块
+import { Personal, Profile } from "./pages/personal";
+
+// 5. 租户管理模块
+import {
+  TenantManagement,
+  PersonalTenantManagement,
+  SchoolLibrary
+} from "./pages/tenant";
+
+// 6. 平台运营模块
+import { PlatformOperation } from "./pages/operation";
+
+// 7. 系统中枢模块
+import { ConfigManagement, InviteRecords } from "./pages/system";
+
+// 公共组件
 import SmartAssistant from "./components/SmartAssistant";
-import TeachingManagement from "./pages/TeachingManagement";
-import CourseLearning from "./pages/CourseLearning";
-import CourseStudy from "./pages/CourseStudy";
 
 export default function App() {
   const [activeView, setActiveView] = useState<
@@ -44,14 +58,16 @@ export default function App() {
     | "teaching-management"
     | "course-learning"
     | "course-study"
-  >((new URLSearchParams(window.location.search).get("view") as any) || "personal");
+    | "student-studies"
+  >((new URLSearchParams(window.location.search).get("view") as any) || "student-studies");
   const [isNavOpen, setIsNavOpen] = useState(false);
 
   const navItems = [
+    { id: "student-studies", label: "学生-我的学习" },
+    { id: "personal", label: "我的主页" },
     { id: "course-hall", label: "课程大厅" },
     { id: "login", label: "登录" },
     { id: "registration", label: "用户注册" },
-    { id: "personal", label: "我的主页" },
     { id: "config", label: "系统管理" },
     { id: "forgot-password", label: "找回密码" },
     { id: "tenant", label: "租户管理" },
@@ -118,6 +134,9 @@ export default function App() {
         )}
         {activeView === "config" && (
           <ConfigManagement onNavigate={(view) => setActiveView(view as any)} />
+        )}
+        {activeView === "student-studies" && (
+          <Personal onNavigate={(view) => setActiveView(view as any)} initialRole="student" initialMenu="my-studies" />
         )}
         {(activeView === "personal" || (activeView as string) === "teaching-management") && (
           <Personal onNavigate={(view) => setActiveView(view as any)} />

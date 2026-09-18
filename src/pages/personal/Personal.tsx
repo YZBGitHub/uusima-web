@@ -48,16 +48,18 @@ import {
   Edit3,
   Cpu,
   Terminal,
-  Copy
+  Copy,
+  Code2
 } from 'lucide-react';
-import CourseManagement from './CourseManagement';
-import UsersManagement from './UsersManagement';
-import OrdersManagement from './OrdersManagement';
-import TeacherTeaching from './personal/TeacherTeaching';
-import TeacherCourseEditor from './TeacherCourseManagement/TeacherCourseEditor';
+import CourseManagement from '../course/CourseManagement';
+import UsersManagement from '../system/UsersManagement';
+import OrdersManagement from '../operation/OrdersManagement';
+import TeacherTeaching from './TeacherTeaching';
+import StudentStudies from './StudentStudies';
+import TeacherCourseEditor from '../course/TeacherCourseManagement/TeacherCourseEditor';
 
 // 角色标识类型
-export type UserRole = 'student' | 'teacher' | 'school_admin' | 'super_admin';
+export type UserRole = 'student' | 'teacher' | 'school_admin' | 'course_developer' | 'super_admin';
 
 interface MenuItem {
   id: string;
@@ -115,6 +117,18 @@ const ROLES: RoleDefinition[] = [
     avatarLabel: '校管',
     menuSummary: ['成员管理', '订购信息查询', '教学管理', '考试竞赛'],
     defaultMenu: 'members'
+  },
+  {
+    id: 'course_developer',
+    name: '课程开发人员',
+    tag: '课程研发展现端',
+    desc: '负责课程体系建设与课程模块包维护',
+    badgeBg: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+    badgeText: 'bg-indigo-500',
+    icon: Code2,
+    avatarLabel: '课开',
+    menuSummary: ['课程管理', '课程模块包'],
+    defaultMenu: 'course-list'
   },
   {
     id: 'super_admin',
@@ -266,12 +280,20 @@ const TEACHER_PURCHASED_COURSES = [
   }
 ];
 
-export default function Personal({ onNavigate }: { onNavigate?: (view: string) => void }) {
+export default function Personal({ 
+  onNavigate,
+  initialRole,
+  initialMenu
+}: { 
+  onNavigate?: (view: string) => void;
+  initialRole?: UserRole;
+  initialMenu?: string;
+}) {
   // 当前角色，默认为学生，可随时弹窗切换
-  const [currentRole, setCurrentRole] = useState<UserRole>('student');
-  // 首次进入我的主页，默认弹窗让用户选择角色
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(true);
-  const [activeMenu, setActiveMenu] = useState('student-home');
+  const [currentRole, setCurrentRole] = useState<UserRole>(initialRole || 'student');
+  // 首次进入我的主页，若未指定明确的初始菜单，则弹窗让用户选择角色
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(!initialRole && !initialMenu);
+  const [activeMenu, setActiveMenu] = useState(initialMenu || 'student-home');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCourseManagementOpen, setIsCourseManagementOpen] = useState(true);
   
@@ -375,6 +397,18 @@ export default function Personal({ onNavigate }: { onNavigate?: (view: string) =
           { id: 'orders', label: '订购信息查询', icon: Package },
           { id: 'teaching', label: '教学管理', icon: BookOpen },
           { id: 'exams', label: '考试竞赛', icon: Trophy }
+        ];
+      case 'course_developer':
+        return [
+          {
+            id: 'course-management',
+            label: '课程管理',
+            icon: Book,
+            children: [
+              { id: 'course-list', label: '课程列表', icon: Book }
+            ]
+          },
+          { id: 'course-packages', label: '课程模块包', icon: LayoutGrid }
         ];
       case 'super_admin':
       default:
@@ -1522,9 +1556,9 @@ export default function Personal({ onNavigate }: { onNavigate?: (view: string) =
     if (activeMenu === 'my-exams' || activeMenu === 'exams') {
       return renderExamsView();
     }
-    // 8. 我的学习
+    // 8. 我的学习（参考截图1:1高保真界面）
     if (activeMenu === 'my-studies') {
-      return renderStudentHome();
+      return <StudentStudies onNavigate={onNavigate} />;
     }
     // 9. 我的教学 / 教学管理（参考截图1:1高保真教学任务中心）
     if (activeMenu === 'teaching' || activeMenu === 'my-teaching') {
@@ -1838,30 +1872,20 @@ export default function Personal({ onNavigate }: { onNavigate?: (view: string) =
             onClick={() => setIsRoleModalOpen(false)}
           />
           
-          <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-sm overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
             {/* 弹窗 Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-blue-50/30">
-              <div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-sm">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-800">请选择要使用的工作角色</h3>
-                </div>
-                <p className="text-xs text-slate-500 mt-1 pl-9">
-                  平台将根据您所选角色的权限动态展示对应功能菜单与控制台
-                </p>
-              </div>
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-800">切换角色</h3>
               <button 
                 onClick={() => setIsRoleModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* 4 个角色卡片列表 */}
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[65vh] overflow-y-auto">
+            {/* 简单角色列表：仅展示角色名称，无冗余解释 */}
+            <div className="p-3 space-y-1.5 max-h-[60vh] overflow-y-auto">
               {ROLES.map((role) => {
                 const Icon = role.icon;
                 const isSelected = currentRole === role.id;
@@ -1869,82 +1893,39 @@ export default function Personal({ onNavigate }: { onNavigate?: (view: string) =
                   <div
                     key={role.id}
                     onClick={() => handleSelectRole(role.id)}
-                    className={`relative p-5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between group ${
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all cursor-pointer ${
                       isSelected 
-                        ? 'border-blue-500 bg-blue-50/30 shadow-md ring-2 ring-blue-500/10' 
-                        : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50/80 hover:shadow-sm'
+                        ? 'border-blue-500 bg-blue-50/60 text-blue-700 shadow-xs' 
+                        : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50/80 text-slate-700'
                     }`}
                   >
-                    <div>
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                            isSelected ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-600'
-                          } transition-colors`}>
-                            <Icon className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <h4 className="font-bold text-slate-800 text-sm">{role.name}</h4>
-                              <span className={`text-[10px] px-1.5 py-0.2 rounded border font-normal ${role.badgeBg}`}>
-                                {role.tag}
-                              </span>
-                            </div>
-                            <span className="text-[11px] text-slate-400 font-mono">Role: {role.id}</span>
-                          </div>
-                        </div>
-                        {isSelected && (
-                          <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center">
-                            <Check className="w-3 h-3 stroke-[3]" />
-                          </div>
-                        )}
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        isSelected ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        <Icon className="w-4 h-4" />
                       </div>
-
-                      <p className="text-xs text-slate-600 leading-relaxed mb-3">
-                        {role.desc}
-                      </p>
+                      <span className="text-sm font-semibold">{role.name}</span>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100/80 mt-auto">
-                      <span className="text-[10px] font-medium text-slate-400 block mb-1.5">展示菜单权限：</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {role.menuSummary.map((m, mIdx) => (
-                          <span 
-                            key={mIdx}
-                            className={`text-[11px] px-2 py-0.5 rounded font-medium ${
-                              isSelected ? 'bg-blue-100/80 text-blue-700' : 'bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            {m}
-                          </span>
-                        ))}
+                    {isSelected && (
+                      <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                        <Check className="w-3 h-3 stroke-[3]" />
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}
             </div>
 
             {/* 弹窗 Footer */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <div className="text-xs text-slate-500">
-                当前生效身份：<span className="font-bold text-blue-600">{currentRoleInfo.name}</span>
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setIsRoleModalOpen(false)}
-                  className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-200/60 rounded-lg transition-colors"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={() => setIsRoleModalOpen(false)}
-                  className="px-5 py-2 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors flex items-center space-x-1"
-                >
-                  <span>确认使用当前角色</span>
-                  <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                </button>
-              </div>
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+              <button
+                onClick={() => setIsRoleModalOpen(false)}
+                className="px-4 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200/70 rounded-lg transition-colors cursor-pointer"
+              >
+                关闭
+              </button>
             </div>
           </div>
         </div>

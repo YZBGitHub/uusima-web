@@ -7,6 +7,8 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Maximize,
   Home,
   ShieldCheck,
@@ -50,6 +52,8 @@ import {
   ArrowRight,
   Clock,
   Plus,
+  Minus,
+  Download,
   Bookmark,
   ArrowUp,
   Wrench,
@@ -89,6 +93,562 @@ const ResizeHandle = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => v
   </div>
 );
 
+// 新大陆时代科技 Logo 组件（完美对照课件截图右上角）
+const NewlandLogo = () => (
+  <div className="flex items-center space-x-2 select-none">
+    <div className="w-6 h-6 sm:w-7 sm:h-7 relative flex items-center justify-center shrink-0">
+      <svg viewBox="0 0 40 40" className="w-6 h-6 sm:w-7 sm:h-7" fill="none">
+        <polygon points="20,2 38,20 20,38 2,20" fill="#0c63c9" />
+        <line x1="8" y1="18" x2="16" y2="26" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="11" y1="14" x2="22" y2="25" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="15" y1="10" x2="29" y2="24" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="19" y1="6" x2="33" y2="20" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
+      </svg>
+    </div>
+    <div className="flex flex-col text-left leading-none">
+      <span className="text-[12px] sm:text-[13px] font-bold text-[#0c63c9] tracking-tight font-sans">新大陆时代科技</span>
+      <span className="text-[6.5px] sm:text-[7.5px] font-bold text-[#0c63c9] tracking-[0.16em] uppercase font-sans mt-0.5">Newland Era Hi-Tech</span>
+    </div>
+  </div>
+);
+
+// 课件 PPT 幻灯片查看器组件（100%对照用户提供的课件阅读截图实现）
+interface SlideViewerProps {
+  title?: string;
+  onBackToDirectory?: () => void;
+  onDownload?: () => void;
+}
+
+const SlideViewer: React.FC<SlideViewerProps> = ({
+  title = '章节1 授课操作演示（PPT）',
+  onBackToDirectory,
+  onDownload,
+}) => {
+  const [currentPage, setCurrentPage] = useState<number>(6); // 默认定位到截图中的第 6 页
+  const [inputPageText, setInputPageText] = useState<string>('6');
+  const totalPages = 21;
+  const [zoomPercent, setZoomPercent] = useState<number>(100);
+  const [zoomModeLabel, setZoomModeLabel] = useState<string>('自动缩放');
+  const [isZoomDropdownOpen, setIsZoomDropdownOpen] = useState<boolean>(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
+  const [activeTool, setActiveTool] = useState<'pen' | 'text' | 'highlight' | 'image' | null>(null);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // 滚动到指定页码
+  const handlePageJump = (page: number) => {
+    const targetPage = Math.max(1, Math.min(totalPages, page));
+    setCurrentPage(targetPage);
+    setInputPageText(String(targetPage));
+    const targetElem = document.getElementById(`slide-page-${targetPage}`);
+    if (targetElem) {
+      targetElem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // 缩放调整
+  const handleZoomChange = (val: number) => {
+    const clamped = Math.max(50, Math.min(200, val));
+    setZoomPercent(clamped);
+    setZoomModeLabel(`${clamped}%`);
+  };
+
+  return (
+    <div className="flex-1 flex flex-col bg-[#c8ced8] overflow-hidden select-none relative">
+      {/* 顶部标题行（左：章节1 授课操作演示（PPT），右：返回目录） */}
+      <div className="h-10 bg-white border-b border-slate-200/90 flex items-center justify-between px-4 shrink-0 z-20 shadow-2xs">
+        <div className="text-[13px] sm:text-sm font-bold text-slate-800 tracking-tight flex items-center truncate pr-3">
+          <span className="truncate">{title}</span>
+        </div>
+        <button 
+          onClick={onBackToDirectory}
+          className="text-xs sm:text-[13px] text-[#2f80ed] hover:text-blue-700 font-medium transition-colors cursor-pointer hover:underline shrink-0"
+        >
+          返回目录
+        </button>
+      </div>
+
+      {/* 第二行工具条（高保真还原截图） */}
+      <div className="h-9 bg-[#fbfcfd] border-b border-slate-200 flex items-center justify-between px-2.5 sm:px-3 text-slate-600 text-xs shrink-0 z-10 select-none overflow-x-auto custom-scrollbar">
+        <div className="flex items-center space-x-1.5 shrink-0">
+          {/* 缩略图侧边栏切换 */}
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={`p-1.5 rounded hover:bg-slate-200/70 transition-colors cursor-pointer ${isSidebarOpen ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}
+            title={isSidebarOpen ? '收起缩略图' : '展开缩略图'}
+          >
+            <div className="w-3.5 h-3.5 border border-current rounded-xs flex overflow-hidden">
+              <div className="w-1 border-r border-current h-full bg-current/20"></div>
+            </div>
+          </button>
+
+          {/* 全文搜索 */}
+          <button 
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            className={`p-1.5 rounded hover:bg-slate-200/70 transition-colors cursor-pointer ${isSearchOpen ? 'bg-blue-50 text-blue-600' : 'text-slate-500'}`}
+            title="全文检索"
+          >
+            <Search className="w-3.5 h-3.5" />
+          </button>
+
+          {/* 上一页 ^ */}
+          <button 
+            onClick={() => handlePageJump(Math.max(1, currentPage - 1))}
+            disabled={currentPage <= 1}
+            className="p-1 text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200/70 rounded cursor-pointer"
+            title="上一页"
+          >
+            <ChevronUp className="w-3.5 h-3.5 stroke-[2.5]" />
+          </button>
+
+          {/* 下一页 v */}
+          <button 
+            onClick={() => handlePageJump(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
+            className="p-1 text-slate-500 hover:text-slate-800 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200/70 rounded cursor-pointer"
+            title="下一页"
+          >
+            <ChevronDown className="w-3.5 h-3.5 stroke-[2.5]" />
+          </button>
+
+          {/* 页码输入框 [ 6 ] / 21 */}
+          <div className="flex items-center space-x-1 pl-0.5">
+            <input 
+              type="text"
+              value={inputPageText}
+              onChange={(e) => setInputPageText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const p = parseInt(inputPageText);
+                  if (!isNaN(p) && p >= 1 && p <= totalPages) {
+                    handlePageJump(p);
+                  }
+                }
+              }}
+              onBlur={() => {
+                const p = parseInt(inputPageText);
+                if (!isNaN(p) && p >= 1 && p <= totalPages) {
+                  handlePageJump(p);
+                } else {
+                  setInputPageText(String(currentPage));
+                }
+              }}
+              className="w-8 h-5.5 text-center border border-slate-300 rounded bg-white text-xs font-mono shadow-2xs outline-none focus:border-blue-500"
+            />
+            <span className="text-slate-400 font-mono text-[11px]">/ {totalPages}</span>
+          </div>
+
+          <div className="h-3.5 w-px bg-slate-300 mx-1"></div>
+
+          {/* 缩小按钮 — */}
+          <button 
+            onClick={() => handleZoomChange(zoomPercent - 10)}
+            className="w-5 h-5 flex items-center justify-center hover:bg-slate-200/70 rounded text-slate-700 font-bold cursor-pointer"
+            title="缩小"
+          >
+            <Minus className="w-3 h-3 stroke-[2.5]" />
+          </button>
+
+          {/* 放大按钮 + */}
+          <button 
+            onClick={() => handleZoomChange(zoomPercent + 10)}
+            className="w-5 h-5 flex items-center justify-center hover:bg-slate-200/70 rounded text-slate-700 font-bold cursor-pointer"
+            title="放大"
+          >
+            <Plus className="w-3 h-3 stroke-[2.5]" />
+          </button>
+
+          {/* 缩放下拉框 [ 自动缩放 v ] */}
+          <div className="relative">
+            <button 
+              onClick={() => setIsZoomDropdownOpen(!isZoomDropdownOpen)}
+              className="flex items-center justify-between space-x-1 px-2 py-0.5 border border-slate-200 rounded bg-white hover:bg-slate-50 text-[11px] text-slate-700 min-w-[76px] cursor-pointer shadow-2xs"
+            >
+              <span>{zoomModeLabel}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+
+            {isZoomDropdownOpen && (
+              <div className="absolute top-full left-0 mt-1 w-28 bg-white border border-slate-200 rounded-md shadow-lg py-1 z-40 text-xs">
+                {[
+                  { label: '自动缩放', percent: 100 },
+                  { label: '适合页宽', percent: 100 },
+                  { label: '实际大小', percent: 100 },
+                  { label: '50%', percent: 50 },
+                  { label: '75%', percent: 75 },
+                  { label: '125%', percent: 125 },
+                  { label: '150%', percent: 150 },
+                  { label: '200%', percent: 200 },
+                ].map(opt => (
+                  <button
+                    key={opt.label}
+                    onClick={() => {
+                      setZoomModeLabel(opt.label);
+                      setZoomPercent(opt.percent);
+                      setIsZoomDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-1 hover:bg-blue-50 cursor-pointer ${zoomModeLabel === opt.label ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="h-3.5 w-px bg-slate-300 mx-1"></div>
+
+          {/* 批注工具组（倾斜毛笔、T 文本、细铅笔、图片、更多 >>） */}
+          <div className="flex items-center space-x-0.5 text-slate-500">
+            <button 
+              onClick={() => setActiveTool(activeTool === 'highlight' ? null : 'highlight')}
+              className={`p-1 rounded hover:bg-slate-200/70 hover:text-blue-600 cursor-pointer ${activeTool === 'highlight' ? 'text-blue-600 bg-blue-50' : ''}`}
+              title="荧光高亮"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={() => setActiveTool(activeTool === 'text' ? null : 'text')}
+              className={`p-1 rounded hover:bg-slate-200/70 hover:text-blue-600 font-serif font-bold text-xs cursor-pointer ${activeTool === 'text' ? 'text-blue-600 bg-blue-50' : ''}`}
+              title="文本标注"
+            >
+              <Type className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={() => setActiveTool(activeTool === 'pen' ? null : 'pen')}
+              className={`p-1 rounded hover:bg-slate-200/70 hover:text-blue-600 cursor-pointer ${activeTool === 'pen' ? 'text-blue-600 bg-blue-50' : ''}`}
+              title="自由画笔"
+            >
+              <PenTool className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              onClick={() => setActiveTool(activeTool === 'image' ? null : 'image')}
+              className={`p-1 rounded hover:bg-slate-200/70 hover:text-blue-600 cursor-pointer ${activeTool === 'image' ? 'text-blue-600 bg-blue-50' : ''}`}
+              title="插入图像/贴图"
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              className="p-1 rounded hover:bg-slate-200/70 hover:text-blue-600 cursor-pointer text-slate-400"
+              title="更多工具"
+            >
+              <ChevronsRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* 右侧：下载课件 (PPT) */}
+        <div className="flex items-center space-x-2 shrink-0 ml-2">
+          <button 
+            onClick={onDownload}
+            className="flex items-center space-x-1.5 px-3 py-1 bg-[#2f80ed] hover:bg-blue-600 text-white text-xs rounded shadow-xs font-medium transition-all active:scale-95 cursor-pointer"
+            title="下载当前课件 PPT 源文件"
+          >
+            <FileDown className="w-3.5 h-3.5 stroke-[2.2]" />
+            <span>下载课件 (PPT)</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 搜索展开框 */}
+      {isSearchOpen && (
+        <div className="bg-white px-4 py-2 border-b border-slate-200 flex items-center justify-between shrink-0 shadow-xs z-10">
+          <div className="flex items-center space-x-2 flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400" />
+            <input 
+              type="text" 
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              placeholder="搜索课件幻灯片内容（如：scatter、参数、目标）..."
+              className="w-full text-xs outline-none text-slate-700 placeholder:text-slate-400"
+              autoFocus
+            />
+          </div>
+          <button 
+            onClick={() => setIsSearchOpen(false)}
+            className="text-xs text-slate-400 hover:text-slate-600 p-1"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* 主体区：左侧可选缩略图 + 右侧连续幻灯片流 */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* 左侧幻灯片缩略图侧边栏 */}
+        {isSidebarOpen && (
+          <div className="w-36 sm:w-44 bg-[#eef1f6] border-r border-slate-300/80 flex flex-col shrink-0 overflow-y-auto custom-scrollbar p-3 space-y-3 select-none">
+            <div className="text-[11px] font-bold text-slate-500 pb-1 border-b border-slate-300 flex items-center justify-between">
+              <span>幻灯片列表</span>
+              <span>21 页</span>
+            </div>
+            {[
+              { num: 1, label: '封面导读' },
+              { num: 2, label: '课程模块' },
+              { num: 3, label: '实训准备' },
+              { num: 4, label: '前置回顾' },
+              { num: 5, label: '知识框架' },
+              { num: 6, label: '任务能力目标概览' },
+              { num: 7, label: '六项任务能力目标' },
+              { num: 8, label: '任务重难点剖析' },
+              { num: 9, label: 'scatter 参数精解' },
+              { num: 10, label: '坐标与标签美化' },
+              { num: 11, label: '颜色映射表应用' },
+              { num: 12, label: '气温与冷饮综合案例' },
+              { num: 13, label: '多子图布局设计' },
+              { num: 14, label: '数据读取与清洗' },
+              { num: 15, label: '可视化趋势绘制' },
+              { num: 16, label: '实操常见报错解析' },
+              { num: 17, label: '代码工程化规范' },
+              { num: 18, label: '课堂小测试' },
+              { num: 19, label: '综合拓展任务' },
+              { num: 20, label: '实训总结与升华' },
+              { num: 21, label: '课后作业与资源' },
+            ].map(slide => (
+              <div 
+                key={slide.num}
+                onClick={() => handlePageJump(slide.num)}
+                className={`p-1.5 rounded-md cursor-pointer transition-all ${
+                  currentPage === slide.num 
+                    ? 'bg-blue-100 ring-2 ring-blue-500' 
+                    : 'bg-white hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                <div className="aspect-[16/9] bg-slate-50 border border-slate-200 rounded flex flex-col items-center justify-center p-1 text-center relative overflow-hidden shadow-2xs">
+                  <div className="w-full h-1 bg-blue-500 absolute top-0 left-0"></div>
+                  <span className="text-[10px] font-bold text-slate-700 truncate w-full">{slide.label}</span>
+                </div>
+                <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
+                  <span>第 {slide.num} 页</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 核心幻灯片阅读画布（连续纵向排版，高精度还原截图内容） */}
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-6 flex flex-col items-center bg-[#c8ced8]"
+        >
+          {/* 幻灯片第 6 页（任务能力目标和任务重难点概览）—— 像素级还原截图 */}
+          <div 
+            id="slide-page-6"
+            style={{ transform: `scale(${zoomPercent / 100})`, transformOrigin: 'top center' }}
+            className="w-full max-w-[760px] aspect-[16/9] bg-white rounded-xs shadow-[0_4px_24px_rgba(0,0,0,0.22)] p-6 sm:p-8 flex flex-col justify-between relative select-text overflow-hidden shrink-0 transition-transform duration-150"
+          >
+            {/* 左上角浅蓝柔和装饰波浪色块 */}
+            <div className="absolute -top-3 -left-4 w-44 h-24 pointer-events-none opacity-85">
+              <div className="w-24 h-4 bg-gradient-to-r from-blue-400 to-sky-300 rounded-full mb-1"></div>
+              <div className="w-36 h-3.5 bg-gradient-to-r from-blue-300 to-sky-200 rounded-full mb-1 ml-3"></div>
+              <div className="w-20 h-3 bg-gradient-to-r from-sky-400 to-blue-200 rounded-full ml-1"></div>
+            </div>
+
+            {/* 右上角：新大陆时代科技 Logo */}
+            <div className="flex justify-end z-10">
+              <NewlandLogo />
+            </div>
+
+            {/* 中间核心内容：立体菱形数字 2 + 大标题 */}
+            <div className="my-auto flex items-center justify-center space-x-6 sm:space-x-8 px-4 sm:px-8 z-10">
+              {/* 立体双层蓝色菱形徽标 */}
+              <div className="w-20 h-20 sm:w-24 sm:h-24 relative flex items-center justify-center shrink-0">
+                <div className="w-full h-full bg-gradient-to-br from-[#1960c9] to-[#0c3779] rotate-45 rounded-lg shadow-xl"></div>
+                <div className="absolute inset-1.5 bg-gradient-to-tr from-[#2d7bf0] to-[#5ba0ff] rotate-45 rounded-md flex items-center justify-center"></div>
+                <div className="absolute inset-3.5 bg-white rotate-45 rounded-xs flex items-center justify-center shadow-inner">
+                  <span className="text-3xl sm:text-4xl font-black text-[#1556ba] -rotate-45 font-sans">2</span>
+                </div>
+              </div>
+
+              {/* 标题文字 */}
+              <div className="text-left">
+                <h2 className="text-2xl sm:text-3xl font-black text-[#183a6a] tracking-wider leading-snug font-sans">
+                  任务能力目标<br />和任务重难点
+                </h2>
+              </div>
+            </div>
+
+            {/* 底部微小页码 */}
+            <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100/60 pt-1">
+              <span>第 6 页</span>
+              <span>Python 数据可视化 · 任务概览</span>
+            </div>
+          </div>
+
+          {/* 幻灯片第 7 页（任务能力目标 6 大立柱卡片）—— 像素级还原截图 */}
+          <div 
+            id="slide-page-7"
+            style={{ transform: `scale(${zoomPercent / 100})`, transformOrigin: 'top center' }}
+            className="w-full max-w-[760px] aspect-[16/9] bg-white rounded-xs shadow-[0_4px_24px_rgba(0,0,0,0.22)] p-6 sm:p-8 flex flex-col justify-between relative select-text overflow-hidden shrink-0 transition-transform duration-150"
+          >
+            {/* 左上角浅蓝装饰与标题 */}
+            <div className="absolute -top-3 -left-4 w-36 h-20 pointer-events-none opacity-85">
+              <div className="w-24 h-3.5 bg-gradient-to-r from-blue-400 to-sky-300 rounded-full mb-1"></div>
+              <div className="w-32 h-3 bg-gradient-to-r from-blue-300 to-sky-200 rounded-full ml-2"></div>
+            </div>
+
+            <div className="flex items-center justify-between z-10 mb-2">
+              <h2 className="text-xl sm:text-2xl font-black text-[#183a6a] tracking-wide font-sans pl-2">
+                任务能力目标
+              </h2>
+              <NewlandLogo />
+            </div>
+
+            {/* 6 个横向排列的彩色立柱指标卡片（01到06） */}
+            <div className="grid grid-cols-6 gap-2 sm:gap-2.5 my-auto pt-2 pb-2 px-1 z-10">
+              {/* 01: 蓝 */}
+              <div className="flex flex-col bg-white rounded border border-blue-200/90 shadow-sm overflow-hidden hover:-translate-y-1 transition-transform">
+                <div className="bg-gradient-to-b from-[#3b82f6] to-[#1d4ed8] text-white text-center py-1 font-bold text-xs sm:text-sm tracking-wider">
+                  01
+                </div>
+                <div className="p-1.5 sm:p-2 text-[10px] sm:text-[11px] text-slate-700 leading-snug font-sans flex-1 flex items-center justify-center text-center">
+                  能启动 Jupyter Notebook 并配置中文显示.
+                </div>
+              </div>
+
+              {/* 02: 橙 */}
+              <div className="flex flex-col bg-white rounded border border-amber-300 shadow-sm overflow-hidden hover:-translate-y-1 transition-transform">
+                <div className="bg-gradient-to-b from-[#f97316] to-[#c2410c] text-white text-center py-1 font-bold text-xs sm:text-sm tracking-wider">
+                  02
+                </div>
+                <div className="p-1.5 sm:p-2 text-[10px] sm:text-[11px] text-slate-700 leading-snug font-sans flex-1 flex items-center justify-center text-center">
+                  能把两个列表画成散点图并加上坐标轴和坐标轴名称.
+                </div>
+              </div>
+
+              {/* 03: 蓝 */}
+              <div className="flex flex-col bg-white rounded border border-blue-200/90 shadow-sm overflow-hidden hover:-translate-y-1 transition-transform">
+                <div className="bg-gradient-to-b from-[#3b82f6] to-[#1d4ed8] text-white text-center py-1 font-bold text-xs sm:text-sm tracking-wider">
+                  03
+                </div>
+                <div className="p-1.5 sm:p-2 text-[10px] sm:text-[11px] text-slate-700 leading-snug font-sans flex-1 flex items-center justify-center text-center">
+                  能用 s、c、marker、alpha 参数调整点的大小、颜色、形状和透明度.
+                </div>
+              </div>
+
+              {/* 04: 橙 */}
+              <div className="flex flex-col bg-white rounded border border-amber-300 shadow-sm overflow-hidden hover:-translate-y-1 transition-transform">
+                <div className="bg-gradient-to-b from-[#f97316] to-[#c2410c] text-white text-center py-1 font-bold text-xs sm:text-sm tracking-wider">
+                  04
+                </div>
+                <div className="p-1.5 sm:p-2 text-[10px] sm:text-[11px] text-slate-700 leading-snug font-sans flex-1 flex items-center justify-center text-center">
+                  能在一张图上面画两组数据并用 legend() 显示图例.
+                </div>
+              </div>
+
+              {/* 05: 蓝 */}
+              <div className="flex flex-col bg-white rounded border border-blue-200/90 shadow-sm overflow-hidden hover:-translate-y-1 transition-transform">
+                <div className="bg-gradient-to-b from-[#3b82f6] to-[#1d4ed8] text-white text-center py-1 font-bold text-xs sm:text-sm tracking-wider">
+                  05
+                </div>
+                <div className="p-1.5 sm:p-2 text-[10px] sm:text-[11px] text-slate-700 leading-snug font-sans flex-1 flex items-center justify-center text-center">
+                  能用颜色深浅 (cmap+color bar) 或点大小表示第三个变量.
+                </div>
+              </div>
+
+              {/* 06: 橙 */}
+              <div className="flex flex-col bg-white rounded border border-amber-300 shadow-sm overflow-hidden hover:-translate-y-1 transition-transform">
+                <div className="bg-gradient-to-b from-[#f97316] to-[#c2410c] text-white text-center py-1 font-bold text-xs sm:text-sm tracking-wider">
+                  06
+                </div>
+                <div className="p-1.5 sm:p-2 text-[10px] sm:text-[11px] text-slate-700 leading-snug font-sans flex-1 flex items-center justify-center text-center">
+                  能独立完成「气温与冷饮销量」综合案例并读懂图中的规律.
+                </div>
+              </div>
+            </div>
+
+            {/* 底部微小页码 */}
+            <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100/60 pt-1">
+              <span>第 7 页</span>
+              <span>Python 数据可视化 · 能力矩阵</span>
+            </div>
+          </div>
+
+          {/* 幻灯片第 8 页（任务重难点：橙色与蓝色折角条）—— 像素级还原截图 */}
+          <div 
+            id="slide-page-8"
+            style={{ transform: `scale(${zoomPercent / 100})`, transformOrigin: 'top center' }}
+            className="w-full max-w-[760px] aspect-[16/9] bg-white rounded-xs shadow-[0_4px_24px_rgba(0,0,0,0.22)] p-6 sm:p-8 flex flex-col justify-between relative select-text overflow-hidden shrink-0 transition-transform duration-150"
+          >
+            {/* 左上角浅蓝装饰与标题 */}
+            <div className="absolute -top-3 -left-4 w-36 h-20 pointer-events-none opacity-85">
+              <div className="w-24 h-3.5 bg-gradient-to-r from-blue-400 to-sky-300 rounded-full mb-1"></div>
+              <div className="w-32 h-3 bg-gradient-to-r from-blue-300 to-sky-200 rounded-full ml-2"></div>
+            </div>
+
+            <div className="flex items-center justify-between z-10 mb-2">
+              <h2 className="text-xl sm:text-2xl font-black text-[#183a6a] tracking-wide font-sans pl-2">
+                任务重难点
+              </h2>
+              <NewlandLogo />
+            </div>
+
+            {/* 重点与难点大折角条 */}
+            <div className="my-auto px-4 sm:px-8 space-y-4 sm:space-y-5 w-full z-10">
+              {/* 重点（橙色立体折角大文本块） */}
+              <div className="relative bg-gradient-to-r from-[#ea580c] to-[#f97316] text-white py-3.5 sm:py-4 px-6 rounded-sm shadow-md flex items-center transform -skew-x-3">
+                <span className="transform skew-x-3 text-xs sm:text-sm md:text-[15px] font-bold tracking-wide font-sans">
+                  重点：scatter() 四个常用参数（s、c、marker、alpha）的含义与使用。
+                </span>
+              </div>
+
+              {/* 难点（蓝色立体折角大文本块） */}
+              <div className="relative bg-gradient-to-r from-[#1d4ed8] to-[#3b82f6] text-white py-3.5 sm:py-4 px-6 rounded-sm shadow-md flex items-center transform -skew-x-3">
+                <span className="transform skew-x-3 text-xs sm:text-sm md:text-[15px] font-bold tracking-wide font-sans">
+                  难点：理解用颜色或点大小在一张图里同时表达第三个变量。
+                </span>
+              </div>
+            </div>
+
+            {/* 底部微小页码 */}
+            <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100/60 pt-1">
+              <span>第 8 页</span>
+              <span>Python 数据可视化 · 教学重难点</span>
+            </div>
+          </div>
+
+          {/* 幻灯片第 9 页（scatter() 函数核心语法演示） */}
+          <div 
+            id="slide-page-9"
+            style={{ transform: `scale(${zoomPercent / 100})`, transformOrigin: 'top center' }}
+            className="w-full max-w-[760px] aspect-[16/9] bg-white rounded-xs shadow-[0_4px_24px_rgba(0,0,0,0.22)] p-6 sm:p-8 flex flex-col justify-between relative select-text overflow-hidden shrink-0 transition-transform duration-150"
+          >
+            <div className="flex items-center justify-between z-10 mb-2">
+              <h2 className="text-xl sm:text-2xl font-black text-[#183a6a] tracking-wide font-sans pl-2">
+                scatter() 核心语法结构
+              </h2>
+              <NewlandLogo />
+            </div>
+
+            <div className="my-auto px-6 py-2 bg-slate-900 text-slate-100 rounded-md font-mono text-xs leading-relaxed overflow-x-auto shadow-inner">
+              <p className="text-emerald-400 font-bold mb-1"># 绘制多维度散点图标准语法模板</p>
+              <p><span className="text-blue-400">import</span> matplotlib.pyplot <span className="text-blue-400">as</span> plt</p>
+              <p className="mt-2">plt.<span className="text-amber-300">scatter</span>(</p>
+              <p className="pl-4">x=temperatures, <span className="text-slate-400"># X轴数据（如日平均气温）</span></p>
+              <p className="pl-4">y=ice_cream_sales, <span className="text-slate-400"># Y轴数据（冷饮日销售额）</span></p>
+              <p className="pl-4">s=sales_volume * 5, <span className="text-slate-400"># 点的大小：表达客单量规模</span></p>
+              <p className="pl-4">c=humidity_levels, <span className="text-slate-400"># 点的颜色：表达空气湿度</span></p>
+              <p className="pl-4">cmap=<span className="text-green-300">'coolwarm'</span>, <span className="text-slate-400"># 颜色映射表</span></p>
+              <p className="pl-4">alpha=<span className="text-purple-300">0.75</span>, <span className="text-slate-400"># 透明度：防止数据重叠遮挡</span></p>
+              <p className="pl-4">marker=<span className="text-green-300">'o'</span> <span className="text-slate-400"># 标记形状：圆点</span></p>
+              <p>)</p>
+              <p className="mt-2">plt.<span className="text-amber-300">colorbar</span>(label=<span className="text-green-300">'相对湿度 (%)'</span>)</p>
+              <p>plt.<span className="text-amber-300">show</span>()</p>
+            </div>
+
+            <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100/60 pt-1">
+              <span>第 9 页</span>
+              <span>Python 数据可视化 · 核心代码语法示范</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // 目录章节与步骤数据接口
 interface DirectoryStepItem {
   id: string;
@@ -103,6 +663,98 @@ interface DirectoryChapter {
   chapterTitle: string;
   steps: DirectoryStepItem[];
 }
+
+// 章节指令库数据模型（根据用户截图高保真定义）
+interface InstructionItem {
+  id: string;
+  text: string;
+}
+
+interface InstructionTask {
+  id: string;
+  stepCode: string; // 如 1-1, 1-2
+  taskName: string; // 如 任务1：图像基础操作（理论）
+  type: 'theory' | 'practice' | 'video';
+  instructions?: InstructionItem[];
+}
+
+interface InstructionChapterData {
+  chapterId: string;
+  chapterTitle: string;
+  tasks: InstructionTask[];
+}
+
+// 章节指令库数据源（100%还原用户截图任务与指令卡片）
+const defaultInstructionChapters: InstructionChapterData[] = [
+  {
+    chapterId: 'chap-image-annotation-1',
+    chapterTitle: '第一章：图片标注',
+    tasks: [
+      { id: 't1-1', stepCode: '1-1', taskName: '任务1：图像基础操作（理论）', type: 'theory' },
+      { 
+        id: 't1-2', 
+        stepCode: '1-2', 
+        taskName: '任务1：图像基础操作（实操）', 
+        type: 'practice',
+        instructions: [
+          { id: 'cmd-1', text: '如何使用OpenCV读取并显示图像属性' },
+          { id: 'cmd-2', text: '图像的像素坐标体系是怎样定义的' },
+          { id: 'cmd-3', text: '彩色图像与灰度图像在通道结构上有何差异' },
+        ]
+      },
+      { id: 't1-3', stepCode: '1-3', taskName: '任务1：图像基础操作（视频）', type: 'video' },
+      { id: 't1-4', stepCode: '1-4', taskName: '任务2：图像处理（理论）', type: 'theory' },
+      { 
+        id: 't1-5', 
+        stepCode: '1-5', 
+        taskName: '任务2：图像处理（实操）', 
+        type: 'practice',
+        instructions: [
+          { id: 'cmd-4', text: '什么是形态学操作中的腐蚀与膨胀' },
+          { id: 'cmd-5', text: '常见的图像滤波方法有哪些' },
+          { id: 'cmd-6', text: '如何使用OpenCV实现图像平滑处理' },
+        ]
+      },
+      { id: 't1-6', stepCode: '1-6', taskName: '任务2：图像处理（视频）', type: 'video' },
+      { id: 't1-7', stepCode: '1-7', taskName: '任务3：图像分类标注（理论）', type: 'theory' },
+      { 
+        id: 't1-8', 
+        stepCode: '1-8', 
+        taskName: '任务3：图像分类标注（实操）', 
+        type: 'practice',
+        instructions: [
+          { id: 'cmd-7', text: '图像多标签分类的标准标注格式是什么' },
+          { id: 'cmd-8', text: '如何使用工具对图片批量导出类别标签' },
+        ]
+      },
+      { id: 't1-9', stepCode: '1-9', taskName: '任务3：图像分类标注（视频）', type: 'video' },
+      { id: 't1-10', stepCode: '1-10', taskName: '任务4：图像标框标注（理论）', type: 'theory' },
+      { 
+        id: 't1-11', 
+        stepCode: '1-11', 
+        taskName: '任务4：图像标框标注（实操）', 
+        type: 'practice',
+        instructions: [
+          { id: 'cmd-9', text: 'VOC xml与YOLO txt边界框坐标格式转换方法' },
+          { id: 'cmd-10', text: '目标检测实操中毒害标签与误检如何校正' },
+        ]
+      },
+      { id: 't1-12', stepCode: '1-12', taskName: '任务4：图像标框标注（视频）', type: 'video' },
+      { id: 't1-13', stepCode: '1-13', taskName: '任务5：图像描点标注（理论）', type: 'theory' },
+      { 
+        id: 't1-14', 
+        stepCode: '1-14', 
+        taskName: '任务5：图像描点标注（实操）', 
+        type: 'practice',
+        instructions: [
+          { id: 'cmd-11', text: '人脸关键点与人体骨骼点标注拓扑顺序要求' },
+          { id: 'cmd-12', text: '标注点遮挡（Occluded）属性的处理标准是什么' },
+        ]
+      },
+      { id: 't1-15', stepCode: '1-15', taskName: '任务5：图像描点标注（视频）', type: 'video' },
+    ]
+  }
+];
 
 // 实验工具入口接口
 interface LabToolItem {
@@ -275,6 +927,9 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
   const [manualTotalPages, setManualTotalPages] = useState<number>(10);
   const [manualZoom, setManualZoom] = useState<number>(100);
   
+  // 打开的图文课件阅读器状态（非 null 时在资源面板中展示如截图所示的 PPT 课件阅读器）
+  const [openedSlideBook, setOpenedSlideBook] = useState<{ chapterTitle: string; title: string } | null>(null);
+  
   // 目录折叠状态控制：各个章节独立折叠/展开
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({
     'dir-chap-1': true,
@@ -313,6 +968,13 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
   const [aiChatMessages, setAiChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; time?: string }>>([]);
   const [isAiThinking, setIsAiThinking] = useState<boolean>(false);
 
+  // AI 弹窗独立宽度控制（默认增宽为 840px，双栏容纳指令库与会话）
+  const [aiDrawerWidth, setAiDrawerWidth] = useState<number>(840);
+  // AI 指令库显隐状态（默认显示在窗口左侧，可点击收起）
+  const [isAiInstructionOpen, setIsAiInstructionOpen] = useState<boolean>(true);
+  // 当前选中的指令库章节
+  const [selectedInstructionChapterId, setSelectedInstructionChapterId] = useState<string>('chap-image-annotation-1');
+
   // 预设历史会话
   const aiHistoryList = [
     { id: '1', title: 'Python 数据可视化课程导学', time: '10:30' },
@@ -320,7 +982,7 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
     { id: '3', title: 'Jupyter 虚拟实训环境配置指引', time: '前天' },
   ];
 
-  // 发送问题处理
+  // 发送问题处理（已深度适配截图中的图像基础操作与实操指令）
   const handleSendAiMessage = (question: string) => {
     if (!question.trim()) return;
     const userMsg = question.trim();
@@ -330,16 +992,34 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
 
     setTimeout(() => {
       setIsAiThinking(false);
-      let reply = '这门课程主要涵盖了数据分析与可视化的基础理论及实操技能，帮助你掌握 Matplotlib、Seaborn 等常用库的实际应用。';
-      if (userMsg.includes('主要内容') || userMsg.includes('介绍')) {
-        reply = '《Python 数据可视化》课程主要培养学生对海量数据的清洗、统计与图表呈现能力。通过项目式实训，循序渐进掌握折线图、散点图、柱状图、箱线图、热力图等可视化图表的绘制与美化技巧。';
+      let reply = '这门课程主要涵盖了数据分析与可视化的基础理论及实操技能，帮助你掌握 OpenCV、数据处理等常用库的实际应用。';
+      if (userMsg.includes('OpenCV') && (userMsg.includes('读取') || userMsg.includes('属性'))) {
+        reply = '【OpenCV 读取与图像属性获取】\n在 Python 中使用 OpenCV 读取图像并查看核心属性：\n```python\nimport cv2\n\n# 读取图像（OpenCV 默认以 BGR 格式载入）\nimg = cv2.imread("sample.jpg")\n\n# 1. 查看图像形状尺寸（高, 宽, 通道数）\nh, w, c = img.shape\nprint(f"分辨率: {w} x {h}, 通道数: {c}")\n\n# 2. 图像像素总数（h * w * c）\nprint(f"总像素数: {img.size}")\n\n# 3. 像素数据类型（通常为 uint8，范围 0~255）\nprint(f"数据类型: {img.dtype}")\n```\n提示：若需以灰度图读取，可传入参数 `cv2.imread("sample.jpg", cv2.IMREAD_GRAYSCALE)`。';
+      } else if (userMsg.includes('坐标体系') || (userMsg.includes('像素') && userMsg.includes('坐标'))) {
+        reply = '【图像像素坐标体系定义】\n1. **几何空间坐标**：以图像左上角为原点 (0, 0)，水平向右为 X 轴正方向（图像宽度方向/列），垂直向下为 Y 轴正方向（图像高度方向/行）。\n2. **NumPy 数组访问**：在 Python/OpenCV 内部，图像被表示为二维或三维 NumPy 矩阵，索引遵循「先行后列」：\n   `pixel = img[y, x]` 或 `img[row, col]`\n   切片区域范围语法为：`roi = img[ymin:ymax, xmin:xmax]`。请注意避免把行列与XY坐标顺序混淆！';
+      } else if (userMsg.includes('通道结构') || (userMsg.includes('彩色') && userMsg.includes('灰度'))) {
+        reply = '【彩色图像与灰度图像的通道结构差异】\n1. **灰度图像**：\n   - 单通道矩阵，维度为 `(Height, Width)`；\n   - 每个像素点仅由一个 8 位整数（0~255）记录亮度强弱，0 表示纯黑，255 表示纯白。\n2. **彩色图像**：\n   - 三通道或四通道矩阵，常见维度为 `(Height, Width, 3)`；\n   - OpenCV 默认采用 **BGR 顺序**（Blue, Green, Red），与常规的 RGB 通道顺序相反；\n   - 每个通道独立记录对应颜色分量的强度，三者合成即可呈现完整色彩。';
+      } else if (userMsg.includes('腐蚀') || userMsg.includes('膨胀')) {
+        reply = '【形态学操作：腐蚀与膨胀】\n形态学操作通常作用于二值图像，依靠结构元（Kernel）对物体形状进行变换：\n1. **腐蚀 (Erosion)**：\n   - 原理：仅当结构元完全落在前景区域时，对应中心像素才保留为高电平；\n   - 效果：消除孤立细微噪点、缩窄目标边界、分离粘连物体；\n   - 代码：`cv2.erode(img, kernel, iterations=1)`\n2. **膨胀 (Dilation)**：\n   - 原理：只要结构元与前景有任意交集，中心像素即被置为高电平；\n   - 效果：填补前景内部微小孔洞、连接中断边缘、扩大物体范围；\n   - 代码：`cv2.dilate(img, kernel, iterations=1)`';
+      } else if (userMsg.includes('滤波方法') || (userMsg.includes('滤波') && !userMsg.includes('平滑'))) {
+        reply = '【常见的图像滤波方法汇总】\n1. **均值滤波** (`cv2.blur`)：简单求邻域像素算术平均，速度极快但边缘容易失真模糊；\n2. **高斯滤波** (`cv2.GaussianBlur`)：像素权重随距中心距离呈高斯分布，平滑效果自然，是去除高斯噪声的主流；\n3. **中值滤波** (`cv2.medianBlur`)：取邻域中位数，能极其完美地消除椒盐噪点（黑白斑点）且不破坏边缘；\n4. **双边滤波** (`cv2.bilateralFilter`)：结合空间距离与灰度差双权重，既能有效降噪又能极好地保全物体轮廓边缘。';
+      } else if (userMsg.includes('平滑处理') || userMsg.includes('平滑')) {
+        reply = '【使用 OpenCV 实现图像平滑处理】\n```python\nimport cv2\n\n# 载入待平滑图像\nimg = cv2.imread("noisy_img.jpg")\n\n# 1. 高斯平滑（卷积核大小须为奇数，如 5x5）\ngaussian = cv2.GaussianBlur(img, (5, 5), sigmaX=1.5)\n\n# 2. 中值平滑（去椒盐噪点专用）\nmedian = cv2.medianBlur(img, 5)\n\n# 3. 均值平滑\nblur = cv2.blur(img, (5, 5))\n\n# 保存或显示结果\ncv2.imwrite("smoothed.jpg", gaussian)\n```';
+      } else if (userMsg.includes('多标签分类') || userMsg.includes('类别标签')) {
+        reply = '【图像多标签分类与标注规范】\n1. 单张图片可同时具有多个独立属性（如「晴天」、「道路」、「行人」）；\n2. 标注数据通常以 JSON 或 Multi-hot 向量形式输出：`{"image_01.jpg": [1, 0, 1, 1]}`；\n3. 在实操中可通过标注平台的批量导出功能，直接生成配套的数据集字典索引。';
+      } else if (userMsg.includes('YOLO') || userMsg.includes('VOC') || userMsg.includes('坐标格式')) {
+        reply = '【VOC 与 YOLO 标注坐标转换原理】\n- **Pascal VOC 格式**：绝对像素左上与右下坐标 `[xmin, ymin, xmax, ymax]`；\n- **YOLO 格式**：归一化相对中心点与宽高 `[class_id, x_center, y_center, w, h]`（取值范围 0.0 ~ 1.0）；\n- 换算公式：\n  `x_center = (xmin + xmax) / (2 * width)`\n  `y_center = (ymin + ymax) / (2 * height)`\n  `w = (xmax - xmin) / width`\n  `h = (ymax - ymin) / height`';
+      } else if (userMsg.includes('关键点') || userMsg.includes('骨骼') || userMsg.includes('描点')) {
+        reply = '【图像描点与关键点标注规范】\n1. 人体骨骼点严格遵守固定拓扑序号（如 COCO 17 点标准：鼻、眼、耳、肩、肘、腕、髋、膝、踝）；\n2. 每个点包含三元组信息 `(x, y, v)`，其中 `v=0` 表示未标注，`v=1` 表示受遮挡但推断标注，`v=2` 表示清晰可见标注；\n3. 遇到肢体被前景遮挡时，需根据躯干生理连线合理标注遮挡属性。';
+      } else if (userMsg.includes('主要内容') || userMsg.includes('介绍')) {
+        reply = '《计算机视觉与图像标注实训》课程主要涵盖图像数据读取、OpenCV处理、VOC/YOLO标框、语义分割及关键点标注实战。点击左侧指令库中的具体指令即可快速调取实战指引！';
       } else if (userMsg.includes('大纲') || userMsg.includes('目录')) {
-        reply = '课程主要分为四大模块：\n1. 数据可视化基础与环境准备（JupyterLab+Numpy）\n2. 核心图表绘制与参数调优（折线/柱状/饼图）\n3. 高级统计图表与动态交互呈现\n4. 行业综合实训与商业看板报告输出。';
-      } else if (userMsg.includes('技术栈')) {
-        reply = '主要技术栈包括：Python 3.10+、NumPy、Pandas、Matplotlib、Seaborn、JupyterLab，以及配套的交互式云端实验容器。';
+        reply = '实训涵盖核心模块：\n1. 第一章：图片标注（图像基础操作、OpenCV滤波、分类/标框/描点实战）\n2. 第二章：自然语言分类与聚类\n3. 第三章：酒店评论情绪分析\n4. 第四章：基于生活场景的命名实体识别';
+      } else {
+        reply = `已收到您的提问「${userMsg}」。在当前实训任务中，可结合左侧指令库开展实验。如需运行演示，请参考代码示例或在 Jupyter 实操环境中直接测试！`;
       }
       setAiChatMessages(prev => [...prev, { role: 'assistant', content: reply, time: '刚刚' }]);
-    }, 500);
+    }, 450);
   };
 
   const handleNewAiChat = () => {
@@ -544,6 +1224,30 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
     }, 3000);
   };
 
+  // 通用下载资源处理（图文课件、手册指导书、文件等，支持真实浏览器下载并有 Toast 提示）
+  const handleDownloadResource = (title: string, type: 'ppt' | 'pdf' | 'doc' | 'file') => {
+    const ext = type === 'ppt' ? 'pptx' : type === 'pdf' ? 'pdf' : type === 'doc' ? 'docx' : 'zip';
+    const mimeMap: Record<string, string> = {
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      pdf: 'application/pdf',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      zip: 'application/zip'
+    };
+    
+    const content = `UUSIMA 智慧教学实验平台教学资源\n文件名称: ${title}.${ext}\n资源类别: ${type.toUpperCase()}\n下载时间: ${new Date().toLocaleString()}\n版权所属: 北京新大陆时代科技有限公司\n\n--- 资源内容已封包，支持教学查看与离线学习 ---`;
+    const blob = new Blob([content], { type: mimeMap[ext] || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    triggerSwitchToast('资源下载', `已开始下载【${title}.${ext}】`);
+  };
+
   // 实验步骤工具列表获取函数（展示多个实验环境，包含虚拟仿真平台型与Jupyter容器型等）
   const getLabToolsForStep = (_stepId: string): LabToolItem[] => {
     return [
@@ -588,6 +1292,32 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
       const deltaX = moveEvent.clientX - startX;
       const newWidth = Math.max(300, Math.min(window.innerWidth * 0.75, Math.min(980, startWidth + deltaX)));
       setDrawerWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  // AI 弹窗横向拖拽手柄事件监听处理（独立于目录与笔记宽度，支持宽屏拖拽）
+  const handleAiMouseDownResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = aiDrawerWidth;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const minW = isAiInstructionOpen ? 560 : 360;
+      const newWidth = Math.max(minW, Math.min(window.innerWidth * 0.9, Math.min(1380, startWidth + deltaX)));
+      setAiDrawerWidth(newWidth);
     };
 
     const onMouseUp = () => {
@@ -1371,7 +2101,16 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
             <button 
               id="btn-ai-drawer"
               type="button"
-              onClick={() => setFloatingDrawer(floatingDrawer === 'ai' ? null : 'ai')}
+              onClick={() => {
+                if (floatingDrawer === 'ai') {
+                  setFloatingDrawer(null);
+                } else {
+                  setFloatingDrawer('ai');
+                  if (isAiInstructionOpen && aiDrawerWidth < 780) {
+                    setAiDrawerWidth(840);
+                  }
+                }
+              }}
               className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-2 cursor-pointer transition-all active:scale-95 relative z-10 pointer-events-auto ${
                 floatingDrawer === 'ai'
                   ? 'bg-[#eef2ff] text-[#4f46e5] font-medium shadow-xs ring-1 ring-indigo-300'
@@ -1613,9 +2352,24 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
                                 </span>
                               </div>
 
-                              <div className="flex items-center space-x-2 shrink-0">
+                              <div className="flex items-center space-x-1.5 shrink-0">
                                 {/* 类型标签：图文、视频、实验、习题、报告 */}
                                 {renderStepTag(step.tag)}
+
+                                {/* 图文与手册步骤支持一键下载快捷按钮 */}
+                                {(step.tag === '图文' || step.type === 'text') && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDownloadResource(step.title, 'ppt');
+                                    }}
+                                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-blue-100/80 rounded text-slate-400 hover:text-blue-600 transition-all cursor-pointer"
+                                    title="下载课件 (PPT)"
+                                  >
+                                    <FileDown className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
 
                                 {isSelected ? (
                                   <span className="text-[10px] text-blue-500 font-bold bg-white px-1 py-0.5 rounded border border-blue-200 shadow-2xs">当前</span>
@@ -1755,230 +2509,338 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
           </aside>
         )}
 
-        {/* 4. AI学伴浮动抽屉（参考截图高精度还原：科技徽标、欢迎标语、推荐问题药丸卡片与专属输入框，浮动在上方与目录、笔记一致） */}
+        {/* 4. AI学伴浮动抽屉（支持窗口增宽、左侧展示当前章节指令库、一键发送消息、收起/展开与横向拖拽） */}
         {floatingDrawer === 'ai' && (
           <aside 
-            style={{ width: `${drawerWidth}px` }}
+            style={{ width: `${aiDrawerWidth}px` }}
             className={`absolute top-0 ${isLeftNavHidden ? 'left-0' : 'left-16'} bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150 overflow-hidden`}
           >
-            {/* 顶部控制栏（分栏扩展、全屏放大、关闭） */}
-            <div className="h-10 flex items-center justify-end px-3.5 border-b border-slate-100/90 shrink-0 bg-white text-[#4f6ef7] space-x-2">
-              <button 
-                onClick={() => setDrawerWidth(drawerWidth === 560 ? 420 : 560)}
-                className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
-                title="分栏扩展"
-              >
-                <Columns2 className="w-[17px] h-[17px] stroke-[2.2]" />
-              </button>
-              <button 
-                onClick={() => setDrawerWidth(drawerWidth === 840 ? 420 : 840)}
-                className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
-                title="全屏放大"
-              >
-                <Maximize2 className="w-[17px] h-[17px] stroke-[2.2]" />
-              </button>
-              <button 
-                onClick={() => setFloatingDrawer(null)}
-                className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
-                title="关闭"
-              >
-                <X className="w-[17px] h-[17px] stroke-[2.2]" />
-              </button>
+            {/* 顶部控制栏（指令库展开/收起状态提示、分栏扩展、全屏放大、关闭） */}
+            <div className="h-10 flex items-center justify-between px-3.5 border-b border-slate-100/90 shrink-0 bg-white text-[#4f6ef7]">
+              {/* 左侧区域：当指令库收起时显示“展开指令库”快速入口，展开时显示状态标志 */}
+              <div className="flex items-center space-x-2">
+                {!isAiInstructionOpen ? (
+                  <button 
+                    onClick={() => {
+                      setIsAiInstructionOpen(true);
+                      if (aiDrawerWidth < 780) setAiDrawerWidth(840);
+                    }}
+                    className="flex items-center space-x-1.5 px-2.5 py-1 text-xs text-blue-600 bg-blue-50/80 hover:bg-blue-100 rounded-md border border-blue-200/80 transition-colors font-medium cursor-pointer shadow-2xs group"
+                    title="展开当前章节指令库"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>展开指令库</span>
+                    <ChevronsRight className="w-3 h-3 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                ) : (
+                  <div className="flex items-center text-xs font-semibold text-slate-700 space-x-1.5 select-none">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    <span>AI 智能学习助手 · 课程指令交互</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 右侧控制按钮：分栏切换、全屏最大化、关闭抽屉 */}
+              <div className="flex items-center space-x-1">
+                <button 
+                  onClick={() => {
+                    const normalWidth = isAiInstructionOpen ? 840 : 480;
+                    setAiDrawerWidth(aiDrawerWidth >= 1080 ? normalWidth : 1120);
+                  }}
+                  className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                  title="分栏扩展"
+                >
+                  <Columns2 className="w-[17px] h-[17px] stroke-[2.2]" />
+                </button>
+                <button 
+                  onClick={() => {
+                    const maxWidth = Math.round(window.innerWidth * 0.88);
+                    const normalWidth = isAiInstructionOpen ? 840 : 480;
+                    setAiDrawerWidth(aiDrawerWidth >= maxWidth - 40 ? normalWidth : maxWidth);
+                  }}
+                  className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                  title="全屏放大"
+                >
+                  <Maximize2 className="w-[17px] h-[17px] stroke-[2.2]" />
+                </button>
+                <button 
+                  onClick={() => setFloatingDrawer(null)}
+                  className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                  title="关闭"
+                >
+                  <X className="w-[17px] h-[17px] stroke-[2.2]" />
+                </button>
+              </div>
             </div>
 
-            {/* 抽屉内容主体区域 */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-6 flex flex-col justify-between">
+            {/* 抽屉内容主体区域（双栏布局：左侧指令库 + 右侧对话交互区） */}
+            <div className="flex-1 flex overflow-hidden">
               
-              {/* 会话列表浮层（点击“会话列表”按钮后展开切换） */}
-              {isAiHistoryOpen ? (
-                <div className="space-y-3 animate-in fade-in duration-150">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                    <span className="text-xs font-bold text-slate-700 flex items-center">
-                      <Clock className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
-                      历史会话列表
-                    </span>
-                    <button 
-                      onClick={() => setIsAiHistoryOpen(false)}
-                      className="text-xs text-blue-600 hover:underline cursor-pointer"
-                    >
-                      返回当前对话
-                    </button>
-                  </div>
-                  <div className="space-y-1.5">
-                    {aiHistoryList.map(item => (
-                      <div 
-                        key={item.id}
+              {/* 左侧指令库展示区（默认显示，参考截图高保真实现，可点击收起） */}
+              {isAiInstructionOpen && (
+                <div className="w-[340px] shrink-0 border-r border-slate-200/80 bg-white flex flex-col h-full overflow-hidden select-none animate-in slide-in-from-left-2 duration-150">
+                  {/* 指令库顶部导航栏（高精度还原截图：返回箭头 + 第一章：图片标注 + 蓝色高亮下划线） */}
+                  <div className="h-11 px-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                    <div className="flex items-center space-x-2">
+                      <button 
                         onClick={() => {
-                          setIsAiHistoryOpen(false);
-                          handleSendAiMessage(item.title);
+                          setIsAiInstructionOpen(false);
+                          if (aiDrawerWidth > 580) setAiDrawerWidth(480);
                         }}
-                        className="p-3 rounded-lg border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all cursor-pointer flex items-center justify-between group"
+                        className="text-blue-500 hover:text-blue-700 transition-colors flex items-center cursor-pointer p-0.5"
+                        title="收起指令库"
                       >
-                        <span className="text-xs text-slate-700 group-hover:text-blue-600 font-medium truncate">
-                          {item.title}
+                        <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                      </button>
+                      
+                      {/* 章节标题与激活下划线指示条 */}
+                      <div className="relative pb-1 pt-0.5">
+                        <span className="text-[13px] font-bold text-blue-600 tracking-tight">
+                          {defaultInstructionChapters[0].chapterTitle}
                         </span>
-                        <span className="text-[11px] text-slate-400 shrink-0 ml-2">{item.time}</span>
+                        <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-blue-500 rounded-full"></div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-1">
+                      <button 
+                        onClick={() => {
+                          setIsAiInstructionOpen(false);
+                          if (aiDrawerWidth > 580) setAiDrawerWidth(480);
+                        }}
+                        className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 px-2 py-1 rounded text-xs transition-colors flex items-center space-x-0.5 cursor-pointer"
+                        title="收起指令库"
+                      >
+                        <span>收起</span>
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 任务与指令滚动列表（100%基于截图还原灰度标题与浅蓝细边框药丸指令卡片） */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-3 space-y-3.5">
+                    {defaultInstructionChapters[0].tasks.map((task) => (
+                      <div key={task.id} className="space-y-2">
+                        {/* 任务名称标题（截图中的淡灰色整齐文字） */}
+                        <div className="text-slate-400 font-medium text-[12px] leading-relaxed">
+                          {task.stepCode} {task.taskName}
+                        </div>
+
+                        {/* 实操任务下的指令卡片（点击后直接发送到右侧聊天窗口） */}
+                        {task.instructions && task.instructions.length > 0 && (
+                          <div className="space-y-2 pt-0.5">
+                            {task.instructions.map((cmd) => (
+                              <button
+                                key={cmd.id}
+                                onClick={() => handleSendAiMessage(cmd.text)}
+                                className="w-full text-left bg-white hover:bg-blue-50/60 active:bg-blue-100/70 border border-[#60a5fa] hover:border-[#3b82f6] text-slate-700 hover:text-blue-700 text-xs sm:text-[12.5px] px-3.5 py-2.5 rounded-xl transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)] active:scale-[0.99] cursor-pointer block leading-normal group"
+                                title="点击直接发送到聊天窗口"
+                              >
+                                <span>{cmd.text}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* 顶部科技六边立方体 Logo 与课程标题（100%还原截图） */}
-                  <div className="flex flex-col items-center pt-3 pb-1">
-                    <div className="w-13 h-13 flex items-center justify-center mb-3">
-                      <svg viewBox="0 0 54 54" className="w-12 h-12" fill="none">
-                        <polygon points="27,4 47,15 47,39 27,50 7,39 7,15" stroke="#104db8" strokeWidth="5.2" strokeLinejoin="round" fill="none" />
-                        <polygon points="27,17 38,23 38,36 27,42 16,36 16,23" fill="#1877f2" />
-                        <line x1="27" y1="4" x2="27" y2="17" stroke="#104db8" strokeWidth="3.8" />
-                        <line x1="47" y1="15" x2="38" y2="23" stroke="#104db8" strokeWidth="3.8" />
-                        <line x1="47" y1="39" x2="38" y2="36" stroke="#104db8" strokeWidth="3.8" />
-                        <line x1="27" y1="50" x2="27" y2="42" stroke="#104db8" strokeWidth="3.8" />
-                        <line x1="7" y1="39" x2="16" y2="36" stroke="#104db8" strokeWidth="3.8" />
-                        <line x1="7" y1="15" x2="16" y2="23" stroke="#104db8" strokeWidth="3.8" />
-                      </svg>
-                    </div>
-                    <h2 className="text-[16px] sm:text-[17px] font-bold text-slate-900 tracking-tight text-center">
-                      AI学伴（演示）-Python 数据可视化
-                    </h2>
-                  </div>
-
-                  {/* 欢迎语及推荐问题卡片（与截图完全一致） */}
-                  {aiChatMessages.length === 0 ? (
-                    <div className="space-y-4 pt-1">
-                      {/* 欢迎语行：机器人头像 + 彩色渐变字 */}
-                      <div className="flex items-center space-x-2.5">
-                        {/* 浅蓝圆形科技机器人头像 */}
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#2563eb] via-[#4f46e5] to-[#38bdf8] p-0.5 shadow-sm shrink-0 flex items-center justify-center">
-                          <div className="w-full h-full rounded-full bg-white flex items-center justify-center relative overflow-hidden">
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-b from-[#1d4ed8] to-[#4338ca] flex flex-col items-center justify-center text-white">
-                              <span className="text-[8px] font-black tracking-tighter leading-none">AI</span>
-                              <div className="w-2 h-0.5 bg-cyan-300 rounded-full mt-0.5"></div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <h3 className="text-[15px] sm:text-[16px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#2f6bf6] to-[#6366f1] tracking-tight">
-                          欢迎来到多模态智能实训平台~
-                        </h3>
-                      </div>
-
-                      {/* 3 个推荐提问气泡药丸卡片 */}
-                      <div className="space-y-2.5 pl-10">
-                        {[
-                          '请介绍下这门课程的主要内容',
-                          '这门课程的主要大纲内容有哪些',
-                          '请介绍下这门课程的技术栈有哪些',
-                        ].map((promptText) => (
-                          <button 
-                            key={promptText}
-                            onClick={() => handleSendAiMessage(promptText)}
-                            className="w-fit max-w-[95%] px-4 py-2.5 bg-[#f1f3f7] hover:bg-[#e7ebf2] active:scale-[0.98] text-slate-700 hover:text-slate-900 text-xs sm:text-[13px] rounded-xl flex items-center space-x-2 transition-all cursor-pointer text-left shadow-2xs group"
-                          >
-                            <span>{promptText}</span>
-                            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    /* 消息对话记录 */
-                    <div className="space-y-4 pt-1">
-                      {aiChatMessages.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          {msg.role === 'assistant' && (
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-[9px] font-bold shrink-0 mr-2 shadow-2xs">
-                              AI
-                            </div>
-                          )}
-                          <div 
-                            className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap ${
-                              msg.role === 'user' 
-                                ? 'bg-[#2f80ed] text-white rounded-br-xs shadow-xs' 
-                                : 'bg-[#f1f3f7] text-slate-800 rounded-bl-xs'
-                            }`}
-                          >
-                            {msg.content}
-                          </div>
-                        </div>
-                      ))}
-                      {isAiThinking && (
-                        <div className="flex items-center space-x-2 text-slate-400 text-xs pl-9">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce"></div>
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.2s]"></div>
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.4s]"></div>
-                          <span>AI学伴正在思考...</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
               )}
 
-              {/* 底部操作区（会话列表/新建会话 + 大圆角输入框，100%还原截图） */}
-              <div className="space-y-2.5 pt-4 shrink-0">
-                {/* 会话列表 & 新建会话按钮 */}
-                <div className="flex items-center justify-between">
-                  <button 
-                    onClick={() => setIsAiHistoryOpen(!isAiHistoryOpen)}
-                    className="px-3 py-1.5 border border-[#8ea4fc] text-[#4f6ef7] hover:bg-blue-50/70 rounded-md text-xs font-medium flex items-center space-x-1.5 transition-colors cursor-pointer bg-white shadow-2xs"
-                  >
-                    <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
-                    <span>会话列表</span>
-                  </button>
-
-                  <button 
-                    onClick={handleNewAiChat}
-                    className="px-3 py-1.5 border border-[#8ea4fc] text-[#4f6ef7] hover:bg-blue-50/70 rounded-md text-xs font-medium flex items-center space-x-1.5 transition-colors cursor-pointer bg-white shadow-2xs"
-                  >
-                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>新建会话</span>
-                  </button>
-                </div>
-
-                {/* 提问输入框 */}
-                <div className="border border-slate-200/90 rounded-2xl bg-white p-3 shadow-2xs focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all flex flex-col justify-between min-h-[96px]">
-                  <textarea 
-                    value={aiInputText}
-                    onChange={(e) => setAiInputText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendAiMessage(aiInputText);
-                      }
-                    }}
-                    placeholder="点击这里开始提问"
-                    className="w-full resize-none outline-none border-none text-xs sm:text-[13px] text-slate-800 placeholder-slate-400 leading-relaxed font-sans bg-transparent"
-                    rows={2}
-                  />
-                  <div className="flex items-center justify-between pt-1">
-                    <div></div>
-                    <div className="flex items-center space-x-2">
-                      <button className="text-slate-400 hover:text-slate-600 p-1 transition-colors cursor-pointer" title="常用提示词">
-                        <Bookmark className="w-4 h-4 stroke-[2]" />
-                      </button>
-                      <button className="text-slate-400 hover:text-slate-600 p-1 transition-colors cursor-pointer" title="上传附件">
-                        <Paperclip className="w-4 h-4 stroke-[2]" />
-                      </button>
+              {/* 右侧 AI 会话窗口主体（欢迎语、历史列表、问答流、专属输入框） */}
+              <div className="flex-1 min-w-[360px] overflow-y-auto custom-scrollbar p-5 sm:p-6 flex flex-col justify-between bg-white">
+                
+                {/* 会话列表浮层（点击“会话列表”按钮后展开切换） */}
+                {isAiHistoryOpen ? (
+                  <div className="space-y-3 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                      <span className="text-xs font-bold text-slate-700 flex items-center">
+                        <Clock className="w-3.5 h-3.5 mr-1.5 text-blue-600" />
+                        历史会话列表
+                      </span>
                       <button 
-                        onClick={() => handleSendAiMessage(aiInputText)}
-                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                          aiInputText.trim() 
-                            ? 'bg-[#6366f1] hover:bg-[#4f46e5] text-white shadow-xs' 
-                            : 'bg-[#818cf8] text-white hover:opacity-95'
-                        }`}
-                        title="发送提问"
+                        onClick={() => setIsAiHistoryOpen(false)}
+                        className="text-xs text-blue-600 hover:underline cursor-pointer"
                       >
-                        <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                        返回当前对话
                       </button>
+                    </div>
+                    <div className="space-y-1.5">
+                      {aiHistoryList.map(item => (
+                        <div 
+                          key={item.id}
+                          onClick={() => {
+                            setIsAiHistoryOpen(false);
+                            handleSendAiMessage(item.title);
+                          }}
+                          className="p-3 rounded-lg border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all cursor-pointer flex items-center justify-between group"
+                        >
+                          <span className="text-xs text-slate-700 group-hover:text-blue-600 font-medium truncate">
+                            {item.title}
+                          </span>
+                          <span className="text-[11px] text-slate-400 shrink-0 ml-2">{item.time}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* 顶部科技六边立方体 Logo 与课程标题（100%还原截图） */}
+                    <div className="flex flex-col items-center pt-2 pb-1">
+                      <div className="w-12 h-12 flex items-center justify-center mb-2.5">
+                        <svg viewBox="0 0 54 54" className="w-11 h-11" fill="none">
+                          <polygon points="27,4 47,15 47,39 27,50 7,39 7,15" stroke="#104db8" strokeWidth="5.2" strokeLinejoin="round" fill="none" />
+                          <polygon points="27,17 38,23 38,36 27,42 16,36 16,23" fill="#1877f2" />
+                          <line x1="27" y1="4" x2="27" y2="17" stroke="#104db8" strokeWidth="3.8" />
+                          <line x1="47" y1="15" x2="38" y2="23" stroke="#104db8" strokeWidth="3.8" />
+                          <line x1="47" y1="39" x2="38" y2="36" stroke="#104db8" strokeWidth="3.8" />
+                          <line x1="27" y1="50" x2="27" y2="42" stroke="#104db8" strokeWidth="3.8" />
+                          <line x1="7" y1="39" x2="16" y2="36" stroke="#104db8" strokeWidth="3.8" />
+                          <line x1="7" y1="15" x2="16" y2="23" stroke="#104db8" strokeWidth="3.8" />
+                        </svg>
+                      </div>
+                      <h2 className="text-[15px] sm:text-[16px] font-bold text-slate-900 tracking-tight text-center">
+                        AI学伴 · 图像标注与计算机视觉实训
+                      </h2>
+                    </div>
+
+                    {/* 欢迎语及推荐问题卡片（与截图完全一致） */}
+                    {aiChatMessages.length === 0 ? (
+                      <div className="space-y-4 pt-1">
+                        {/* 欢迎语行：机器人头像 + 彩色渐变字 */}
+                        <div className="flex items-center space-x-2.5">
+                          {/* 浅蓝圆形科技机器人头像 */}
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#2563eb] via-[#4f46e5] to-[#38bdf8] p-0.5 shadow-sm shrink-0 flex items-center justify-center">
+                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center relative overflow-hidden">
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-b from-[#1d4ed8] to-[#4338ca] flex flex-col items-center justify-center text-white">
+                                <span className="text-[8px] font-black tracking-tighter leading-none">AI</span>
+                                <div className="w-2 h-0.5 bg-cyan-300 rounded-full mt-0.5"></div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <h3 className="text-[14px] sm:text-[15px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#2f6bf6] to-[#6366f1] tracking-tight">
+                            欢迎来到多模态智能实训平台~
+                          </h3>
+                        </div>
+
+                        {/* 3 个推荐提问气泡药丸卡片 */}
+                        <div className="space-y-2.5 pl-10">
+                          {[
+                            '请介绍下这门课程的主要内容',
+                            '这门课程的主要大纲内容有哪些',
+                            '如何使用OpenCV读取并显示图像属性',
+                          ].map((promptText) => (
+                            <button 
+                              key={promptText}
+                              onClick={() => handleSendAiMessage(promptText)}
+                              className="w-fit max-w-[95%] px-4 py-2.5 bg-[#f1f3f7] hover:bg-[#e7ebf2] active:scale-[0.98] text-slate-700 hover:text-slate-900 text-xs sm:text-[13px] rounded-xl flex items-center space-x-2 transition-all cursor-pointer text-left shadow-2xs group"
+                            >
+                              <span>{promptText}</span>
+                              <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      /* 消息对话记录 */
+                      <div className="space-y-4 pt-1">
+                        {aiChatMessages.map((msg, idx) => (
+                          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            {msg.role === 'assistant' && (
+                              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-[9px] font-bold shrink-0 mr-2 shadow-2xs">
+                                AI
+                              </div>
+                            )}
+                            <div 
+                              className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap ${
+                                msg.role === 'user' 
+                                  ? 'bg-[#2f80ed] text-white rounded-br-xs shadow-xs' 
+                                  : 'bg-[#f1f3f7] text-slate-800 rounded-bl-xs'
+                              }`}
+                            >
+                              {msg.content}
+                            </div>
+                          </div>
+                        ))}
+                        {isAiThinking && (
+                          <div className="flex items-center space-x-2 text-slate-400 text-xs pl-9">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce"></div>
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.2s]"></div>
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce [animation-delay:0.4s]"></div>
+                            <span>AI学伴正在思考...</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 底部操作区（会话列表/新建会话 + 大圆角输入框，100%还原截图） */}
+                <div className="space-y-2.5 pt-4 shrink-0">
+                  {/* 会话列表 & 新建会话按钮 */}
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => setIsAiHistoryOpen(!isAiHistoryOpen)}
+                      className="px-3 py-1.5 border border-[#8ea4fc] text-[#4f6ef7] hover:bg-blue-50/70 rounded-md text-xs font-medium flex items-center space-x-1.5 transition-colors cursor-pointer bg-white shadow-2xs"
+                    >
+                      <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
+                      <span>会话列表</span>
+                    </button>
+
+                    <button 
+                      onClick={handleNewAiChat}
+                      className="px-3 py-1.5 border border-[#8ea4fc] text-[#4f6ef7] hover:bg-blue-50/70 rounded-md text-xs font-medium flex items-center space-x-1.5 transition-colors cursor-pointer bg-white shadow-2xs"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>新建会话</span>
+                    </button>
+                  </div>
+
+                  {/* 提问输入框 */}
+                  <div className="border border-slate-200/90 rounded-2xl bg-white p-3 shadow-2xs focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all flex flex-col justify-between min-h-[96px]">
+                    <textarea 
+                      value={aiInputText}
+                      onChange={(e) => setAiInputText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendAiMessage(aiInputText);
+                        }
+                      }}
+                      placeholder="点击这里开始提问，或点击左侧指令库指令直接提问..."
+                      className="w-full resize-none outline-none border-none text-xs sm:text-[13px] text-slate-800 placeholder-slate-400 leading-relaxed font-sans bg-transparent"
+                      rows={2}
+                    />
+                    <div className="flex items-center justify-between pt-1">
+                      <div></div>
+                      <div className="flex items-center space-x-2">
+                        <button className="text-slate-400 hover:text-slate-600 p-1 transition-colors cursor-pointer" title="常用提示词">
+                          <Bookmark className="w-4 h-4 stroke-[2]" />
+                        </button>
+                        <button className="text-slate-400 hover:text-slate-600 p-1 transition-colors cursor-pointer" title="上传附件">
+                          <Paperclip className="w-4 h-4 stroke-[2]" />
+                        </button>
+                        <button 
+                          onClick={() => handleSendAiMessage(aiInputText)}
+                          className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                            aiInputText.trim() 
+                              ? 'bg-[#6366f1] hover:bg-[#4f46e5] text-white shadow-xs' 
+                              : 'bg-[#818cf8] text-white hover:opacity-95'
+                          }`}
+                          title="发送提问"
+                        >
+                          <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 拖拽手柄 */}
-            <ResizeHandle onMouseDown={handleMouseDownResize} />
+            {/* 拖拽手柄（支持横向拖拽改变 AI 窗口大小） */}
+            <ResizeHandle onMouseDown={handleAiMouseDownResize} />
           </aside>
         )}
 
@@ -1999,6 +2861,15 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
                   >
                     <ArrowLeft className="w-3.5 h-3.5 mr-1" />
                     <span>返回手册列表</span>
+                  </button>
+                ) : openedSlideBook ? (
+                  <button 
+                    onClick={() => setOpenedSlideBook(null)}
+                    className="flex items-center text-xs text-blue-600 hover:text-blue-700 font-medium py-1 px-1.5 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                    title="返回资源列表"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                    <span>返回图文列表</span>
                   </button>
                 ) : (
                   <span className="text-xs font-bold text-slate-700 flex items-center">
@@ -2085,13 +2956,24 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
                       </div>
                     </div>
 
-                    {/* 右侧批注工具组（画笔、T字、荧光笔、插入图像、更多扩展） */}
-                    <div className="flex items-center space-x-1 text-slate-500">
+                    {/* 右侧批注工具组（画笔、T字、荧光笔、插入图像、更多扩展）与下载手册按钮 */}
+                    <div className="flex items-center space-x-1.5 text-slate-500">
                       <button className="p-1 hover:bg-slate-100 hover:text-blue-600 rounded cursor-pointer" title="画笔批注"><PenTool className="w-3.5 h-3.5" /></button>
                       <button className="p-1 hover:bg-slate-100 hover:text-blue-600 rounded font-serif font-bold text-xs cursor-pointer" title="文本标注"><Type className="w-3.5 h-3.5" /></button>
                       <button className="p-1 hover:bg-slate-100 hover:text-blue-600 rounded cursor-pointer" title="高亮标记"><Edit2 className="w-3.5 h-3.5" /></button>
                       <button className="p-1 hover:bg-slate-100 hover:text-blue-600 rounded cursor-pointer" title="插入图像"><ImageIcon className="w-3.5 h-3.5" /></button>
                       <button className="p-1 hover:bg-slate-100 hover:text-blue-600 rounded cursor-pointer" title="更多工具"><ChevronsRight className="w-3.5 h-3.5" /></button>
+                      
+                      <div className="h-3.5 w-px bg-slate-300 mx-0.5"></div>
+
+                      <button 
+                        onClick={() => handleDownloadResource(openedManualBook.title, 'pdf')}
+                        className="flex items-center space-x-1 px-2.5 py-1 bg-[#2f80ed] hover:bg-blue-600 text-white rounded text-[11px] font-medium shadow-xs transition-colors cursor-pointer"
+                        title="下载实训指导书完整 PDF 手册"
+                      >
+                        <FileDown className="w-3.5 h-3.5 stroke-[2.2]" />
+                        <span>下载手册 (PDF)</span>
+                      </button>
                     </div>
                   </div>
 
@@ -2180,6 +3062,15 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
                     </div>
                   </div>
                 </div>
+              ) : openedSlideBook ? (
+                /* 当处于打开图文课件模式时，在资源面板内直接展示截图所示的 PPT 查看器 */
+                <div className="flex-1 flex flex-col overflow-hidden bg-[#c8ced8]">
+                  <SlideViewer
+                    title={`${openedSlideBook.chapterTitle} ${openedSlideBook.title}（PPT）`}
+                    onBackToDirectory={() => setOpenedSlideBook(null)}
+                    onDownload={() => handleDownloadResource(openedSlideBook.title, 'ppt')}
+                  />
+                </div>
               ) : (
                 /* 常规资源 Tab 与章节资源列表 */
                 <>
@@ -2238,25 +3129,46 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
 
                               <div className="w-8 border-b border-dotted border-blue-200/90 mx-1.5 opacity-70 shrink-0"></div>
 
-                              <button 
-                                onClick={() => {
-                                  if (item.type === 'video') {
-                                    setCurrentStepId('1-4');
-                                    setIsPlaying(true);
-                                    triggerSwitchToast(chapter.chapterTitle, item.fullTitle);
-                                  } else if (item.type === 'manual') {
-                                    setOpenedManualBook({
-                                      title: item.fullTitle || item.name,
-                                      subtitle: chapter.chapterTitle
-                                    });
-                                  } else {
-                                    setPreviewItem(item);
-                                  }
-                                }}
-                                className="px-3 py-0.5 text-xs text-[#2f80ed] border border-[#2f80ed] hover:bg-[#2f80ed] hover:text-white rounded-full transition-all duration-150 shrink-0 font-normal bg-white shadow-2xs active:scale-95 cursor-pointer"
-                              >
-                                {item.type === 'video' ? '播放' : (item.type === 'file' ? '下载' : '查看')}
-                              </button>
+                              <div className="flex items-center space-x-1.5 shrink-0">
+                                <button 
+                                  onClick={() => {
+                                    if (item.type === 'video') {
+                                      setCurrentStepId('1-4');
+                                      setIsPlaying(true);
+                                      triggerSwitchToast(chapter.chapterTitle, item.fullTitle);
+                                    } else if (item.type === 'manual') {
+                                      setOpenedManualBook({
+                                        title: item.fullTitle || item.name,
+                                        subtitle: chapter.chapterTitle
+                                      });
+                                    } else if (item.type === 'text') {
+                                      setOpenedSlideBook({
+                                        chapterTitle: chapter.chapterTitle,
+                                        title: item.fullTitle || item.name
+                                      });
+                                    } else if (item.type === 'file') {
+                                      handleDownloadResource(item.fullTitle || item.name, 'file');
+                                    } else {
+                                      setPreviewItem(item);
+                                    }
+                                  }}
+                                  className="px-2.5 py-0.5 text-xs text-[#2f80ed] border border-[#2f80ed] hover:bg-[#2f80ed] hover:text-white rounded-full transition-all duration-150 font-normal bg-white shadow-2xs active:scale-95 cursor-pointer"
+                                >
+                                  {item.type === 'video' ? '播放' : (item.type === 'file' ? '下载' : '查看')}
+                                </button>
+
+                                {/* 图文和手册除支持查看外，还支持下载 */}
+                                {(item.type === 'text' || item.type === 'manual') && (
+                                  <button 
+                                    onClick={() => handleDownloadResource(item.fullTitle || item.name, item.type === 'text' ? 'ppt' : 'pdf')}
+                                    className="px-2 py-0.5 text-xs text-slate-500 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-full transition-all duration-150 font-normal bg-slate-50 hover:bg-blue-50 shadow-2xs active:scale-95 cursor-pointer flex items-center space-x-0.5"
+                                    title={`下载${item.type === 'text' ? '课件 (PPT)' : '手册 (PDF)'}`}
+                                  >
+                                    <FileDown className="w-3 h-3" />
+                                    <span>下载</span>
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -3444,117 +4356,12 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
               </div>
             </div>
           ) : (
-            
-            /* 场景 C：图文步骤类型（原 PPT / 课件浏览） */
-            <div className="flex-1 flex flex-col relative bg-[#f5f6f8]">
-              {/* 查看器顶栏工具条 */}
-              <div className="h-12 bg-white border-b border-slate-200 flex items-center px-4 justify-between shrink-0 shadow-xs z-10">
-                <div className="flex items-center space-x-2">
-                  <button 
-                    onClick={() => setFloatingDrawer(floatingDrawer === 'directory' ? null : 'directory')}
-                    className="p-1.5 text-slate-500 hover:bg-slate-100 rounded cursor-pointer" 
-                    title="展开/收起目录"
-                  >
-                    <AlignLeft className="w-4 h-4" />
-                  </button>
-                  <div className="h-4 w-px bg-slate-300 mx-1"></div>
-                  <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded cursor-pointer" title="全文搜索">
-                    <Search className="w-4 h-4" />
-                  </button>
-                  <div className="flex items-center">
-                    <button 
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      <ChevronUp className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-                  </div>
-                  
-                  <div className="flex items-center ml-2 border border-slate-300 rounded bg-white overflow-hidden h-7">
-                    <input 
-                      type="text" 
-                      value={currentPage} 
-                      onChange={(e) => setCurrentPage(Number(e.target.value) || 1)}
-                      className="w-10 text-center text-xs outline-none h-full border-r border-slate-300" 
-                    />
-                    <span className="text-xs text-slate-500 px-2 bg-slate-50 h-full flex items-center">/ {totalPages}</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center bg-slate-100 rounded border border-slate-200 h-8">
-                  <button className="px-2 text-slate-500 hover:text-slate-800 transition-colors h-full border-r border-slate-200 cursor-pointer">−</button>
-                  <div className="flex items-center justify-between w-24 px-2 h-full text-xs bg-white text-slate-700 cursor-pointer">
-                    <span>自动缩放</span>
-                    <ChevronDown className="w-3 h-3 text-slate-400" />
-                  </div>
-                  <button className="px-2 text-slate-500 hover:text-slate-800 transition-colors h-full border-l border-slate-200 cursor-pointer">+</button>
-                </div>
-                
-                <div className="flex items-center space-x-1">
-                  <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded cursor-pointer" title="绘图"><PenTool className="w-4 h-4" /></button>
-                  <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded cursor-pointer" title="文本"><Type className="w-4 h-4" /></button>
-                  <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded cursor-pointer" title="编辑"><Edit2 className="w-4 h-4" /></button>
-                  <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded cursor-pointer" title="图片"><ImageIcon className="w-4 h-4" /></button>
-                  <div className="h-4 w-px bg-slate-300 mx-1"></div>
-                  <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded cursor-pointer" title="全屏"><Maximize className="w-4 h-4" /></button>
-                </div>
-              </div>
-              
-              {/* 画布幻灯片展示区 */}
-              <div className="flex-1 overflow-auto p-8 flex justify-center items-start">
-                <div className="bg-white shadow-lg rounded-sm overflow-hidden border border-slate-200 max-w-[1000px] w-full aspect-[16/9] relative flex flex-col">
-                  
-                  {/* 校企合作标识 */}
-                  <div className="absolute top-6 right-8 flex flex-col items-end z-10">
-                    <div className="flex items-center text-[#183a6a] font-bold text-xl tracking-tight mb-1">
-                      <div className="w-6 h-6 mr-2 grid grid-cols-2 gap-0.5 rotate-45 transform">
-                        <div className="bg-[#183a6a]"></div>
-                        <div className="bg-[#4a8df8]"></div>
-                        <div className="bg-[#4a8df8]"></div>
-                        <div className="bg-[#183a6a]"></div>
-                      </div>
-                      新大陆时代科技
-                    </div>
-                    <div className="text-[#183a6a] font-bold text-sm tracking-wide uppercase">
-                      Newland Era Hi-Tech
-                    </div>
-                  </div>
-
-                  {/* 装饰渐变线条 */}
-                  <div className="absolute top-[30%] left-0 w-full h-[50%] flex flex-col justify-center space-y-4 opacity-90 pointer-events-none">
-                    <div className="h-6 w-[20%] bg-gradient-to-r from-[#7a4af8]/60 to-[#4adbf8]/40 rounded-r-full -ml-4"></div>
-                    <div className="h-10 w-[35%] bg-gradient-to-r from-[#4a8df8] to-[#4adbf8] rounded-r-full"></div>
-                    <div className="h-24 w-[90%] bg-gradient-to-r from-[#5a3af8] via-[#4a8df8] to-[#9adbf8]/50 rounded-r-full flex items-center relative">
-                      
-                      {/* 中央课件标题卡片 */}
-                      <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-full py-8 px-40 shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-50 whitespace-nowrap z-20">
-                        <h2 className="text-[44px] font-black text-slate-900 tracking-tight">{activeStep.title}</h2>
-                      </div>
-
-                    </div>
-                    <div className="h-6 w-[25%] bg-gradient-to-r from-[#4adbf8] to-transparent rounded-r-full ml-10"></div>
-                    <div className="h-6 w-[15%] bg-gradient-to-r from-[#4adbf8]/40 to-transparent rounded-r-full -ml-2"></div>
-                  </div>
-
-                  {/* 底部胶囊徽标 */}
-                  <div className="absolute bottom-[20%] left-1/2 transform -translate-x-1/2 z-10">
-                    <div className="bg-[#3b82f6] text-white px-16 py-4 rounded-full text-[22px] font-medium shadow-md whitespace-nowrap tracking-wide">
-                      {activeChapter.chapterTitle}
-                    </div>
-                  </div>
-
-                  <div className="absolute bottom-4 right-6 text-xs text-slate-400">
-                    第 {currentPage} 页 / 共 {totalPages} 页
-                  </div>
-                </div>
-              </div>
-            </div>
+            /* 场景 C：图文步骤类型 —— 100% 对齐用户截图的高保真 PPT 课件阅读器（支持缩放、批注、多页滚动与课件下载） */
+            <SlideViewer
+              title={`${activeChapter.chapterTitle} ${activeStep.title}（PPT）`}
+              onBackToDirectory={() => setFloatingDrawer('directory')}
+              onDownload={() => handleDownloadResource(activeStep.title, 'ppt')}
+            />
           )}
 
         </div>

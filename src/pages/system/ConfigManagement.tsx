@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Users, FileText, Settings, BookOpen, ChevronDown, ChevronRight, Search, Plus, Trash2, Edit2, Check, X, MoreHorizontal, Power, MinusCircle, Bell, UserCircle, BadgeCheck, FileClock, ArrowLeftRight, LogOut, CheckCircle2, LayoutGrid, Activity } from 'lucide-react';
-import OrdersManagement from './OrdersManagement';
+import OrdersManagement from '../operation/OrdersManagement';
 import Invite from './Invite';
 import InviteRecords from './InviteRecords';
 import UsersManagement from './UsersManagement';
 import SystemHome from './SystemHome';
-import ClassManagement from './system/ClassManagement';
+import ClassManagement from './ClassManagement';
 import { motion, AnimatePresence } from 'motion/react';
 
 // Mock data

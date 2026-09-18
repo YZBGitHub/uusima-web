@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { RefreshCcw, Link as LinkIcon, Building2, UserCircle, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import JoinOrg from './JoinOrg';
+import JoinOrg from '../auth/JoinOrg';
 
 export default function InviteRecords({ isSubpage }: { isSubpage?: boolean } = {}) {
   const [filterStatus, setFilterStatus] = useState<string>('all');

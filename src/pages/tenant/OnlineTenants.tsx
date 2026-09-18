@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // We will import these if they exist, but they are full pages.
 import TenantResourceOverview from './TenantResourceOverview';
-import OrdersManagement from './OrdersManagement';
-import UsersManagement from './UsersManagement';
-import PortalConfigModal from '../components/PortalConfigModal';
+import OrdersManagement from '../operation/OrdersManagement';
+import UsersManagement from '../system/UsersManagement';
+import PortalConfigModal from '../../components/PortalConfigModal';
 
 interface Tenant {
   id: string;

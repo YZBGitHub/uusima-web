@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AppHeader from '../../components/AppHeader';
 import { 
   Bot, 
   ChevronDown, 
@@ -173,52 +174,10 @@ export default function LabHall({ onNavigate }: { onNavigate?: (view: string) =>
   return (
     <div className="min-h-screen bg-[#f5f7f9] flex flex-col font-sans">
       {/* Header */}
-      <header className="bg-white px-6 py-3 flex items-center justify-between border-b border-slate-100 sticky top-0 z-50">
-        <div className="flex items-center space-x-12">
-          {/* Logo */}
-          <div className="flex items-center cursor-pointer" onClick={() => onNavigate && onNavigate('course-hall')}>
-            <img src="/logo.png" alt="UUSIMA 智慧教学实验平台" className="h-8 object-contain" />
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center space-x-8 text-sm text-slate-500">
-            <button className="hover:text-blue-500 transition-colors" onClick={() => onNavigate && onNavigate('course-hall')}>课程大厅</button>
-            <button className="text-blue-500 font-medium transition-colors" onClick={() => onNavigate && onNavigate('lab-hall')}>实验大厅</button>
-            <button className="hover:text-blue-500 transition-colors" onClick={() => onNavigate && onNavigate('dataset-hall')}>数据大厅</button>
-            <a href="https://aixb.nlecloud.com/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">AI技能分析系统</a>
-            <a href="https://lct-xy.nlecloud.com/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">AI产教融合系统</a>
-            <a href="https://deviceai.nlecloud.com/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">硬件智能体系统</a>
-            <a href="#" className="hover:text-blue-500 transition-colors" onClick={(e) => e.preventDefault()}>考试系统</a>
-          </nav>
-        </div>
-
-        {/* Right Actions */}
-        <div className="flex items-center space-x-6 text-sm">
-          <button className="flex items-center text-slate-600 hover:text-blue-500 transition-colors">
-            <Languages className="w-4 h-4 mr-1" />
-            En
-          </button>
-          <button 
-            onClick={() => onNavigate && onNavigate('personal')}
-            className="text-slate-700 hover:text-blue-500 font-medium transition-colors"
-          >
-            我的主页
-          </button>
-
-          {/* User Profile Dropdown Component */}
-          <div className="relative">
-            <button 
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center space-x-2 cursor-pointer focus:outline-none hover:opacity-80 transition-opacity"
-            >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold shadow-sm">
-                Y
-              </div>
-              <ChevronDown className="w-4 h-4 text-slate-400" />
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        activeTab="lab-hall"
+        onNavigate={onNavigate}
+      />
 
       {/* Main Content */}
       <div className="flex-1 w-full flex flex-col">

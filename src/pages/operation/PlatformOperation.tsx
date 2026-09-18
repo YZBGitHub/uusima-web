@@ -4,8 +4,8 @@ import BillingSettings from './BillingSettings';
 import UsersRegistered from './UsersRegistered';
 import OrdersManagement from './OrdersManagement';
 import ProductsManagement from './ProductsManagement';
-import OnlineTenants from './OnlineTenants';
-import PrivateTenants from './PrivateTenants';
+import OnlineTenants from '../tenant/OnlineTenants';
+import PrivateTenants from '../tenant/PrivateTenants';
 
 
 import { motion, AnimatePresence } from 'framer-motion';

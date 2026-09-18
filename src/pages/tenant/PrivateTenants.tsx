@@ -6,9 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import TenantResourceOverview from './TenantResourceOverview';
 import TenantAuthManagement from './TenantAuthManagement';
 import TenantDataOverview from './TenantDataOverview';
-import OrdersManagement from './OrdersManagement';
-import UsersManagement from './UsersManagement';
-import PortalConfigModal from '../components/PortalConfigModal';
+import OrdersManagement from '../operation/OrdersManagement';
+import UsersManagement from '../system/UsersManagement';
+import PortalConfigModal from '../../components/PortalConfigModal';
 
 interface Tenant {
   onlineStatus: 'online' | 'offline';

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import UserProfileDropdown from '../../components/UserProfileDropdown';
 import { Book, LayoutGrid, Clock, Tag, Database, Home, PieChart, Shield, Trophy, Users, User, BookOpen, UserCheck, GraduationCap, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { Languages } from 'lucide-react';
 import CourseManagement from './CourseManagement';
@@ -76,13 +77,7 @@ export default function TeachingManagement({ onNavigate }: { onNavigate?: (view:
             我的主页
           </button>
           
-          <div className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity">
-            <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center overflow-hidden">
-              <User className="w-4 h-4 text-slate-500" />
-            </div>
-            <span className="text-slate-700 font-medium text-sm">杨振邦<span className="text-slate-400 font-normal text-xs">(15396005420)</span></span>
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          </div>
+          <UserProfileDropdown onNavigate={onNavigate} />
         </div>
       </header>
 

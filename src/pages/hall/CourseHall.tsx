@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Search, Bot, Languages, User, UserCircle, Settings, LogOut, Activity, ChevronRight, BookOpen } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, Bot, BookOpen, Activity } from 'lucide-react';
+import AppHeader from '../../components/AppHeader';
 
 export default function CourseHall({ onNavigate }: { onNavigate?: (view: string) => void }) {
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isTenantOpen, setIsTenantOpen] = useState(false);
   const activeTenant = { name: "教育公司" };
   const [activeSort, setActiveSort] = useState('默认排序');
@@ -70,154 +70,33 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
     },
     {
       id: 7,
-      title: '智慧煤矿应用开发',
-      category: '物联网/行业应用',
-      students: 261,
-      desc: '本课程基于AIoT平台，围绕“...',
+      title: '数字孪生应用开发',
+      category: '物联网/前端与可视化',
+      students: 44,
+      desc: '结合Three.js实现工业级数字孪...',
       isPurchased: false,
-      gradient: 'from-indigo-500 to-purple-500'
+      gradient: 'from-blue-500 to-indigo-500'
     },
     {
       id: 8,
-      title: '植物工厂应用开发',
-      category: '物联网/行业应用',
-      students: 247,
-      desc: '本课程以智慧农业中的植物工...',
-      isPurchased: false,
-      gradient: 'from-blue-400 to-indigo-400'
-    },
-    {
-      id: 9,
-      title: '智慧健康应用开发',
-      category: '物联网/行业应用',
-      students: 206,
-      desc: '智慧健康应用开发',
-      isPurchased: false,
-      gradient: 'from-indigo-400 to-purple-400'
-    },
-    {
-      id: 10,
-      title: '智慧水务应用开发',
-      category: '物联网/行业应用',
-      students: 204,
-      desc: '智慧水务应用开发',
+      title: '工业自动化与PLC编程',
+      category: '工业互联网/自动控制',
+      students: 120,
+      desc: '涵盖常见PLC接口与现场总线系统设计...',
       isPurchased: true,
-      gradient: 'from-blue-400 to-cyan-400'
+      gradient: 'from-slate-600 to-slate-400'
     }
   ];
 
   return (
     <div className="min-h-screen bg-[#f5f7f9] flex flex-col font-sans">
       {/* Header */}
-      <header className="bg-white px-6 py-3 flex items-center justify-between border-b border-slate-100 sticky top-0 z-50">
-        <div className="flex items-center space-x-12">
-          {/* Logo */}
-          <div className="flex items-center cursor-pointer" onClick={() => onNavigate && onNavigate('course-hall')}>
-            <img src="/logo.png" alt="UUSIMA 智慧教学实验平台" className="h-8 object-contain" />
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center space-x-8 text-sm text-slate-500">
-            <button className="text-blue-500 font-medium transition-colors" onClick={() => onNavigate && onNavigate('course-hall')}>课程大厅</button>
-            <button className="hover:text-blue-500 transition-colors" onClick={() => onNavigate && onNavigate('lab-hall')}>实验大厅</button>
-            <button className="hover:text-blue-500 transition-colors" onClick={() => onNavigate && onNavigate('dataset-hall')}>数据大厅</button>
-            <a href="https://aixb.nlecloud.com/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">AI技能分析系统</a>
-            <a href="https://lct-xy.nlecloud.com/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">AI产教融合系统</a>
-            <a href="https://deviceai.nlecloud.com/" target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 transition-colors">硬件智能体系统</a>
-            <a href="#" className="hover:text-blue-500 transition-colors" onClick={(e) => e.preventDefault()}>考试系统</a>
-          </nav>
-        </div>
-
-        {/* Right Actions */}
-        <div className="flex items-center space-x-6 text-sm">
-          <button className="flex items-center text-slate-600 hover:text-blue-500 transition-colors">
-            <Languages className="w-4 h-4 mr-1" />
-            En
-          </button>
-          <button 
-            onClick={() => onNavigate && onNavigate('personal')}
-            className="text-slate-700 hover:text-blue-500 font-medium transition-colors"
-          >
-            我的主页
-          </button>
-
-          {/* User Profile Dropdown Component */}
-          <div className="relative">
-            <button 
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center space-x-2 cursor-pointer focus:outline-none hover:opacity-80 transition-opacity"
-            >
-              <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center overflow-hidden">
-                <User className="w-4 h-4 text-slate-500" />
-              </div>
-              <span className="text-slate-700 font-medium text-sm">杨振邦<span className="text-slate-400 font-normal text-xs">(15396005420)</span></span>
-              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {isUserMenuOpen && (
-              <div className="absolute right-0 mt-3 w-56 bg-white rounded shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-50 overflow-hidden transform origin-top-right">
-                <div className="relative h-12 bg-[#e6f4ff]">
-                  <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-11 h-11 rounded-full bg-[#f48b8d] text-white flex items-center justify-center font-medium border-[3px] border-white text-sm shadow-sm">
-                    振邦
-                  </div>
-                </div>
-                <div className="pt-8 pb-1">
-                  <div className="text-center px-4 mb-2">
-                    <div className="font-medium text-slate-800 text-sm">杨振邦</div>
-                    <div className="text-xs text-slate-400 mt-0.5">15396005420</div>
-                  </div>
-                  <div className="h-px bg-slate-100 my-2 mx-2"></div>
-                  <button 
-                    onClick={() => onNavigate && onNavigate('personal')}
-                    className="w-full flex items-center px-4 py-2 text-[13px] text-slate-600 hover:text-blue-500 hover:bg-slate-50 transition-colors"
-                  >
-                    <UserCircle className="w-4 h-4 mr-2" />
-                    个人设置
-                  </button>
-                  <button 
-                    onClick={() => onNavigate && onNavigate('config')}
-                    className="w-full flex items-center px-4 py-2 text-[13px] text-slate-600 hover:text-blue-500 hover:bg-slate-50 transition-colors"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    系统管理
-                  </button>
-                  <button 
-                    onClick={() => onNavigate && onNavigate('platform-operation')}
-                    className="w-full flex items-center px-4 py-2 text-[13px] text-slate-600 hover:text-blue-500 hover:bg-slate-50 transition-colors"
-                  >
-                    <Activity className="w-4 h-4 mr-2" />
-                    平台运营
-                  </button>
-                  <button 
-                    onClick={() => onNavigate && onNavigate('login')}
-                    className="w-full flex items-center px-4 py-2 text-[13px] text-red-500 hover:bg-red-50 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    退出登录
-                  </button>
-                </div>
-                <div className="border-t border-slate-100 px-3 py-3">
-                  <div className="text-[12px] text-slate-500 mb-2 px-1">组织</div>
-                  <div className="bg-[#f5f7fa] rounded flex items-center justify-between p-2">
-                    <div className="flex items-center space-x-2 overflow-hidden">
-                      <div className="w-5 h-5 bg-white rounded shadow-sm text-blue-500 flex items-center justify-center shrink-0 font-bold text-xs italic">
-                        X
-                      </div>
-                      <span className="text-[13px] text-slate-700 truncate">{activeTenant ? activeTenant.name : "教育公司"}</span>
-                    </div>
-                    <button 
-                      onClick={() => { setIsUserMenuOpen(false); setIsTenantOpen && setIsTenantOpen(true); }}
-                      className="text-[12px] text-slate-400 hover:text-blue-500 flex items-center shrink-0"
-                    >
-                      切换 <ChevronRight className="w-3 h-3 ml-0.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        activeTab="course-hall"
+        activeTenant={activeTenant}
+        onNavigate={onNavigate}
+        onSwitchTenant={() => setIsTenantOpen(true)}
+      />
 
       {/* Main Content */}
       <div className="flex-1 w-full max-w-[1440px] mx-auto pb-10">
