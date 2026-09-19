@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, ChevronUp, ExternalLink, ArrowUp, ArrowDown, Link2, Box, Image as ImageIcon, Plus, Minus, ChevronRight, Bold, Underline, Italic, Strikethrough, Heading, Code, Image, Undo, Redo, Eye, List, ListOrdered, UploadCloud, Copy, Cpu, Target, Book } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ExternalLink, ArrowUp, ArrowDown, Link2, Box, Image as ImageIcon, Plus, Minus, Bold, Underline, Italic, Strikethrough, Heading, Code, Image, Undo, Redo, Eye, List, ListOrdered, UploadCloud, Copy, Cpu, Target, Book } from 'lucide-react';
 
 interface Task {
   id: string;
@@ -98,6 +98,30 @@ export default function StepEditorModal({ task, courseName, chapters = [], onClo
     { id: 2, title: "下列属于 plt.scatter() 常用参数的有（ ）。", type: '多选题', category: '编程基础', score: 2 },
     { id: 3, title: "下列属于虚拟仿真环境支持的操作功能的有（ ）。", type: '多选题', category: '仿真', score: 4 },
     { id: 4, title: "在智慧家居项目的应用设计中，2D应用界面需实现的功能包括（ ）。", type: '多选题', category: '设计', score: 4 },
+    { id: 5, title: "使用 OpenCV 进行图像色彩空间转换时，BGR 转灰度图的常用色彩代码是（ ）。", type: '单选题', category: '编程基础', score: 2 },
+    { id: 6, title: "在图像标注任务中，以下关于目标检测矩形框标注规范说法正确的有（ ）。", type: '多选题', category: '设计', score: 3 },
+    { id: 7, title: "NumPy 中用于矩阵转置的属性是（ ）。", type: '单选题', category: '编程基础', score: 2 },
+    { id: 8, title: "下列哪些方法可以用来防止机器学习模型过拟合（ ）。", type: '多选题', category: '编程基础', score: 4 },
+    { id: 9, title: "虚拟现实与仿真系统中常采用的三维模型文件格式包括（ ）。", type: '多选题', category: '仿真', score: 3 },
+    { id: 10, title: "在进行多边形语义分割标注时，关键边缘点的贴合度要求应达到（ ）。", type: '单选题', category: '设计', score: 2 },
+    { id: 11, title: "简述在图像预处理阶段进行直方图均衡化的主要目的和基本原理。", type: '简答题', category: '编程基础', score: 5 },
+    { id: 12, title: "PyTorch 中用于定义神经网络层参数梯度的核心属性是 requires_grad。（ ）", type: '单选题', category: '编程基础', score: 2 },
+    { id: 13, title: "在 3D 点云仿真交互中，用于坐标系姿态描述的四元数包含几个分量（ ）。", type: '单选题', category: '仿真', score: 2 },
+    { id: 14, title: "UI 设计中遵循的无障碍对比度（WCAG AA级）对于普通文本的最小比值是（ ）。", type: '单选题', category: '设计', score: 3 },
+    { id: 15, title: "Pandas 中读取 CSV 文件并自动解析日期列的常用参数是（ ）。", type: '单选题', category: '编程基础', score: 2 },
+    { id: 16, title: "下列属于常见工业缺陷图像检测样本增强手段的有（ ）。", type: '多选题', category: '设计', score: 4 },
+    { id: 17, title: "在机器人轨迹仿真测试中，逆运动学求解的主要应用场景是什么？", type: '简答题', category: '仿真', score: 5 },
+    { id: 18, title: "Matplotlib 图表中保存高分辨率图像时，推荐设置的 dpi 数值是（ ）。", type: '单选题', category: '编程基础', score: 2 },
+    { id: 19, title: "交互式标注系统中快捷键撤销和重做的通用快捷键是（ ）。", type: '多选题', category: '设计', score: 2 },
+    { id: 20, title: "数字孪生车间建模中支持物理碰撞检测的物理引擎包括（ ）。", type: '多选题', category: '仿真', score: 4 },
+    { id: 21, title: "在卷积神经网络中，Pooling 池化层的主要作用包括（ ）。", type: '多选题', category: '编程基础', score: 3 },
+    { id: 22, title: "Labelme 工具导出的常用标注元数据保存格式为（ ）。", type: '单选题', category: '设计', score: 2 },
+    { id: 23, title: "简要说明虚拟仿真实验中“事件驱动机制”的工作过程。", type: '简答题', category: '仿真', score: 5 },
+    { id: 24, title: "Python 列表中向末尾追加多个元素的方法是（ ）。", type: '单选题', category: '编程基础', score: 2 },
+    { id: 25, title: "标注数据质检验收（QA）合格率通常需达到的行业基准要求是（ ）。", type: '单选题', category: '设计', score: 3 },
+    { id: 26, title: "三维物理仿真场景中光照渲染模型主要包含哪些分量？", type: '多选题', category: '仿真', score: 3 },
+    { id: 27, title: "在深度学习模型训练中，学习率衰减（Learning Rate Decay）的作用是（ ）。", type: '单选题', category: '编程基础', score: 2 },
+    { id: 28, title: "人机交互界面中关于“格式塔心理学”原则包括以下哪些？", type: '多选题', category: '设计', score: 4 },
   ]);
 
   const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
@@ -107,6 +131,11 @@ export default function StepEditorModal({ task, courseName, chapters = [], onClo
   const [requireAllAnswered, setRequireAllAnswered] = useState(true);
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
 
+  // 分页状态：支持配置分页大小（10、50、100、500）
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [jumpPageInput, setJumpPageInput] = useState<string>('');
+
   const filteredQuestions = questions.filter(q => {
     if (searchTitle && !q.title.toLowerCase().includes(searchTitle.toLowerCase())) return false;
     if (searchType && q.type !== searchType) return false;
@@ -114,11 +143,32 @@ export default function StepEditorModal({ task, courseName, chapters = [], onClo
     return true;
   });
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const totalCount = filteredQuestions.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  // 当筛选条件或 pageSize 变更时校验并重置页码
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  // 当前页切片数据
+  const paginatedQuestions = filteredQuestions.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // 全选当前页逻辑
+  const isCurrentPageAllSelected = paginatedQuestions.length > 0 && paginatedQuestions.every(q => selectedQuestions.includes(q.id));
+
+  const handleSelectAllCurrentPage = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedQuestions(filteredQuestions.map(q => q.id));
+      const idsToAdd = paginatedQuestions.map(q => q.id).filter(id => !selectedQuestions.includes(id));
+      setSelectedQuestions(prev => [...prev, ...idsToAdd]);
     } else {
-      setSelectedQuestions([]);
+      const pageIds = paginatedQuestions.map(q => q.id);
+      setSelectedQuestions(prev => prev.filter(id => !pageIds.includes(id)));
     }
   };
 
@@ -130,6 +180,27 @@ export default function StepEditorModal({ task, courseName, chapters = [], onClo
     setQuestions(prev => prev.filter(q => !selectedQuestions.includes(q.id)));
     setSelectedQuestions([]);
   };
+
+  const handleDeleteQuestion = (id: number) => {
+    setQuestions(prev => prev.filter(item => item.id !== id));
+    setSelectedQuestions(prev => prev.filter(qId => qId !== id));
+  };
+
+  const handleMoveQuestion = (id: number, direction: 'up' | 'down') => {
+    setQuestions(prev => {
+      const idx = prev.findIndex(item => item.id === id);
+      if (idx === -1) return prev;
+      const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
+      const copy = [...prev];
+      const temp = copy[idx];
+      copy[idx] = copy[targetIdx];
+      copy[targetIdx] = temp;
+      return copy;
+    });
+  };
+
+  const totalScore = filteredQuestions.reduce((sum, q) => sum + (q.score || 0), 0);
 
   const renderDocumentEditor = () => (
     <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm flex flex-col h-full">
@@ -522,8 +593,8 @@ export default function StepEditorModal({ task, courseName, chapters = [], onClo
                           
                           <div className="flex items-center space-x-4">
                             <div className="flex items-center text-sm bg-slate-50 px-4 py-1.5 rounded-full border border-slate-100">
-                              <span className="text-slate-600 mr-6">总分数： <span className="text-red-500 font-bold text-lg mx-1">27</span> 分</span>
-                              <span className="text-slate-600">评分项个数： <span className="text-red-500 font-bold text-lg mx-1">{filteredQuestions.length}</span> 个</span>
+                              <span className="text-slate-600 mr-6">总分数： <span className="text-red-500 font-bold text-lg mx-1">{totalScore}</span> 分</span>
+                              <span className="text-slate-600">评分项个数： <span className="text-red-500 font-bold text-lg mx-1">{totalCount}</span> 个</span>
                             </div>
                             <button 
                               onClick={() => setIsFiltersExpanded(!isFiltersExpanded)} 
@@ -551,15 +622,21 @@ export default function StepEditorModal({ task, courseName, chapters = [], onClo
                                     type="text" 
                                     placeholder="按题干搜索..." 
                                     value={searchTitle}
-                                    onChange={(e) => setSearchTitle(e.target.value)}
+                                    onChange={(e) => {
+                                      setSearchTitle(e.target.value);
+                                      setCurrentPage(1);
+                                    }}
                                     className="w-full px-3 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#1890ff] text-sm"
                                   />
                                 </div>
                                 <div className="w-48">
                                   <select 
                                     value={searchType}
-                                    onChange={(e) => setSearchType(e.target.value)}
-                                    className="w-full px-3 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#1890ff] text-sm bg-white"
+                                    onChange={(e) => {
+                                      setSearchType(e.target.value);
+                                      setCurrentPage(1);
+                                    }}
+                                    className="w-full px-3 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#1890ff] text-sm bg-white cursor-pointer"
                                   >
                                     <option value="">全部题型</option>
                                     <option value="单选题">单选题</option>
@@ -570,8 +647,11 @@ export default function StepEditorModal({ task, courseName, chapters = [], onClo
                                 <div className="w-48">
                                   <select 
                                     value={searchCategory}
-                                    onChange={(e) => setSearchCategory(e.target.value)}
-                                    className="w-full px-3 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#1890ff] text-sm bg-white"
+                                    onChange={(e) => {
+                                      setSearchCategory(e.target.value);
+                                      setCurrentPage(1);
+                                    }}
+                                    className="w-full px-3 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#1890ff] text-sm bg-white cursor-pointer"
                                   >
                                     <option value="">全部分类</option>
                                     <option value="编程基础">编程基础</option>
@@ -603,8 +683,8 @@ export default function StepEditorModal({ task, courseName, chapters = [], onClo
                           <div className="flex items-center justify-center">
                             <input 
                               type="checkbox" 
-                              checked={selectedQuestions.length === filteredQuestions.length && filteredQuestions.length > 0}
-                              onChange={handleSelectAll}
+                              checked={isCurrentPageAllSelected}
+                              onChange={handleSelectAllCurrentPage}
                               className="rounded border-slate-300 text-[#1890ff] focus:ring-[#1890ff]" 
                             />
                           </div>
@@ -617,56 +697,174 @@ export default function StepEditorModal({ task, courseName, chapters = [], onClo
                         </div>
                         
                         <div className="divide-y divide-slate-100 overflow-y-auto flex-1">
-                          {filteredQuestions.map((q, index) => (
-                            <div key={q.id} className="grid grid-cols-[40px_60px_1fr_100px_100px_120px_160px] gap-4 px-4 py-4 items-center hover:bg-blue-50/30 transition-colors text-sm">
-                              <div className="flex items-center justify-center">
-                                <input 
-                                  type="checkbox" 
-                                  checked={selectedQuestions.includes(q.id)}
-                                  onChange={() => handleSelectQuestion(q.id)}
-                                  className="rounded border-slate-300 text-[#1890ff] focus:ring-[#1890ff]" 
-                                />
-                              </div>
-                              <div className="flex items-center justify-center font-medium text-slate-500">
-                                {index + 1}
-                              </div>
-                              <div className="text-slate-700 leading-relaxed pr-4 font-medium flex flex-col">
-                                <span>{q.title}</span>
-                              </div>
-                              <div className="text-slate-500">{q.type}</div>
-                              <div className="text-slate-500">{q.category}</div>
-                              <div className="flex items-center">
-                                <div className="flex items-center border border-slate-200 rounded overflow-hidden w-24">
-                                  <button className="px-2 py-1 bg-slate-50 text-slate-400 hover:text-[#1890ff] hover:bg-blue-50 border-r border-slate-200 transition-colors">
-                                    <Minus className="w-3 h-3" />
-                                  </button>
-                                  <input type="text" defaultValue={q.score} readOnly className="w-full text-center text-sm outline-none bg-white py-1 font-medium text-slate-700" />
-                                  <button className="px-2 py-1 bg-slate-50 text-slate-400 hover:text-[#1890ff] hover:bg-blue-50 border-l border-slate-200 transition-colors">
-                                    <Plus className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              </div>
-                              <div className="flex items-center space-x-3 text-[#1890ff]">
-                                <button className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" title="编辑"><ExternalLink className="w-4 h-4" /></button>
-                                <button onClick={() => setQuestions(prev => prev.filter(item => item.id !== q.id))} className="text-red-500 hover:text-red-600 p-1 rounded hover:bg-red-50" title="删除"><X className="w-4 h-4" /></button>
-                                <button className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" title="上移" disabled={index === 0}><ArrowUp className={`w-4 h-4 ${index === 0 ? 'opacity-30 cursor-not-allowed' : ''}`} /></button>
-                                <button className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" title="下移" disabled={index === filteredQuestions.length - 1}><ArrowDown className={`w-4 h-4 ${index === filteredQuestions.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}`} /></button>
-                                <button className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" title="关联"><Link2 className="w-4 h-4" /></button>
-                              </div>
+                          {paginatedQuestions.length === 0 ? (
+                            <div className="py-12 text-center text-slate-400 text-sm">
+                              暂无符合条件的习题
                             </div>
-                          ))}
+                          ) : (
+                            paginatedQuestions.map((q, index) => {
+                              const absoluteIndex = (currentPage - 1) * pageSize + index;
+                              const isFirst = absoluteIndex === 0;
+                              const isLast = absoluteIndex === totalCount - 1;
+
+                              return (
+                                <div key={q.id} className="grid grid-cols-[40px_60px_1fr_100px_100px_120px_160px] gap-4 px-4 py-4 items-center hover:bg-blue-50/30 transition-colors text-sm">
+                                  <div className="flex items-center justify-center">
+                                    <input 
+                                      type="checkbox" 
+                                      checked={selectedQuestions.includes(q.id)}
+                                      onChange={() => handleSelectQuestion(q.id)}
+                                      className="rounded border-slate-300 text-[#1890ff] focus:ring-[#1890ff]" 
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-center font-medium text-slate-500">
+                                    {absoluteIndex + 1}
+                                  </div>
+                                  <div className="text-slate-700 leading-relaxed pr-4 font-medium flex flex-col">
+                                    <span>{q.title}</span>
+                                  </div>
+                                  <div className="text-slate-500">{q.type}</div>
+                                  <div className="text-slate-500">{q.category}</div>
+                                  <div className="flex items-center">
+                                    <div className="flex items-center border border-slate-200 rounded overflow-hidden w-24">
+                                      <button 
+                                        type="button"
+                                        onClick={() => {
+                                          setQuestions(prev => prev.map(item => item.id === q.id ? { ...item, score: Math.max(1, (item.score || 1) - 1) } : item));
+                                        }}
+                                        className="px-2 py-1 bg-slate-50 text-slate-400 hover:text-[#1890ff] hover:bg-blue-50 border-r border-slate-200 transition-colors cursor-pointer"
+                                      >
+                                        <Minus className="w-3 h-3" />
+                                      </button>
+                                      <input type="text" value={q.score} readOnly className="w-full text-center text-sm outline-none bg-white py-1 font-medium text-slate-700" />
+                                      <button 
+                                        type="button"
+                                        onClick={() => {
+                                          setQuestions(prev => prev.map(item => item.id === q.id ? { ...item, score: (item.score || 0) + 1 } : item));
+                                        }}
+                                        className="px-2 py-1 bg-slate-50 text-slate-400 hover:text-[#1890ff] hover:bg-blue-50 border-l border-slate-200 transition-colors cursor-pointer"
+                                      >
+                                        <Plus className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-3 text-[#1890ff]">
+                                    <button className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" title="编辑"><ExternalLink className="w-4 h-4" /></button>
+                                    <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-500 hover:text-red-600 p-1 rounded hover:bg-red-50" title="删除"><X className="w-4 h-4" /></button>
+                                    <button 
+                                      onClick={() => handleMoveQuestion(q.id, 'up')} 
+                                      className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" 
+                                      title="上移" 
+                                      disabled={isFirst}
+                                    >
+                                      <ArrowUp className={`w-4 h-4 ${isFirst ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`} />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleMoveQuestion(q.id, 'down')} 
+                                      className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" 
+                                      title="下移" 
+                                      disabled={isLast}
+                                    >
+                                      <ArrowDown className={`w-4 h-4 ${isLast ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`} />
+                                    </button>
+                                    <button className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" title="关联"><Link2 className="w-4 h-4" /></button>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
                       </div>
                       
-                      {/* Pagination */}
-                      <div className="flex items-center justify-end mt-6 shrink-0">
-                         <div className="flex items-center space-x-1 text-sm">
-                            <span className="text-slate-500 mr-4">共 10 条</span>
-                            <button className="px-2.5 py-1 border border-slate-200 rounded text-slate-500 hover:text-[#1890ff] hover:border-[#1890ff] transition-colors bg-white">&lt;</button>
-                            <button className="px-2.5 py-1 border border-[#1890ff] text-white bg-[#1890ff] rounded font-medium shadow-sm shadow-blue-200">1</button>
-                            <button className="px-2.5 py-1 border border-slate-200 rounded text-slate-600 hover:text-[#1890ff] hover:border-[#1890ff] transition-colors bg-white">2</button>
-                            <button className="px-2.5 py-1 border border-slate-200 rounded text-slate-500 hover:text-[#1890ff] hover:border-[#1890ff] transition-colors bg-white">&gt;</button>
-                         </div>
+                      {/* Pagination: 支持配置分页大小（10、50、100、500） */}
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 shrink-0 text-xs text-slate-500">
+                        {/* 左侧：条数统计与下拉选择分页大小 */}
+                        <div className="flex items-center space-x-3">
+                          <span>
+                            共 <span className="text-slate-800 font-semibold">{totalCount}</span> 条
+                          </span>
+
+                          <div className="relative flex items-center">
+                            <select
+                              value={pageSize}
+                              onChange={(e) => {
+                                setPageSize(Number(e.target.value));
+                                setCurrentPage(1);
+                              }}
+                              className="appearance-none pl-2.5 pr-6 py-1 bg-white border border-slate-200 rounded text-slate-700 text-xs outline-none hover:border-[#1890ff] focus:border-[#1890ff] transition-colors cursor-pointer"
+                            >
+                              <option value={10}>10条/页</option>
+                              <option value={50}>50条/页</option>
+                              <option value={100}>100条/页</option>
+                              <option value={500}>500条/页</option>
+                            </select>
+                            <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          </div>
+                        </div>
+
+                        {/* 右侧：页码数字按钮与直接跳转 */}
+                        <div className="flex items-center space-x-1.5">
+                          {/* 上一页 */}
+                          <button
+                            type="button"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage <= 1}
+                            className="w-7 h-7 flex items-center justify-center rounded border border-slate-200 bg-white hover:border-[#1890ff] hover:text-[#1890ff] disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-500 cursor-pointer"
+                            title="上一页"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* 页码序列 */}
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                            <button
+                              key={pageNum}
+                              type="button"
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`min-w-[28px] h-7 px-2 flex items-center justify-center rounded text-xs transition-colors cursor-pointer ${
+                                currentPage === pageNum
+                                  ? 'border border-[#1890ff] bg-[#1890ff] text-white font-medium shadow-xs'
+                                  : 'border border-slate-200 bg-white text-slate-600 hover:border-[#1890ff] hover:text-[#1890ff]'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          ))}
+
+                          {/* 下一页 */}
+                          <button
+                            type="button"
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage >= totalPages}
+                            className="w-7 h-7 flex items-center justify-center rounded border border-slate-200 bg-white hover:border-[#1890ff] hover:text-[#1890ff] disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-500 cursor-pointer"
+                            title="下一页"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* 前往 N 页 */}
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const p = parseInt(jumpPageInput, 10);
+                              if (!isNaN(p) && p >= 1 && p <= totalPages) {
+                                setCurrentPage(p);
+                              }
+                              setJumpPageInput('');
+                            }}
+                            className="flex items-center space-x-1 pl-2 text-slate-500 text-xs"
+                          >
+                            <span>前往</span>
+                            <input
+                              type="text"
+                              value={jumpPageInput}
+                              onChange={(e) => setJumpPageInput(e.target.value.replace(/\D/g, ''))}
+                              placeholder={String(currentPage)}
+                              className="w-10 h-7 text-center border border-slate-200 rounded outline-none focus:border-[#1890ff] text-xs text-slate-700 bg-white"
+                            />
+                            <span>页</span>
+                          </form>
+                        </div>
                       </div>
                     </motion.div>
                   )}

@@ -20,7 +20,14 @@ import {
   Award,
   BarChart3,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Bot,
+  FlaskConical,
+  BookOpen,
+  SlidersHorizontal,
+  Check,
+  FolderTree,
+  Sparkles
 } from 'lucide-react';
 
 export interface TaskItem {
@@ -160,6 +167,167 @@ const INITIAL_TASKS: TaskItem[] = [
   }
 ];
 
+// 教学小节步骤定义（支持细粒度智能体控制）
+export interface ChapterTaskStep {
+  id: string;
+  code: string;
+  name: string;
+  type: 'experiment' | 'theory';
+  agentEnabled: boolean;
+  selected: boolean;
+}
+
+// 教学章节一级项目节点
+export interface ChapterProjectNode {
+  id: string;
+  title: string;
+  collapsed: boolean;
+  tasks: ChapterTaskStep[];
+}
+
+// 截图 1:1 默认章节树数据（AI学伴-功能演示 4个项目共11节）
+const DEFAULT_CHAPTER_PROJECTS: ChapterProjectNode[] = [
+  {
+    id: 'proj_1',
+    title: '项目一：开发环境认知与快速体验',
+    collapsed: false,
+    tasks: [
+      {
+        id: 't1_1',
+        code: '任务1.1',
+        name: 'Jupyter云端实验环境容器构建与快速启动',
+        type: 'experiment',
+        agentEnabled: true,
+        selected: true
+      },
+      {
+        id: 't1_2',
+        code: '任务1.2',
+        name: '大模型API交互接口连通性测试与参数调试',
+        type: 'experiment',
+        agentEnabled: true,
+        selected: true
+      },
+      {
+        id: 't1_3',
+        code: '任务1.3',
+        name: 'AI学伴核心交互界面与系统架构导读',
+        type: 'theory',
+        agentEnabled: false,
+        selected: true
+      }
+    ]
+  },
+  {
+    id: 'proj_2',
+    title: '项目二：Python编程语法基础实训',
+    collapsed: false,
+    tasks: [
+      {
+        id: 't2_1',
+        code: '任务2.1',
+        name: 'Python核心数据结构与推导式编程实操',
+        type: 'experiment',
+        agentEnabled: true,
+        selected: true
+      },
+      {
+        id: 't2_2',
+        code: '任务2.2',
+        name: 'NumPy多维张量运算与数据标准化清洗实践',
+        type: 'experiment',
+        agentEnabled: true,
+        selected: true
+      },
+      {
+        id: 't2_3',
+        code: '任务2.3',
+        name: '数据科学计算核心算子理论解析',
+        type: 'theory',
+        agentEnabled: false,
+        selected: true
+      }
+    ]
+  },
+  {
+    id: 'proj_3',
+    title: '项目三：文本分词与特征提取实践',
+    collapsed: false,
+    tasks: [
+      {
+        id: 't3_1',
+        code: '任务3.1',
+        name: '基于Jieba与NLTK的中英文分词与停用词过滤',
+        type: 'experiment',
+        agentEnabled: true,
+        selected: true
+      },
+      {
+        id: 't3_2',
+        code: '任务3.2',
+        name: 'TF-IDF特征提取算法实现与词云可视化',
+        type: 'experiment',
+        agentEnabled: true,
+        selected: true
+      },
+      {
+        id: 't3_3',
+        code: '任务3.3',
+        name: '自然语言特征空间向量表征机理',
+        type: 'theory',
+        agentEnabled: false,
+        selected: true
+      }
+    ]
+  },
+  {
+    id: 'proj_4',
+    title: '项目四：分类算法实操与自动评测',
+    collapsed: false,
+    tasks: [
+      {
+        id: 't4_1',
+        code: '任务4.1',
+        name: '基于逻辑回归与SVM的文本意图分类模型训练',
+        type: 'experiment',
+        agentEnabled: true,
+        selected: true
+      },
+      {
+        id: 't4_2',
+        code: '任务4.2',
+        name: '模型准确率召回率全指标测评与调优',
+        type: 'experiment',
+        agentEnabled: true,
+        selected: true
+      }
+    ]
+  }
+];
+
+const CLASS_OPTIONS = [
+  '人工智能2101班',
+  '人工智能2102班',
+  '大数据应用2101班',
+  '软件工程2103班',
+  '物联网工程2201班'
+];
+
+const STUDENT_SELECT_OPTIONS = [
+  '全选（当前班级全部学生 30人）',
+  '第一实验小组 (15人)',
+  '第二实验小组 (15人)',
+  '学业攻坚小组 (6人)'
+];
+
+const COURSE_SELECT_OPTIONS = [
+  'AI学伴-功能演示（AI学伴产品）',
+  '自然语言处理技术与应用（AI学伴产品）',
+  '智慧园区-虚拟实验台（智慧园区云部）',
+  '智慧水务业务开发（智慧水务系统）',
+  '硬件模块开发实践（硬件开发平台）'
+];
+
 // 预设下发选项数据（联动）
 const COURSE_OPTIONS = [
   {
@@ -266,18 +434,20 @@ export default function TeacherTeaching() {
   const [gradingTask, setGradingTask] = useState<TaskItem | null>(null);
   const [atlasTask, setAtlasTask] = useState<TaskItem | null>(null);
 
-  // 下发任务完整表单状态（1:1严格还原截图）
+  // 下发任务完整表单状态（1:1严格还原截图，大部分项预置丰富合理的默认值）
   const [envType, setEnvType] = useState<'cloud'>('cloud');
-  const [selectedOrg, setSelectedOrg] = useState('');
-  const [selectedStudentGroup, setSelectedStudentGroup] = useState('');
-  const [selectedCourseResource, setSelectedCourseResource] = useState('');
-  const [selectedChapter, setSelectedChapter] = useState('');
+  const [selectedClass, setSelectedClass] = useState('人工智能2101班');
+  const [selectedStudentGroup, setSelectedStudentGroup] = useState('全选（当前班级全部学生 30人）');
+  const [selectedCourseResource, setSelectedCourseResource] = useState('AI学伴-功能演示（AI学伴产品）');
   const [timeType, setTimeType] = useState<'duration' | 'deadline'>('duration');
-  const [taskDuration, setTaskDuration] = useState('0');
+  const [taskDuration, setTaskDuration] = useState('1000');
   const [taskDeadline, setTaskDeadline] = useState('2026-10-31 23:59');
-  const [dispatchTaskName, setDispatchTaskName] = useState('');
-  const [dispatchTaskType, setDispatchTaskType] = useState<'实训任务' | '练习任务' | '考试任务' | ''>('');
+  const [dispatchTaskName, setDispatchTaskName] = useState('AI学伴-功能演示 202609172024');
+  const [dispatchTaskType, setDispatchTaskType] = useState<'实训任务' | '练习任务' | '考试任务'>('实训任务');
   const [toastMessage, setToastMessage] = useState('');
+
+  // 教学章节树形状态（每个实验步骤均可独立配置智能体显隐）
+  const [chapterProjects, setChapterProjects] = useState<ChapterProjectNode[]>(DEFAULT_CHAPTER_PROJECTS);
 
   // 批改作业模拟名单
   const mockSubmissions = useMemo(() => {
@@ -337,67 +507,165 @@ export default function TeacherTeaching() {
     return filteredTasks.slice(start, start + pageSize);
   }, [filteredTasks, currentPageSafe, pageSize]);
 
-  // 当前选中的课程资源对象
-  const activeCourseObj = useMemo(() => {
-    return COURSE_OPTIONS.find(c => c.name === selectedCourseResource);
-  }, [selectedCourseResource]);
+  // 章节树统计
+  const totalChaptersCount = useMemo(() => {
+    return chapterProjects.reduce((acc, p) => acc + p.tasks.length, 0);
+  }, [chapterProjects]);
 
-  // 当切换课程资源时自动联动章节、类型、时长和任务名称
-  const handleSelectCourse = (courseName: string) => {
-    setSelectedCourseResource(courseName);
-    const matched = COURSE_OPTIONS.find(c => c.name === courseName);
-    if (matched) {
-      setSelectedChapter(matched.chapters[0] || '');
-      setDispatchTaskType(matched.defaultType as any);
-      setTaskDuration(String(matched.defaultDuration));
-      if (!dispatchTaskName || dispatchTaskName.includes('任务') || dispatchTaskName.includes('演示')) {
-        setDispatchTaskName(matched.name);
-      }
-    } else {
-      setSelectedChapter('');
-    }
+  const selectedChaptersCount = useMemo(() => {
+    return chapterProjects.reduce((acc, p) => acc + p.tasks.filter(t => t.selected).length, 0);
+  }, [chapterProjects]);
+
+  const isAllChaptersSelected = totalChaptersCount > 0 && selectedChaptersCount === totalChaptersCount;
+  const isAllProjectsCollapsed = chapterProjects.length > 0 && chapterProjects.every(p => p.collapsed);
+
+  // 树操作：切换单项智能体显隐（实验步骤独立控制）
+  const handleToggleAgent = (projectId: string, taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setChapterProjects(prev =>
+      prev.map(proj => {
+        if (proj.id !== projectId) return proj;
+        return {
+          ...proj,
+          tasks: proj.tasks.map(task => {
+            if (task.id !== taskId) return task;
+            return { ...task, agentEnabled: !task.agentEnabled };
+          })
+        };
+      })
+    );
   };
 
-  // 打开下发弹窗时初始化表单
+  // 树操作：勾选/取消小节任务
+  const handleToggleTaskSelect = (projectId: string, taskId: string) => {
+    setChapterProjects(prev =>
+      prev.map(proj => {
+        if (proj.id !== projectId) return proj;
+        return {
+          ...proj,
+          tasks: proj.tasks.map(task => {
+            if (task.id !== taskId) return task;
+            return { ...task, selected: !task.selected };
+          })
+        };
+      })
+    );
+  };
+
+  // 树操作：项目级全选/反选
+  const handleToggleProjectSelect = (projectId: string) => {
+    setChapterProjects(prev =>
+      prev.map(proj => {
+        if (proj.id !== projectId) return proj;
+        const allSelected = proj.tasks.every(t => t.selected);
+        return {
+          ...proj,
+          tasks: proj.tasks.map(task => ({ ...task, selected: !allSelected }))
+        };
+      })
+    );
+  };
+
+  // 树操作：项目折叠/展开
+  const handleToggleProjectCollapse = (projectId: string) => {
+    setChapterProjects(prev =>
+      prev.map(proj => (proj.id === projectId ? { ...proj, collapsed: !proj.collapsed } : proj))
+    );
+  };
+
+  // 树操作：全部全选 / 取消全选
+  const handleToggleSelectAllChapters = () => {
+    const nextSelect = !isAllChaptersSelected;
+    setChapterProjects(prev =>
+      prev.map(proj => ({
+        ...proj,
+        tasks: proj.tasks.map(t => ({ ...t, selected: nextSelect }))
+      }))
+    );
+  };
+
+  // 树操作：全部折叠 / 全部展开
+  const handleToggleCollapseAll = () => {
+    const nextCollapsed = !isAllProjectsCollapsed;
+    setChapterProjects(prev =>
+      prev.map(proj => ({
+        ...proj,
+        collapsed: nextCollapsed
+      }))
+    );
+  };
+
+  // 切换课程资源时自动联动任务名称
+  const handleSelectCourse = (courseName: string) => {
+    setSelectedCourseResource(courseName);
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const cleanName = courseName.split('（')[0];
+    setDispatchTaskName(`${cleanName} ${dateStr}`);
+  };
+
+  // 打开下发弹窗时初始化表单，赋予完备的默认值
   const handleOpenDispatchModal = () => {
-    setSelectedOrg(ORG_LIST[0]);
-    setSelectedStudentGroup(STUDENT_LIST[1]);
-    const defCourse = COURSE_OPTIONS[0];
-    setSelectedCourseResource(defCourse.name);
-    setSelectedChapter(defCourse.chapters[0]);
+    setSelectedClass('人工智能2101班');
+    setSelectedStudentGroup('全选（当前班级全部学生 30人）');
+    setSelectedCourseResource('AI学伴-功能演示（AI学伴产品）');
     setTimeType('duration');
-    setTaskDuration('0');
-    setDispatchTaskName(defCourse.name);
+    setTaskDuration('1000');
+    setDispatchTaskName('AI学伴-功能演示 202609172024');
     setDispatchTaskType('实训任务');
+    // 章节树初始化：默认全部勾选，实验步骤默认开启智能体
+    setChapterProjects(
+      DEFAULT_CHAPTER_PROJECTS.map(proj => ({
+        ...proj,
+        collapsed: false,
+        tasks: proj.tasks.map(t => ({
+          ...t,
+          selected: true,
+          agentEnabled: t.type === 'experiment'
+        }))
+      }))
+    );
     setIsDispatchModalOpen(true);
   };
 
   // 处理下发新任务
-  const handleCreateTask = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateTask = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!dispatchTaskName.trim()) {
       alert('请输入任务名称');
       return;
     }
+    if (selectedChaptersCount === 0) {
+      alert('请至少选择一个教学章节任务小节！');
+      return;
+    }
 
-    const matchedCourse = COURSE_OPTIONS.find(c => c.name === selectedCourseResource);
     const newTask: TaskItem = {
       id: Date.now().toString(),
-      name: dispatchTaskName,
-      type: (dispatchTaskType as any) || '实训任务',
+      name: dispatchTaskName.trim(),
+      type: dispatchTaskType || '实训任务',
       status: '进行中',
       auditStatus: '审核通过',
       dispatchTime: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
-      product: matchedCourse ? matchedCourse.product : 'AI学伴产品',
-      duration: parseInt(taskDuration, 10) || 0,
+      product: selectedCourseResource.includes('智慧水务')
+        ? '智慧水务系统'
+        : selectedCourseResource.includes('智慧园区')
+        ? '智慧园区云部'
+        : selectedCourseResource.includes('硬件')
+        ? '硬件开发平台'
+        : 'AI学伴产品',
+      duration: parseInt(taskDuration, 10) || 1000,
       submittedCount: 0,
-      totalCount: selectedStudentGroup.includes('28人') ? 28 : selectedStudentGroup.includes('32人') ? 32 : 30
+      totalCount: selectedStudentGroup.includes('28人')
+        ? 28
+        : selectedStudentGroup.includes('32人')
+        ? 32
+        : 30
     };
 
     setTasks([newTask, ...tasks]);
     setIsDispatchModalOpen(false);
-    setToastMessage(`任务《${dispatchTaskName}》创建并下发成功！`);
-    setTimeout(() => setToastMessage(''), 3000);
+    setToastMessage(`任务《${dispatchTaskName}》创建并下发成功！已授权 ${selectedChaptersCount} 节教学小节。`);
+    setTimeout(() => setToastMessage(''), 3500);
   };
 
   // 归档或删除
@@ -774,137 +1042,116 @@ export default function TeacherTeaching() {
         </div>
       )}
 
-      {/* 弹窗1：下发任务模态框（1:1精准还原用户截图的表单排版与字段） */}
+      {/* 弹窗1：下发教学任务模态框（1:1严格高保真复刻用户截图设计） */}
       {isDispatchModalOpen && (
         <div className="fixed inset-0 bg-black/45 backdrop-blur-2xs flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden border border-slate-200/80 flex flex-col my-auto max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
             {/* 弹窗顶部标头 */}
-            <div className="px-8 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center space-x-2">
-                <span className="w-1.5 h-4 bg-blue-600 rounded-full inline-block" />
-                <h3 className="font-semibold text-sm text-slate-800">下发任务</h3>
+            <div className="px-8 pt-5 pb-4 border-b border-slate-100 flex items-start justify-between bg-white shrink-0">
+              <div className="flex items-start space-x-3">
+                <span className="w-1.5 h-6 bg-blue-600 rounded-full inline-block mt-0.5" />
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 tracking-tight">下发教学任务</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">面向指定班级一键配置教学实验与任务，支持章节粒度精细化智能体授权</p>
+                </div>
               </div>
               <button
                 onClick={() => setIsDispatchModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded hover:bg-slate-100 transition-colors"
+                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer p-1.5 rounded-lg transition-colors"
                 title="关闭"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* 表单内容区域（严格按截图排版） */}
-            <form onSubmit={handleCreateTask} className="px-10 py-7 space-y-6 text-xs bg-white">
-              {/* 第1行：* 实验环境: 云实验环境 */}
-              <div>
-                <label className="block text-xs text-slate-800 font-normal mb-2.5">
-                  <span className="text-red-500 mr-1">*</span>实验环境:
-                </label>
-                <div className="flex items-center space-x-2 pl-0.5">
-                  <label className="inline-flex items-center space-x-2 text-xs text-slate-700 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="envType"
-                      checked={envType === 'cloud'}
-                      onChange={() => setEnvType('cloud')}
-                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
-                    />
-                    <span className="text-blue-600 font-medium">云实验环境</span>
-                  </label>
+            {/* 左右分栏主体区域 */}
+            <div className="flex-1 overflow-y-auto px-8 py-5 grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white">
+              {/* 左侧一栏：基础信息配置（占比 5 列） */}
+              <div className="lg:col-span-5 space-y-4 pr-1">
+                {/* 标头 */}
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                  <div className="flex items-center space-x-2 text-slate-800 font-semibold text-xs">
+                    <SlidersHorizontal className="w-4 h-4 text-blue-600" />
+                    <span>基础信息配置</span>
+                  </div>
+                  <span className="text-[11px] text-slate-400">带 * 为必填项</span>
                 </div>
-              </div>
 
-              {/* 第2行：* 组织机构 与 * 学生: */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
+                {/* 实验环境 */}
                 <div>
-                  <label className="block text-xs text-slate-800 mb-2">
-                    <span className="text-red-500 mr-1">*</span>组织机构
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                    <span className="text-red-500 mr-1">*</span>实验环境:
                   </label>
-                  <div className="relative">
-                    <select
-                      value={selectedOrg}
-                      onChange={(e) => setSelectedOrg(e.target.value)}
-                      required
-                      className="w-full h-9 px-3 pr-8 text-xs border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer placeholder:text-slate-400 shadow-2xs"
-                    >
-                      <option value="">请选择组织机构</option>
-                      {ORG_LIST.map((org) => (
-                        <option key={org} value={org}>{org}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-lg border-2 border-blue-500 bg-blue-50/60 text-blue-600 text-xs font-medium cursor-pointer shadow-2xs">
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-blue-600 flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                    </div>
+                    <span className="font-semibold text-blue-700">云实验环境</span>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs text-slate-800 mb-2">
-                    <span className="text-red-500 mr-1">*</span>学生:
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={selectedStudentGroup}
-                      onChange={(e) => setSelectedStudentGroup(e.target.value)}
-                      required
-                      className="w-full h-9 px-3 pr-8 text-xs border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer placeholder:text-slate-400 shadow-2xs"
-                    >
-                      <option value="">请选择学生</option>
-                      {STUDENT_LIST.map((stu) => (
-                        <option key={stu} value={stu}>{stu}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                {/* 班级 与 学生 并排网格 */}
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                      <span className="text-red-500 mr-1">*</span>班级:
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedClass}
+                        onChange={(e) => setSelectedClass(e.target.value)}
+                        className="w-full h-9 pl-3 pr-8 text-xs border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer shadow-2xs"
+                      >
+                        {CLASS_OPTIONS.map((cls) => (
+                          <option key={cls} value={cls}>{cls}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                      <span className="text-red-500 mr-1">*</span>学生:
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedStudentGroup}
+                        onChange={(e) => setSelectedStudentGroup(e.target.value)}
+                        className="w-full h-9 pl-3 pr-8 text-xs border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer truncate shadow-2xs"
+                      >
+                        {STUDENT_SELECT_OPTIONS.map((stu) => (
+                          <option key={stu} value={stu}>{stu}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* 第3行：* 课程资源: 与 * 章节: */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
+                {/* 课程 */}
                 <div>
-                  <label className="block text-xs text-slate-800 mb-2">
-                    <span className="text-red-500 mr-1">*</span>课程资源:
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                    <span className="text-red-500 mr-1">*</span>课程:
                   </label>
                   <div className="relative">
                     <select
                       value={selectedCourseResource}
                       onChange={(e) => handleSelectCourse(e.target.value)}
-                      required
-                      className="w-full h-9 px-3 pr-8 text-xs border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer placeholder:text-slate-400 shadow-2xs"
+                      className="w-full h-9 pl-3 pr-8 text-xs border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer shadow-2xs"
                     >
-                      <option value="">请选择课程资源</option>
-                      {COURSE_OPTIONS.map((c) => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
+                      {COURSE_SELECT_OPTIONS.map((c) => (
+                        <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
 
+                {/* 时间类型 */}
                 <div>
-                  <label className="block text-xs text-slate-800 mb-2">
-                    <span className="text-red-500 mr-1">*</span>章节:
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={selectedChapter}
-                      onChange={(e) => setSelectedChapter(e.target.value)}
-                      required
-                      className="w-full h-9 px-3 pr-8 text-xs border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer placeholder:text-slate-400 shadow-2xs"
-                    >
-                      <option value="">请选择章节</option>
-                      {(activeCourseObj ? activeCourseObj.chapters : ['项目一：开发环境认知与快速体验', '项目二：核心实训代码实操']).map((ch) => (
-                        <option key={ch} value={ch}>{ch}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              {/* 第4行：时间类型: 与 * 任务时长: */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5 items-start">
-                <div>
-                  <label className="block text-xs text-slate-800 mb-2">时间类型:</label>
-                  <div className="flex items-center space-x-6 h-9">
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">时间类型:</label>
+                  <div className="flex items-center space-x-6 h-8">
                     <label className="inline-flex items-center space-x-2 text-xs text-slate-700 cursor-pointer">
                       <input
                         type="radio"
@@ -928,43 +1175,46 @@ export default function TeacherTeaching() {
                   </div>
                 </div>
 
+                {/* 任务时长（分钟） */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs text-slate-800">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium text-slate-700">
                       <span className="text-red-500 mr-1">*</span>
-                      {timeType === 'duration' ? '任务时长:' : '截止时间:'}
+                      {timeType === 'duration' ? '任务时长 (分钟):' : '任务截止时间:'}
                     </label>
                     {timeType === 'duration' && (
                       <span className="text-[11px] text-slate-500">
-                        任务预计消耗时长: <span className="text-blue-600 font-medium">{taskDuration || 0}分钟</span>
+                        预计消耗时长: <span className="text-blue-600 font-bold">{taskDuration || 0} 分钟</span>
                       </span>
                     )}
                   </div>
                   {timeType === 'duration' ? (
-                    <input
-                      type="number"
-                      min="0"
-                      value={taskDuration}
-                      onChange={(e) => setTaskDuration(e.target.value)}
-                      placeholder="0"
-                      className="w-full h-9 px-3 text-xs border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:border-blue-500 shadow-2xs"
-                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="1"
+                        value={taskDuration}
+                        onChange={(e) => setTaskDuration(e.target.value)}
+                        className="w-full h-9 pl-3 pr-12 text-xs border border-slate-300 rounded-lg bg-white text-slate-800 focus:outline-none focus:border-blue-500 shadow-2xs font-medium"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
+                        分钟
+                      </span>
+                    </div>
                   ) : (
                     <input
                       type="datetime-local"
                       value={taskDeadline}
                       onChange={(e) => setTaskDeadline(e.target.value)}
-                      className="w-full h-9 px-3 text-xs border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:border-blue-500 shadow-2xs"
+                      className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-800 focus:outline-none focus:border-blue-500 shadow-2xs"
                     />
                   )}
                 </div>
-              </div>
 
-              {/* 第5行：* 任务名称 与 * 任务类型 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
+                {/* 任务名称 */}
                 <div>
-                  <label className="block text-xs text-slate-800 mb-2">
-                    <span className="text-red-500 mr-1">*</span>任务名称
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                    <span className="text-red-500 mr-1">*</span>任务名称:
                   </label>
                   <input
                     type="text"
@@ -972,48 +1222,226 @@ export default function TeacherTeaching() {
                     value={dispatchTaskName}
                     onChange={(e) => setDispatchTaskName(e.target.value)}
                     placeholder="请输入任务名称"
-                    className="w-full h-9 px-3 text-xs border border-slate-300 rounded bg-white text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs"
+                    className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs font-medium"
                   />
                 </div>
 
+                {/* 任务类型 */}
                 <div>
-                  <label className="block text-xs text-slate-800 mb-2">
-                    <span className="text-red-500 mr-1">*</span>任务类型
+                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                    <span className="text-red-500 mr-1">*</span>任务类型:
                   </label>
                   <div className="relative">
                     <select
                       value={dispatchTaskType}
                       onChange={(e) => setDispatchTaskType(e.target.value as any)}
                       required
-                      className="w-full h-9 px-3 pr-8 text-xs border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer placeholder:text-slate-400 shadow-2xs"
+                      className="w-full h-9 pl-3 pr-8 text-xs border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer shadow-2xs"
                     >
-                      <option value="">请选择课程资源</option>
                       <option value="实训任务">实训任务</option>
                       <option value="练习任务">练习任务</option>
                       <option value="考试任务">考试任务</option>
                     </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
               </div>
 
-              {/* 底部操作按钮：居中排布（1:1复刻截图） */}
-              <div className="pt-8 pb-3 flex items-center justify-center space-x-5">
-                <button
-                  type="submit"
-                  className="px-7 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium cursor-pointer transition-colors shadow-xs"
-                >
-                  创建并下发
-                </button>
+              {/* 右侧一栏：教学章节树形列表（占比 7 列） */}
+              <div className="lg:col-span-7 flex flex-col space-y-3">
+                {/* 标头区域 */}
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                  <div className="flex items-center space-x-2">
+                    <FolderTree className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs font-semibold text-slate-800">
+                      <span className="text-red-500 mr-1">*</span>教学章节树形列表
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-200/60">
+                      已选 {selectedChaptersCount} / {totalChaptersCount} 节
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={handleToggleSelectAllChapters}
+                      className="px-2.5 py-1 rounded border border-slate-200 hover:border-blue-300 text-[11px] font-medium text-slate-600 hover:text-blue-600 bg-white hover:bg-blue-50/30 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      {isAllChaptersSelected ? '取消全选' : '全选'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleToggleCollapseAll}
+                      className="px-2.5 py-1 rounded border border-slate-200 hover:border-blue-300 text-[11px] font-medium text-slate-600 hover:text-blue-600 bg-white hover:bg-blue-50/30 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      {isAllProjectsCollapsed ? '全部展开' : '全部折叠'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 树形卡片滚动列表容器 */}
+                <div className="flex-1 max-h-[410px] overflow-y-auto space-y-3.5 pr-1.5 scrollbar-thin scrollbar-thumb-slate-200">
+                  {chapterProjects.map((project) => {
+                    const projectTotal = project.tasks.length;
+                    const projectSelected = project.tasks.filter(t => t.selected).length;
+                    const isProjectAllSelected = projectTotal > 0 && projectSelected === projectTotal;
+                    const isProjectPartial = projectSelected > 0 && projectSelected < projectTotal;
+
+                    return (
+                      <div
+                        key={project.id}
+                        className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-2xs hover:border-slate-300 transition-all"
+                      >
+                        {/* 项目父节点头部 */}
+                        <div className="px-3.5 py-2.5 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between select-none">
+                          <div className="flex items-center space-x-2.5">
+                            {/* 展开/折叠箭头 */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleProjectCollapse(project.id)}
+                              className="p-1 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-200/50 transition-colors cursor-pointer"
+                            >
+                              <ChevronDown
+                                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                                  project.collapsed ? '-rotate-90' : ''
+                                }`}
+                              />
+                            </button>
+
+                            {/* 项目级全选复选框 */}
+                            <input
+                              type="checkbox"
+                              checked={isProjectAllSelected}
+                              ref={(el) => {
+                                if (el) el.indeterminate = isProjectPartial;
+                              }}
+                              onChange={() => handleToggleProjectSelect(project.id)}
+                              className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                            />
+
+                            {/* 项目名称 */}
+                            <span
+                              onClick={() => handleToggleProjectCollapse(project.id)}
+                              className="text-xs font-semibold text-slate-800 cursor-pointer hover:text-blue-600"
+                            >
+                              {project.title}
+                            </span>
+                          </div>
+
+                          {/* 项目内小节数统计 */}
+                          <span className="text-[11px] text-slate-400 font-medium">
+                            {projectSelected}/{projectTotal} 节
+                          </span>
+                        </div>
+
+                        {/* 项目子任务列表 */}
+                        {!project.collapsed && (
+                          <div className="divide-y divide-slate-100 bg-white">
+                            {project.tasks.map((task) => (
+                              <div
+                                key={task.id}
+                                className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50/60 transition-colors"
+                              >
+                                {/* 左侧：复选框 + 任务标题 + 类型标签 */}
+                                <div className="flex items-center space-x-2.5 flex-1 min-w-0 pr-3">
+                                  <input
+                                    type="checkbox"
+                                    checked={task.selected}
+                                    onChange={() => handleToggleTaskSelect(project.id, task.id)}
+                                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer shrink-0"
+                                  />
+                                  <span
+                                    onClick={() => handleToggleTaskSelect(project.id, task.id)}
+                                    className="text-xs text-slate-700 truncate cursor-pointer select-none"
+                                    title={`${task.code}: ${task.name}`}
+                                  >
+                                    <span className="font-semibold text-slate-800 mr-1">{task.code}:</span>
+                                    {task.name}
+                                  </span>
+
+                                  {/* 类型 Badge */}
+                                  {task.type === 'experiment' ? (
+                                    <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0">
+                                      <FlaskConical className="w-3 h-3 text-emerald-600" />
+                                      <span>实验</span>
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200 shrink-0">
+                                      <BookOpen className="w-3 h-3 text-slate-500" />
+                                      <span>理论</span>
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* 右侧：智能体授权开关（每个实验步骤均可单独设置显示隐藏） */}
+                                {task.type === 'experiment' && (
+                                  <div className="flex items-center space-x-1.5 px-2 py-1 rounded-md bg-blue-50/70 border border-blue-100/80 text-blue-600 shrink-0 shadow-2xs">
+                                    <Bot className="w-3.5 h-3.5 text-blue-600" />
+                                    <span className="text-[11px] font-medium text-blue-700 select-none">智能体</span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleToggleAgent(project.id, task.id, e)}
+                                      title={task.agentEnabled ? '已开启智能体（点击关闭）' : '已隐藏智能体（点击开启）'}
+                                      className={`relative inline-flex h-4 w-7.5 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+                                        task.agentEnabled ? 'bg-blue-600' : 'bg-slate-300'
+                                      }`}
+                                    >
+                                      <span
+                                        className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out mt-0.5 ${
+                                          task.agentEnabled ? 'translate-x-4' : 'translate-x-0.5'
+                                        }`}
+                                      />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 底部温馨提示条 */}
+                <div className="flex items-center space-x-2 px-3.5 py-2.5 rounded-lg bg-blue-50/70 border border-blue-200/80 text-blue-700 text-xs shadow-2xs">
+                  <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="font-normal text-[11px] leading-tight">
+                    提示：实验步骤类型默认开启实验智能体，支持单独关闭
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 底部汇总栏与操作按钮（Footer） */}
+            <div className="px-8 py-3.5 bg-slate-50/80 border-t border-slate-200 shrink-0 flex items-center justify-between">
+              {/* 左侧实时摘要信息 */}
+              <div className="flex items-center space-x-2 text-xs text-slate-500">
+                <span>目标班级：<strong className="font-semibold text-slate-800">{selectedClass}</strong></span>
+                <span className="text-slate-300">｜</span>
+                <span>已选章节：<strong className="font-bold text-blue-600">{selectedChaptersCount} 节</strong></span>
+                <span className="text-slate-300">｜</span>
+                <span>任务类型：<strong className="font-semibold text-slate-800">{dispatchTaskType}</strong></span>
+              </div>
+
+              {/* 右侧操作按钮 */}
+              <div className="flex items-center space-x-3">
                 <button
                   type="button"
                   onClick={() => setIsDispatchModalOpen(false)}
-                  className="px-7 py-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 rounded text-xs font-medium cursor-pointer transition-colors"
+                  className="px-5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium cursor-pointer transition-colors shadow-2xs"
                 >
                   取消
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleCreateTask()}
+                  className="inline-flex items-center space-x-1.5 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-sm hover:shadow-md active:scale-95"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>创建并下发任务</span>
+                </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

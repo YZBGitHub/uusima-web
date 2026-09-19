@@ -280,6 +280,9 @@ interface StudentStudiesProps {
 }
 
 export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
+  // ======================= 顶层 Tab：我学的课 / 我的任务 =======================
+  const [activeMainTab, setActiveMainTab] = useState<'courses' | 'tasks'>('courses');
+
   // ======================= 上部分状态：我学的课 =======================
   const [courseTab, setCourseTab] = useState<'task' | 'self'>('task');
   // 控制哪些课程卡片展开了所有关联任务列表（默认全部收起，只展示最近学习任务）
@@ -293,6 +296,17 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
   const activeCourses = useMemo(() => {
     return courseTab === 'task' ? MOCK_TEACHER_COURSES : MOCK_SELF_COURSES;
   }, [courseTab]);
+
+  // 课程分页状态与切片数据
+  const [coursePage, setCoursePage] = useState(1);
+  const [coursePageSize, setCoursePageSize] = useState(8); // 默认8门（2行4列）
+
+  const totalCourseItems = activeCourses.length;
+  const totalCoursePages = Math.ceil(totalCourseItems / coursePageSize) || 1;
+  const paginatedCourses = useMemo(() => {
+    const start = (coursePage - 1) * coursePageSize;
+    return activeCourses.slice(start, start + coursePageSize);
+  }, [activeCourses, coursePage, coursePageSize]);
 
   // 计算课程完成度统计
   const calculateCourseProgress = (tasks: CourseTaskItem[]) => {
@@ -311,6 +325,16 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
     if (inProgress) return inProgress;
     return course.tasks[0];
   };
+
+  // 统计全部任务数量（用于主 Tab 角标展示）
+  const totalTeacherTasksCount = useMemo(() => {
+    return MOCK_TEACHER_COURSES.reduce((sum, c) => sum + c.tasks.length, 0);
+  }, []);
+  const totalSelfTasksCount = useMemo(() => {
+    return MOCK_SELF_COURSES.reduce((sum, c) => sum + c.tasks.length, 0);
+  }, []);
+  const totalAllTasksCount = totalTeacherTasksCount + totalSelfTasksCount;
+  const totalAllCoursesCount = MOCK_TEACHER_COURSES.length + MOCK_SELF_COURSES.length;
 
   // ======================= 下部分状态：任务列表 =======================
   // Tab 名称：'task' -> 我的任务, 'self' -> 我的自学
@@ -430,239 +454,358 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
   };
 
   return (
-    <div className="flex-1 p-6 bg-[#f4f7f9] min-h-0 overflow-y-auto space-y-7">
+    <div className="h-full flex flex-col p-6 bg-[#f4f7f9] overflow-hidden space-y-4">
       
       {/* ========================================================
-          1. 上部分：我学的课（一行4门，默认收起任务列表，只展示最近学习的那个任务直接跳转）
+          0. 顶层主 Tab 导航栏：我学的课 / 我的任务
       ======================================================== */}
-      <div className="bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.03)] border border-slate-200/80 p-6">
-        {/* 顶部标题与 Tab 栏 */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-slate-100 gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-1.5 h-5 bg-blue-600 rounded-full" />
-            <h2 className="text-lg font-bold text-slate-800 tracking-tight">我学的课</h2>
-            <span className="text-xs text-slate-400 font-normal">
-              {courseTab === 'task' ? `共 ${MOCK_TEACHER_COURSES.length} 门教师下发课程 · 点击最近学习任务可快速直达` : `共 ${MOCK_SELF_COURSES.length} 门自主参与课程`}
+      <div className="shrink-0 bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.03)] border border-slate-200/80 px-6 pt-3 pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center space-x-8">
+          <button
+            type="button"
+            onClick={() => setActiveMainTab('courses')}
+            className={`pb-3 text-sm font-bold flex items-center space-x-2 border-b-2 transition-all relative ${
+              activeMainTab === 'courses'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>我学的课</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+              activeMainTab === 'courses' ? 'bg-blue-100/80 text-blue-700' : 'bg-slate-100 text-slate-500'
+            }`}>
+              {totalAllCoursesCount}
             </span>
-          </div>
+          </button>
 
-          {/* 两个 Tab：任务课程 / 自学课程 */}
-          <div className="flex bg-slate-100/90 p-1 rounded-lg self-start sm:self-auto">
-            <button
-              onClick={() => {
-                setCourseTab('task');
-                setExpandedCourseIds({});
-              }}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center space-x-1.5 ${
-                courseTab === 'task'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span>任务课程</span>
-              <span className={`text-[11px] px-1.5 py-0.2 rounded-full ${courseTab === 'task' ? 'bg-blue-100/80 text-blue-700' : 'bg-slate-200 text-slate-500'}`}>
-                {MOCK_TEACHER_COURSES.length}
-              </span>
-            </button>
-            <button
-              onClick={() => {
-                setCourseTab('self');
-                setExpandedCourseIds({});
-              }}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center space-x-1.5 ${
-                courseTab === 'self'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span>自学课程</span>
-              <span className={`text-[11px] px-1.5 py-0.2 rounded-full ${courseTab === 'self' ? 'bg-blue-100/80 text-blue-700' : 'bg-slate-200 text-slate-500'}`}>
-                {MOCK_SELF_COURSES.length}
-              </span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveMainTab('tasks')}
+            className={`pb-3 text-sm font-bold flex items-center space-x-2 border-b-2 transition-all relative ${
+              activeMainTab === 'tasks'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>我的任务</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+              activeMainTab === 'tasks' ? 'bg-blue-100/80 text-blue-700' : 'bg-slate-100 text-slate-500'
+            }`}>
+              {totalAllTasksCount}
+            </span>
+          </button>
         </div>
 
-        {/* 课程网格：一行 4 门（在 lg 及 xl 屏幕下为 4 列） */}
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {activeCourses.map((course) => {
-            const progress = calculateCourseProgress(course.tasks);
-            const latestTask = getLatestStudiedTask(course);
-            const isExpanded = !!expandedCourseIds[course.id];
-
-            return (
-              <div 
-                key={course.id} 
-                className="border border-slate-200/90 rounded-xl bg-white hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
-              >
-                {/* 1. 顶部：封面图 + 类别标签 */}
-                <div className="relative w-full h-32 bg-slate-900 overflow-hidden shrink-0">
-                  <img
-                    src={course.cover}
-                    alt={course.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-[10px] text-white font-medium">
-                    {course.category}
-                  </div>
-                  {course.teacher && (
-                    <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/50 backdrop-blur-sm text-[10px] text-slate-200">
-                      {course.teacher}
-                    </div>
-                  )}
-                </div>
-
-                {/* 2. 中部：课程名称与学习进度百分比 */}
-                <div className="p-3.5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 
-                      className="text-xs font-bold text-slate-800 line-clamp-1 hover:text-blue-600 transition-colors" 
-                      title={course.name}
-                    >
-                      {course.name}
-                    </h3>
-                    <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
-                      {course.subTitle}
-                    </p>
-
-                    {/* 进度条与百分比 */}
-                    <div className="mt-2.5">
-                      <div className="flex items-center justify-between text-[11px] mb-1">
-                        <span className="text-slate-400">学习进度</span>
-                        <span className="font-bold text-blue-600">{progress}%</span>
-                      </div>
-                      <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-600 rounded-full transition-all duration-500"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 3. 核心区域：聚焦展示「最近学习的那个任务」，点击直接快速到该任务学习 */}
-                  <div className="mt-3 pt-3 border-t border-slate-100">
-                    <div className="text-[11px] text-slate-400 flex items-center justify-between mb-1.5">
-                      <span className="flex items-center text-slate-500 font-medium">
-                        <Clock className="w-3 h-3 mr-1 text-blue-500" />
-                        最近学习任务
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => toggleExpandCourse(course.id)}
-                        className="text-[10px] text-blue-500 hover:text-blue-700 hover:underline flex items-center"
-                      >
-                        {isExpanded ? '收起列表' : `全部(${course.tasks.length})`}
-                        <ChevronDown className={`w-2.5 h-2.5 ml-0.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                      </button>
-                    </div>
-
-                    {/* 最近任务卡片（重点交互：可直接点击快速跳转学习） */}
-                    <div
-                      onClick={() => handleContinueStudy(latestTask?.id)}
-                      className="p-2.5 rounded-lg bg-blue-50/60 hover:bg-blue-100/70 border border-blue-100/80 transition-all cursor-pointer group/quick"
-                      title="点击快速继续该任务学习"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-600 text-white font-medium">
-                          {latestTask?.typeName || '任务'}
-                        </span>
-                        <div className="flex items-center text-[10px] text-blue-600 font-medium group-hover/quick:translate-x-0.5 transition-transform">
-                          <span>快速去学习</span>
-                          <Play className="w-2.5 h-2.5 ml-1 fill-current" />
-                        </div>
-                      </div>
-                      <div className="text-xs text-slate-700 font-medium line-clamp-1 mt-1.5 group-hover/quick:text-blue-700">
-                        {latestTask?.name}
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
-                        <span>进度: {latestTask?.progress}%</span>
-                        <span>{latestTask?.lastStudyTime !== '-' ? latestTask?.lastStudyTime : '待开始'}</span>
-                      </div>
-                    </div>
-
-                    {/* 可选展开的关联任务列表（最近5条） */}
-                    {isExpanded && (
-                      <div className="mt-2.5 space-y-1.5 pt-2 border-t border-slate-100">
-                        <div className="text-[10px] text-slate-400 mb-1">全部关联任务:</div>
-                        {course.tasks.slice(0, 5).map((task, idx) => (
-                          <div
-                            key={task.id}
-                            onClick={() => handleContinueStudy(task.id)}
-                            className="flex items-center justify-between px-2 py-1 rounded bg-slate-50 hover:bg-blue-50 text-[11px] text-slate-600 hover:text-blue-600 cursor-pointer transition-colors"
-                          >
-                            <span className="truncate pr-1">
-                              {idx + 1}. {task.name}
-                            </span>
-                            <span className="shrink-0 text-[10px] text-slate-400">
-                              {task.progress}%
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-              </div>
-            );
-          })}
+        <div className="text-xs text-slate-400 hidden sm:block pb-3">
+          {activeMainTab === 'courses'
+            ? '包含教师下发课程与个人自学课程，支持按课程快捷直达最近任务'
+            : '汇总所有课程关联的学习任务，支持多维条件检索与进度跟进'}
         </div>
       </div>
 
       {/* ========================================================
-          2. 下部分：任务列表（名称改为任务列表，Tab改为我的任务和我的自学）
+          1. Tab 1：我学的课（默认激活，一屏完整展示，多余内容使用滚动条）
       ======================================================== */}
-      <div className="bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.03)] border border-slate-200/80 p-6">
-        
-        {/* 顶部标题与 Tab 栏 */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-slate-100 gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-1.5 h-5 bg-indigo-600 rounded-full" />
-            <h2 className="text-lg font-bold text-slate-800 tracking-tight">任务列表</h2>
-            <span className="text-xs text-slate-400 font-normal">支持课程下拉过滤、时间范围与快捷日期检索</span>
+      {activeMainTab === 'courses' && (
+        <div className="flex-1 min-h-0 bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.03)] border border-slate-200/80 flex flex-col overflow-hidden">
+          {/* 顶部标题与 Tab 栏 (固定在顶部) */}
+          <div className="shrink-0 p-5 pb-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-1.5 h-5 bg-blue-600 rounded-full" />
+              <h2 className="text-lg font-bold text-slate-800 tracking-tight">我学的课</h2>
+              <span className="text-xs text-slate-400 font-normal">
+                {courseTab === 'task' ? `共 ${MOCK_TEACHER_COURSES.length} 门教师下发课程 · 点击最近学习任务可快速直达` : `共 ${MOCK_SELF_COURSES.length} 门自主参与课程`}
+              </span>
+            </div>
+
+            {/* 两个 Tab：任务课程 / 自学课程 */}
+            <div className="flex bg-slate-100/90 p-1 rounded-lg self-start sm:self-auto">
+              <button
+                onClick={() => {
+                  setCourseTab('task');
+                  setCoursePage(1);
+                  setExpandedCourseIds({});
+                }}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center space-x-1.5 ${
+                  courseTab === 'task'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>任务课程</span>
+                <span className={`text-[11px] px-1.5 py-0.2 rounded-full ${courseTab === 'task' ? 'bg-blue-100/80 text-blue-700' : 'bg-slate-200 text-slate-500'}`}>
+                  {MOCK_TEACHER_COURSES.length}
+                </span>
+              </button>
+              <button
+                onClick={() => {
+                  setCourseTab('self');
+                  setCoursePage(1);
+                  setExpandedCourseIds({});
+                }}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center space-x-1.5 ${
+                  courseTab === 'self'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span>自学课程</span>
+                <span className={`text-[11px] px-1.5 py-0.2 rounded-full ${courseTab === 'self' ? 'bg-blue-100/80 text-blue-700' : 'bg-slate-200 text-slate-500'}`}>
+                  {MOCK_SELF_COURSES.length}
+                </span>
+              </button>
+            </div>
           </div>
 
-          {/* 两个 Tab：我的任务 / 我的自学 */}
-          <div className="flex bg-slate-100/90 p-1 rounded-lg self-start sm:self-auto">
-            <button
-              onClick={() => {
-                setTaskListTab('task');
-                setSelectedCourseName('');
-                setCourseFilterKeyword('');
-                setCurrentPage(1);
-              }}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                taskListTab === 'task'
-                  ? 'bg-white text-indigo-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              我的任务
-            </button>
-            <button
-              onClick={() => {
-                setTaskListTab('self');
-                setSelectedCourseName('');
-                setCourseFilterKeyword('');
-                setCurrentPage(1);
-              }}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                taskListTab === 'self'
-                  ? 'bg-white text-indigo-600 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              我的自学
-            </button>
+          {/* 课程网格滚动区：多余内容使用滚动条 */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {paginatedCourses.map((course) => {
+                const progress = calculateCourseProgress(course.tasks);
+                const latestTask = getLatestStudiedTask(course);
+                const isExpanded = !!expandedCourseIds[course.id];
+
+                return (
+                  <div 
+                    key={course.id} 
+                    className="border border-slate-200/90 rounded-xl bg-white hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
+                  >
+                    {/* 1. 顶部：封面图 + 类别标签 */}
+                    <div className="relative w-full h-32 bg-slate-900 overflow-hidden shrink-0">
+                      <img
+                        src={course.cover}
+                        alt={course.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-[10px] text-white font-medium">
+                        {course.category}
+                      </div>
+                      {course.teacher && (
+                        <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/50 backdrop-blur-sm text-[10px] text-slate-200">
+                          {course.teacher}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2. 中部：课程名称与学习进度百分比 */}
+                    <div className="p-3.5 flex-1 flex flex-col justify-between">
+                      <div>
+                        <h3 
+                          className="text-xs font-bold text-slate-800 line-clamp-1 hover:text-blue-600 transition-colors" 
+                          title={course.name}
+                        >
+                          {course.name}
+                        </h3>
+                        <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
+                          {course.subTitle}
+                        </p>
+
+                        {/* 进度条与百分比 */}
+                        <div className="mt-2.5">
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="text-slate-400">学习进度</span>
+                            <span className="font-bold text-blue-600">{progress}%</span>
+                          </div>
+                          <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-blue-600 rounded-full transition-all duration-500"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 3. 核心区域：聚焦展示「最近学习的那个任务」，点击直接快速到该任务学习 */}
+                      <div className="mt-3 pt-3 border-t border-slate-100">
+                        <div className="text-[11px] text-slate-400 flex items-center justify-between mb-1.5">
+                          <span className="flex items-center text-slate-500 font-medium">
+                            <Clock className="w-3 h-3 mr-1 text-blue-500" />
+                            最近学习任务
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandCourse(course.id)}
+                            className="text-[10px] text-blue-500 hover:text-blue-700 hover:underline flex items-center"
+                          >
+                            {isExpanded ? '收起列表' : `全部(${course.tasks.length})`}
+                            <ChevronDown className={`w-2.5 h-2.5 ml-0.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                          </button>
+                        </div>
+
+                        {/* 最近任务卡片（重点交互：可直接点击快速跳转学习） */}
+                        <div
+                          onClick={() => handleContinueStudy(latestTask?.id)}
+                          className="p-2.5 rounded-lg bg-blue-50/60 hover:bg-blue-100/70 border border-blue-100/80 transition-all cursor-pointer group/quick"
+                          title="点击快速继续该任务学习"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-600 text-white font-medium">
+                              {latestTask?.typeName || '任务'}
+                            </span>
+                            <div className="flex items-center text-[10px] text-blue-600 font-medium group-hover/quick:translate-x-0.5 transition-transform">
+                              <span>快速去学习</span>
+                              <Play className="w-2.5 h-2.5 ml-1 fill-current" />
+                            </div>
+                          </div>
+                          <div className="text-xs text-slate-700 font-medium line-clamp-1 mt-1.5 group-hover/quick:text-blue-700">
+                            {latestTask?.name}
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+                            <span>进度: {latestTask?.progress}%</span>
+                            <span>{latestTask?.lastStudyTime !== '-' ? latestTask?.lastStudyTime : '待开始'}</span>
+                          </div>
+                        </div>
+
+                        {/* 可选展开的关联任务列表（最近5条） */}
+                        {isExpanded && (
+                          <div className="mt-2.5 space-y-1.5 pt-2 border-t border-slate-100">
+                            <div className="text-[10px] text-slate-400 mb-1">全部关联任务:</div>
+                            {course.tasks.slice(0, 5).map((task, idx) => (
+                              <div
+                                key={task.id}
+                                onClick={() => handleContinueStudy(task.id)}
+                                className="flex items-center justify-between px-2 py-1 rounded bg-slate-50 hover:bg-blue-50 text-[11px] text-slate-600 hover:text-blue-600 cursor-pointer transition-colors"
+                              >
+                                <span className="truncate pr-1">
+                                  {idx + 1}. {task.name}
+                                </span>
+                                <span className="shrink-0 text-[10px] text-slate-400">
+                                  {task.progress}%
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 课程底部吸底分页栏 (固定在底部，一屏始终可见) */}
+          <div className="shrink-0 px-5 py-3 bg-slate-50/70 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
+            <div className="flex items-center space-x-3">
+              <span>
+                共 <strong className="text-slate-800">{totalCourseItems}</strong> 门课程
+              </span>
+              <span>
+                第 <strong className="text-slate-800">{coursePage}</strong> / {totalCoursePages} 页
+              </span>
+              <div className="flex items-center space-x-1 pl-2">
+                <span>每页:</span>
+                <select
+                  value={coursePageSize}
+                  onChange={(e) => {
+                    setCoursePageSize(Number(e.target.value));
+                    setCoursePage(1);
+                  }}
+                  className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-700 outline-none hover:border-blue-400 transition-colors"
+                >
+                  <option value={4}>4 门 (1行)</option>
+                  <option value={8}>8 门 (2行)</option>
+                  <option value={12}>12 门 (3行)</option>
+                  <option value={16}>16 门 (4行)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 页码切换 */}
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => setCoursePage(prev => Math.max(prev - 1, 1))}
+                disabled={coursePage <= 1}
+                className="p-1 rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                title="上一页"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              
+              {Array.from({ length: totalCoursePages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCoursePage(page)}
+                  className={`w-6 h-6 rounded text-xs font-medium transition-colors ${
+                    coursePage === page
+                      ? 'bg-blue-600 text-white'
+                      : 'border border-slate-200 bg-white hover:bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setCoursePage(prev => Math.min(prev + 1, totalCoursePages))}
+                disabled={coursePage >= totalCoursePages}
+                className="p-1 rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                title="下一页"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* ========================================================
+          2. Tab 2：我的任务
+      ======================================================== */}
+      {activeMainTab === 'tasks' && (
+        <div className="flex-1 min-h-0 bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.03)] border border-slate-200/80 flex flex-col overflow-hidden p-5">
+          
+          {/* 顶部标题与 Tab 栏 */}
+          <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-1.5 h-5 bg-indigo-600 rounded-full" />
+              <h2 className="text-lg font-bold text-slate-800 tracking-tight">我的任务清单</h2>
+              <span className="text-xs text-slate-400 font-normal">支持课程下拉过滤、时间范围与快捷日期检索</span>
+            </div>
+
+            {/* 两个 Tab：我的任务 / 我的自学 */}
+            <div className="flex bg-slate-100/90 p-1 rounded-lg self-start sm:self-auto">
+              <button
+                onClick={() => {
+                  setTaskListTab('task');
+                  setSelectedCourseName('');
+                  setCourseFilterKeyword('');
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  taskListTab === 'task'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                我的任务
+              </button>
+              <button
+                onClick={() => {
+                  setTaskListTab('self');
+                  setSelectedCourseName('');
+                  setCourseFilterKeyword('');
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                  taskListTab === 'self'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                我的自学
+              </button>
+            </div>
+          </div>
 
         {/* 多条件检索栏（任务名称、课程下拉选择+搜索、时间范围+快速选项） */}
-        <div className="mt-5 p-4 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-3">
+        <div className="shrink-0 mt-3.5 p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-2.5">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
             
             {/* 1. 任务名称搜索 */}
@@ -842,12 +985,12 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
           </div>
         </div>
 
-        {/* 任务表格（无封面，包含课程名称、任务名称、下发时间/加入学习时间、完成进度、最近学习时间、操作） */}
-        <div className="mt-5 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
-          <div className="overflow-x-auto">
+        {/* 任务表格（支持内部滚动与吸底分页） */}
+        <div className="flex-1 min-h-0 mt-3.5 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col justify-between">
+          <div className="overflow-x-auto flex-1 min-h-0 overflow-y-auto">
             <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/90 text-slate-500 text-xs border-b border-slate-200 font-semibold">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-slate-50/95 backdrop-blur-xs text-slate-500 text-xs border-b border-slate-200 font-semibold">
                   <th className="py-3 px-4 w-14 text-center">序号</th>
                   <th className="py-3 px-4 w-52">课程名称</th>
                   <th className="py-3 px-4">任务名称</th>
@@ -952,7 +1095,7 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
           </div>
 
           {/* 表格底部带分页 */}
-          <div className="px-4 py-3 bg-slate-50/70 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
+          <div className="shrink-0 px-4 py-3 bg-slate-50/70 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
             <div className="flex items-center space-x-3">
               <span>
                 共 <strong className="text-slate-800">{totalItems}</strong> 条任务
@@ -1013,9 +1156,9 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
             </div>
           </div>
         </div>
-
       </div>
+    )}
 
-    </div>
-  );
+  </div>
+);
 }

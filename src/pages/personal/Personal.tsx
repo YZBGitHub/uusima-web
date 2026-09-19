@@ -49,7 +49,10 @@ import {
   Cpu,
   Terminal,
   Copy,
-  Code2
+  Code2,
+  List,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import CourseManagement from '../course/CourseManagement';
 import UsersManagement from '../system/UsersManagement';
@@ -57,6 +60,7 @@ import OrdersManagement from '../operation/OrdersManagement';
 import TeacherTeaching from './TeacherTeaching';
 import StudentStudies from './StudentStudies';
 import TeacherCourseEditor from '../course/TeacherCourseManagement/TeacherCourseEditor';
+import { QuestionManagement, AutoGradingManagement } from '../course';
 
 // 角色标识类型
 export type UserRole = 'student' | 'teacher' | 'school_admin' | 'course_developer' | 'super_admin';
@@ -65,7 +69,7 @@ interface MenuItem {
   id: string;
   label: string;
   icon: any;
-  children?: { id: string; label: string; icon: any }[];
+  children?: MenuItem[];
 }
 
 interface RoleDefinition {
@@ -155,7 +159,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '岗位技能认证',
     bannerText: '新大陆时代科技',
     bannerSub: 'Newland Era Hi-Tech',
-    theme: 'blue-gradient'
+    theme: 'blue-gradient',
+    allowSelfStudy: true
   },
   {
     id: 2,
@@ -166,7 +171,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '专业核心课',
     bannerText: '自然语言处理',
     bannerSub: '技术与应用',
-    theme: 'deep-blue'
+    theme: 'deep-blue',
+    allowSelfStudy: true
   },
   {
     id: 3,
@@ -177,7 +183,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '行业应用课',
     bannerText: '智慧行业应用开发',
     bannerSub: '牧场、家居、温室',
-    theme: 'cyber-purple'
+    theme: 'cyber-purple',
+    allowSelfStudy: true
   },
   {
     id: 4,
@@ -188,7 +195,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '专业基础课',
     bannerText: '新大陆时代科技',
     bannerSub: 'Newland Era Hi-Tech',
-    theme: 'blue-gradient'
+    theme: 'blue-gradient',
+    allowSelfStudy: false
   },
   {
     id: 5,
@@ -199,7 +207,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '岗位认证课',
     bannerText: '新大陆时代科技',
     bannerSub: 'Newland Era Hi-Tech',
-    theme: 'blue-gradient'
+    theme: 'blue-gradient',
+    allowSelfStudy: true
   },
   {
     id: 6,
@@ -210,7 +219,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '专业核心课',
     bannerText: '新大陆时代科技',
     bannerSub: 'Newland Era Hi-Tech',
-    theme: 'blue-gradient'
+    theme: 'blue-gradient',
+    allowSelfStudy: true
   },
   {
     id: 7,
@@ -221,7 +231,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '专业基础课',
     bannerText: '新大陆时代科技',
     bannerSub: 'Newland Era Hi-Tech',
-    theme: 'blue-gradient'
+    theme: 'blue-gradient',
+    allowSelfStudy: true
   },
   {
     id: 8,
@@ -232,7 +243,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '行业应用课',
     bannerText: '智慧水务应用开发',
     bannerSub: '智能水质调度实训',
-    theme: 'cyber-purple'
+    theme: 'cyber-purple',
+    allowSelfStudy: true
   },
   {
     id: 9,
@@ -243,7 +255,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '行业应用课',
     bannerText: '智慧行业应用开发',
     bannerSub: '牧场、家居、温室',
-    theme: 'cyber-purple'
+    theme: 'cyber-purple',
+    allowSelfStudy: true
   },
   {
     id: 10,
@@ -254,7 +267,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '专业核心课',
     bannerText: '智慧行业应用开发',
     bannerSub: '牧场、家居、温室',
-    theme: 'cyber-purple'
+    theme: 'cyber-purple',
+    allowSelfStudy: false
   },
   {
     id: 11,
@@ -265,7 +279,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '技能竞赛',
     bannerText: '新大陆时代科技',
     bannerSub: 'Newland Era Hi-Tech',
-    theme: 'blue-gradient'
+    theme: 'blue-gradient',
+    allowSelfStudy: true
   },
   {
     id: 12,
@@ -276,7 +291,8 @@ const TEACHER_PURCHASED_COURSES = [
     type: '基础素质',
     bannerText: '新大陆时代科技',
     bannerSub: 'Newland Era Hi-Tech',
-    theme: 'blue-gradient'
+    theme: 'blue-gradient',
+    allowSelfStudy: true
   }
 ];
 
@@ -296,6 +312,7 @@ export default function Personal({
   const [activeMenu, setActiveMenu] = useState(initialMenu || 'student-home');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCourseManagementOpen, setIsCourseManagementOpen] = useState(true);
+  const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(true);
   
   // 顶部与用户信息状态
   const [activeTeachingTab, setActiveTeachingTab] = useState('进行中');
@@ -304,13 +321,18 @@ export default function Personal({
   const [isTenantOpen, setIsTenantOpen] = useState(false);
   const activeTenant = { name: "新大陆教育行业云" };
 
-  // 我的课程状态（支持 全部 / 已购课程 / 自建课程）
+  // 我的课程状态（支持 全部 / 已购课程 / 自建课程，默认卡片展示）
   const [teachingCourseTab, setTeachingCourseTab] = useState<'all' | 'purchased' | 'custom'>('all');
+  const [courseViewMode, setCourseViewMode] = useState<'card' | 'list'>('card');
+  const [selectedCourseIds, setSelectedCourseIds] = useState<number[]>([]);
   const [selectedCourseType, setSelectedCourseType] = useState('全部');
   const [activeCourseSort, setActiveCourseSort] = useState('默认排序');
   const [courseSearchKeyword, setCourseSearchKeyword] = useState('');
   const [isCourseFilterExpanded, setIsCourseFilterExpanded] = useState(false);
   const [editingTeacherCourse, setEditingTeacherCourse] = useState<any | null>(null);
+
+  // 状态化已购课程数据（支持动态修改学生自学权限）
+  const [purchasedCourses, setPurchasedCourses] = useState(TEACHER_PURCHASED_COURSES);
 
   // 创建课程与任务下发弹窗状态
   const [isCreateCourseModalOpen, setIsCreateCourseModalOpen] = useState(false);
@@ -327,7 +349,7 @@ export default function Personal({
   const [dispatchTaskName, setDispatchTaskName] = useState('');
   const [dispatchSuccessToast, setDispatchSuccessToast] = useState('');
 
-  // 自建课程数据列表
+  // 自建课程数据列表（增加 allowSelfStudy 属性）
   const [customCourses, setCustomCourses] = useState([
     {
       id: 101,
@@ -338,7 +360,8 @@ export default function Personal({
       gradient: 'from-blue-500 to-indigo-600',
       bannerText: 'Python进阶与爬虫',
       bannerSub: '校本特色实战',
-      isCustom: true
+      isCustom: true,
+      allowSelfStudy: true
     },
     {
       id: 102,
@@ -349,7 +372,8 @@ export default function Personal({
       gradient: 'from-indigo-600 to-purple-600',
       bannerText: '深度学习实训',
       bannerSub: 'YOLOv8目标检测',
-      isCustom: true
+      isCustom: true,
+      allowSelfStudy: true
     },
     {
       id: 103,
@@ -360,9 +384,80 @@ export default function Personal({
       gradient: 'from-cyan-500 to-blue-600',
       bannerText: '边缘计算与智能网关',
       bannerSub: '协议开发与上云',
-      isCustom: true
+      isCustom: true,
+      allowSelfStudy: false
     }
   ]);
+
+  // 单门课程快速切换学生自学权限
+  const handleToggleCourseSelfStudy = (courseId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    let updatedTitle = '';
+    let nextStatus = false;
+
+    setPurchasedCourses(prev => prev.map(c => {
+      if (c.id === courseId) {
+        updatedTitle = c.title;
+        nextStatus = !c.allowSelfStudy;
+        return { ...c, allowSelfStudy: nextStatus };
+      }
+      return c;
+    }));
+
+    setCustomCourses(prev => prev.map(c => {
+      if (c.id === courseId) {
+        updatedTitle = c.title;
+        nextStatus = !c.allowSelfStudy;
+        return { ...c, allowSelfStudy: nextStatus };
+      }
+      return c;
+    }));
+
+    setDispatchSuccessToast(`课程《${updatedTitle}》已${nextStatus ? '允许' : '禁止'}学生自主学习`);
+    setTimeout(() => setDispatchSuccessToast(''), 3000);
+  };
+
+  // 批量为课程设置学生自学权限
+  const handleBatchSetSelfStudy = (allow: boolean) => {
+    if (selectedCourseIds.length === 0) return;
+    const count = selectedCourseIds.length;
+
+    setPurchasedCourses(prev => prev.map(c => {
+      if (selectedCourseIds.includes(c.id)) {
+        return { ...c, allowSelfStudy: allow };
+      }
+      return c;
+    }));
+
+    setCustomCourses(prev => prev.map(c => {
+      if (selectedCourseIds.includes(c.id)) {
+        return { ...c, allowSelfStudy: allow };
+      }
+      return c;
+    }));
+
+    setSelectedCourseIds([]);
+    setDispatchSuccessToast(`已成功将选中的 ${count} 门课程批量设置为【${allow ? '允许学生自学' : '禁止学生自学'}】`);
+    setTimeout(() => setDispatchSuccessToast(''), 3500);
+  };
+
+  // 勾选/取消勾选课程
+  const handleToggleSelectCourse = (courseId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedCourseIds(prev => 
+      prev.includes(courseId) ? prev.filter(id => id !== courseId) : [...prev, courseId]
+    );
+  };
+
+  // 全选/反选当前筛选列表的所有课程
+  const handleToggleSelectAll = (filteredIds: number[]) => {
+    const isAllSelected = filteredIds.length > 0 && filteredIds.every(id => selectedCourseIds.includes(id));
+    if (isAllSelected) {
+      setSelectedCourseIds(prev => prev.filter(id => !filteredIds.includes(id)));
+    } else {
+      setSelectedCourseIds(prev => Array.from(new Set([...prev, ...filteredIds])));
+    }
+  };
 
   const currentRoleInfo = ROLES.find(r => r.id === currentRole) || ROLES[0];
 
@@ -405,7 +500,16 @@ export default function Personal({
             label: '课程管理',
             icon: Book,
             children: [
-              { id: 'course-list', label: '课程列表', icon: Book }
+              { id: 'course-list', label: '课程列表', icon: Book },
+              { 
+                id: 'questions', 
+                label: '题库管理', 
+                icon: Database,
+                children: [
+                  { id: 'question-list', label: '试题管理', icon: FileText }
+                ]
+              },
+              { id: 'auto-grading', label: '自动评分', icon: Clock }
             ]
           },
           { id: 'course-packages', label: '课程模块包', icon: LayoutGrid }
@@ -418,13 +522,20 @@ export default function Personal({
             label: '课程管理',
             icon: Book,
             children: [
-              { id: 'course-list', label: '课程列表', icon: Book }
+              { id: 'course-list', label: '课程列表', icon: Book },
+              { 
+                id: 'questions', 
+                label: '题库管理', 
+                icon: Database,
+                children: [
+                  { id: 'question-list', label: '试题管理', icon: FileText }
+                ]
+              },
+              { id: 'auto-grading', label: '自动评分', icon: Clock }
             ]
           },
           { id: 'course-packages', label: '课程模块包', icon: LayoutGrid },
-          { id: 'auto-grading', label: '自动评分', icon: Clock },
           { id: 'tags', label: '标签管理', icon: Tag },
-          { id: 'questions', label: '题库管理', icon: Database },
           { id: 'admin-home', label: '管理员主页', icon: Home },
           { id: 'operations', label: '运营管理', icon: PieChart },
           { id: 'system-admin', label: '系统管理员主页', icon: Shield },
@@ -835,76 +946,20 @@ export default function Personal({
               { name: '软件工程2201班', course: 'Python程序设计进阶', students: 50, rate: 69, status: '待开始' },
               { name: '大数据应用2202班', course: '智能实验分析导论', students: 43, rate: 91, status: '已完成' },
             ].map((cls, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3.5 bg-slate-50 rounded-lg hover:bg-blue-50/40 transition-colors">
-                <div className="flex items-center space-x-3">
-                  <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                    {cls.name.slice(0, 2)}
+              <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:border-slate-200 transition-colors">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-bold text-slate-800">{cls.name}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 font-medium">{cls.status}</span>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-800">{cls.name}</h4>
-                    <p className="text-xs text-slate-500">{cls.course} · {cls.students}人</p>
-                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{cls.course} · {cls.students}人</p>
                 </div>
-                <div className="flex items-center space-x-6">
-                  <div className="text-right">
-                    <span className="text-xs text-slate-500">学习进度</span>
-                    <span className="text-xs font-bold text-slate-700 ml-2">{cls.rate}%</span>
-                  </div>
-                  <button 
-                    onClick={() => setActiveMenu('my-teaching')}
-                    className="px-3 py-1 bg-white border border-slate-200 hover:border-blue-400 hover:text-blue-600 text-slate-600 text-xs rounded transition-colors"
-                  >
-                    教学监控
-                  </button>
+                <div className="text-right">
+                  <span className="text-xs font-bold text-slate-700">{cls.rate}%</span>
+                  <p className="text-[10px] text-slate-400">完成率</p>
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
-          <div>
-            <h3 className="font-bold text-slate-800 mb-4">快捷教学工具</h3>
-            <div className="space-y-3">
-              <button 
-                onClick={() => setActiveMenu('my-courses')}
-                className="w-full flex items-center p-3 rounded-lg border border-slate-100 hover:border-blue-300 hover:bg-blue-50/30 text-left transition-all group"
-              >
-                <div className="w-8 h-8 rounded bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:scale-105 transition-transform">
-                  <Book className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-slate-800">课程备课与编辑</div>
-                  <div className="text-xs text-slate-400">编写课件、编辑实训实验步骤</div>
-                </div>
-              </button>
-
-              <button 
-                onClick={() => setActiveMenu('my-teaching')}
-                className="w-full flex items-center p-3 rounded-lg border border-slate-100 hover:border-blue-300 hover:bg-blue-50/30 text-left transition-all group"
-              >
-                <div className="w-8 h-8 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 group-hover:scale-105 transition-transform">
-                  <Layers className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-slate-800">作业与任务下发</div>
-                  <div className="text-xs text-slate-400">向指定班级下发实验与作业</div>
-                </div>
-              </button>
-
-              <button 
-                onClick={() => setActiveMenu('my-teaching')}
-                className="w-full flex items-center p-3 rounded-lg border border-slate-100 hover:border-blue-300 hover:bg-blue-50/30 text-left transition-all group"
-              >
-                <div className="w-8 h-8 rounded bg-amber-100 text-amber-600 flex items-center justify-center mr-3 group-hover:scale-105 transition-transform">
-                  <Award className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-slate-800">实验评分与审核</div>
-                  <div className="text-xs text-slate-400">在线批阅实验代码与运行报告</div>
-                </div>
-              </button>
-            </div>
           </div>
 
           <div className="p-4 bg-slate-50 rounded-lg mt-4 border border-dashed border-slate-200">
@@ -985,7 +1040,7 @@ export default function Personal({
     </div>
   );
 
-  // 5. 教师-我的课程视图（按截图高保真实现，含已购课程/自建课程Tab、创建课程按钮与下发任务）
+  // 5. 教师-我的课程视图（支持列表与卡片展示切换、批量为课程设置学生自学权限）
   const renderTeacherCoursesView = () => {
     // 若当前正在编辑自建课程，渲染教师端专属自建课程编辑器
     if (editingTeacherCourse) {
@@ -1000,9 +1055,6 @@ export default function Personal({
         />
       );
     }
-
-    // 基础已购课程数据（引用组件常量）
-    const purchasedCourses = TEACHER_PURCHASED_COURSES;
 
     const courseTypes = [
       '全部',
@@ -1032,13 +1084,18 @@ export default function Personal({
       return matchType && matchSearch;
     });
 
+    const isAllFilteredSelected = filteredCourses.length > 0 && filteredCourses.every(c => selectedCourseIds.includes(c.id));
+
     return (
       <div className="flex-1 flex flex-col bg-white overflow-hidden">
         {/* 顶部 Tab 栏（全部 vs 已购课程 vs 自建课程）与 创建课程按钮 */}
         <div className="px-6 pt-3.5 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
           <div className="flex space-x-8">
             <button
-              onClick={() => setTeachingCourseTab('all')}
+              onClick={() => {
+                setTeachingCourseTab('all');
+                setSelectedCourseIds([]);
+              }}
               className={`pb-3 text-sm font-semibold relative transition-colors flex items-center cursor-pointer ${
                 teachingCourseTab === 'all'
                   ? 'text-blue-600 border-b-2 border-blue-600'
@@ -1054,7 +1111,10 @@ export default function Personal({
             </button>
 
             <button
-              onClick={() => setTeachingCourseTab('purchased')}
+              onClick={() => {
+                setTeachingCourseTab('purchased');
+                setSelectedCourseIds([]);
+              }}
               className={`pb-3 text-sm font-semibold relative transition-colors flex items-center cursor-pointer ${
                 teachingCourseTab === 'purchased'
                   ? 'text-blue-600 border-b-2 border-blue-600'
@@ -1070,7 +1130,10 @@ export default function Personal({
             </button>
 
             <button
-              onClick={() => setTeachingCourseTab('custom')}
+              onClick={() => {
+                setTeachingCourseTab('custom');
+                setSelectedCourseIds([]);
+              }}
               className={`pb-3 text-sm font-semibold relative transition-colors flex items-center cursor-pointer ${
                 teachingCourseTab === 'custom'
                   ? 'text-blue-600 border-b-2 border-blue-600'
@@ -1106,7 +1169,7 @@ export default function Personal({
           )}
         </div>
 
-        {/* 筛选与搜索行（完全依照截图设计） */}
+        {/* 筛选、搜索与视图切换栏 */}
         <div className="px-6 py-3 border-b border-slate-100 bg-white space-y-2.5 shrink-0">
           <div className="flex items-center justify-between">
             {/* 课程类型标签列表 */}
@@ -1127,15 +1190,15 @@ export default function Personal({
               ))}
             </div>
 
-            {/* 右侧搜索框与展开控制 */}
+            {/* 右侧搜索框、展开与视图切换模式（卡片 vs 列表，默认卡片） */}
             <div className="flex items-center space-x-3 shrink-0 ml-4">
-              <div className="relative w-64">
+              <div className="relative w-60">
                 <input
                   type="text"
                   value={courseSearchKeyword}
                   onChange={(e) => setCourseSearchKeyword(e.target.value)}
                   placeholder="请输入课程名进行搜索"
-                  className="w-full pl-3 pr-8 py-1 text-xs border border-slate-200 rounded-md outline-none focus:border-blue-500 bg-white placeholder:text-slate-400"
+                  className="w-full pl-3 pr-8 py-1.5 text-xs border border-slate-200 rounded-md outline-none focus:border-blue-500 bg-white placeholder:text-slate-400"
                 />
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2" />
               </div>
@@ -1148,49 +1211,135 @@ export default function Personal({
                 <ChevronDown className={`w-3.5 h-3.5 ml-0.5 transition-transform ${isCourseFilterExpanded ? 'rotate-180' : ''}`} />
               </button>
 
-              <button className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100" title="高级选项">
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-              </button>
+              {/* 卡片 / 列表展示模式切换按钮组（默认卡片） */}
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                <button
+                  onClick={() => setCourseViewMode('card')}
+                  className={`px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1 transition-all cursor-pointer ${
+                    courseViewMode === 'card'
+                      ? 'bg-white text-blue-600 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="卡片展示视图（默认）"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">卡片</span>
+                </button>
+                <button
+                  onClick={() => setCourseViewMode('list')}
+                  className={`px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1 transition-all cursor-pointer ${
+                    courseViewMode === 'list'
+                      ? 'bg-white text-blue-600 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="列表展示视图"
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">列表</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* 排序行 */}
-          <div className="flex items-center space-x-6 pt-1.5 border-t border-slate-50 text-xs">
-            {['默认排序', '最新', '引用最多'].map(s => (
-              <button
-                key={s}
-                onClick={() => setActiveCourseSort(s)}
-                className={`transition-colors cursor-pointer ${
-                  activeCourseSort === s ? 'text-[#1890ff] font-semibold' : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                {s}
-              </button>
-            ))}
+          {/* 排序与全选控制行 */}
+          <div className="flex items-center justify-between pt-1.5 border-t border-slate-50 text-xs">
+            <div className="flex items-center space-x-6">
+              {['默认排序', '最新', '引用最多'].map(s => (
+                <button
+                  key={s}
+                  onClick={() => setActiveCourseSort(s)}
+                  className={`transition-colors cursor-pointer ${
+                    activeCourseSort === s ? 'text-[#1890ff] font-semibold' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            {/* 批量全选当前筛选结果 */}
+            <div className="flex items-center space-x-3 text-xs text-slate-600">
+              <label className="inline-flex items-center space-x-1.5 cursor-pointer hover:text-blue-600 select-none">
+                <input
+                  type="checkbox"
+                  checked={isAllFilteredSelected}
+                  onChange={() => handleToggleSelectAll(filteredCourses.map(c => c.id))}
+                  className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                />
+                <span>全选当前 ({filteredCourses.length})</span>
+              </label>
+            </div>
           </div>
         </div>
 
-        {/* 课程卡片栅格列表 */}
+        {/* 批量操作浮动工具栏（当选中课程数 > 0 时动态弹出） */}
+        {selectedCourseIds.length > 0 && (
+          <div className="mx-6 my-2.5 px-4 py-2 bg-blue-50/90 border border-blue-200 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-1 duration-150 shadow-2xs">
+            <div className="flex items-center space-x-3 text-xs text-slate-700">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-bold">
+                {selectedCourseIds.length}
+              </span>
+              <span>
+                已选择 <strong className="text-blue-600 font-bold">{selectedCourseIds.length}</strong> 门课程
+              </span>
+              <span className="text-slate-300">|</span>
+              <button
+                onClick={() => setSelectedCourseIds([])}
+                className="text-xs text-slate-500 hover:text-slate-800 cursor-pointer underline"
+              >
+                取消选择
+              </button>
+            </div>
+
+            <div className="flex items-center space-x-2.5">
+              <span className="text-xs text-slate-600 font-medium">批量设置学生自学:</span>
+              <button
+                onClick={() => handleBatchSetSelfStudy(true)}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                title="批量允许学生自主学习"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>批量允许自学</span>
+              </button>
+              <button
+                onClick={() => handleBatchSetSelfStudy(false)}
+                className="px-3.5 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-md text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                title="批量禁止学生自学（仅排课教学可见）"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>批量禁止自学</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 主列表区域：支持卡片展示与列表展示 */}
         <div className="flex-1 p-5 overflow-y-auto bg-slate-50/50">
           {filteredCourses.length === 0 ? (
             <div className="h-64 flex flex-col items-center justify-center text-slate-400">
               <BookOpen className="w-12 h-12 text-slate-300 mb-2" />
               <p className="text-sm">未检索到相关课程</p>
             </div>
-          ) : (
+          ) : courseViewMode === 'card' ? (
+            /* 卡片展示模式（默认） */
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3.5">
               {filteredCourses.map((course) => {
                 const isCustom = !!course.isCustom;
+                const isSelected = selectedCourseIds.includes(course.id);
+                const allowStudy = course.allowSelfStudy !== false;
+
                 return (
                   <div
                     key={course.id}
                     className={`rounded-lg overflow-hidden transition-all flex flex-col justify-between group relative ${
-                      isCustom
+                      isSelected
+                        ? 'ring-2 ring-blue-500 shadow-md bg-white'
+                        : isCustom
                         ? 'bg-white border-2 border-emerald-400/90 hover:border-emerald-500 hover:shadow-lg shadow-emerald-500/5'
                         : 'bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md'
                     }`}
                   >
-                    {/* 左上角明显的角标区分标签 */}
+                    {/* 左上角角色/性质标签 */}
                     <div className="absolute left-0 top-0 z-20">
                       {isCustom ? (
                         <div className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-md shadow-xs flex items-center">
@@ -1205,6 +1354,23 @@ export default function Personal({
                       )}
                     </div>
 
+                    {/* 右上角多选 Checkbox */}
+                    <div 
+                      className="absolute right-2 top-2 z-20"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className={`p-1 rounded-md cursor-pointer transition-all ${
+                        isSelected ? 'bg-white shadow-sm' : 'bg-black/25 hover:bg-white/90 group-hover:bg-white/90'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelectCourse(course.id)}
+                          className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer block"
+                        />
+                      </div>
+                    </div>
+
                     {/* 顶部封面图区域 */}
                     <div className="relative h-[115px] overflow-hidden select-none">
                       {course.theme === 'blue-gradient' ? (
@@ -1213,7 +1379,6 @@ export default function Personal({
                             <div className="text-[13px] font-extrabold tracking-tight drop-shadow-xs">{course.bannerText}</div>
                             <div className="text-[9px] opacity-90 font-mono tracking-tighter">{course.bannerSub}</div>
                           </div>
-                          {/* 3D 装饰图形 */}
                           <div className="absolute right-2 bottom-1.5 w-14 h-14 opacity-90">
                             <div className="w-12 h-12 rounded-lg bg-white/20 backdrop-blur-xs border border-white/30 transform rotate-12 flex items-center justify-center">
                               <Layers className="w-6 h-6 text-white" />
@@ -1296,10 +1461,45 @@ export default function Personal({
                         <p className="text-[11px] text-slate-500 mt-1.5 line-clamp-1" title={course.desc}>
                           {course.desc}
                         </p>
+
+                        {/* 学生自学权限状态控制条（支持一键开关） */}
+                        <div 
+                          className="mt-2.5 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 flex items-center justify-between"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center space-x-1">
+                            <span className="text-[10px] text-slate-400 font-medium">自学:</span>
+                            {allowStudy ? (
+                              <span className="text-[10px] font-semibold text-emerald-600 flex items-center">
+                                <CheckCircle2 className="w-2.5 h-2.5 mr-0.5 text-emerald-500" />
+                                允许自学
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-medium text-slate-400 flex items-center">
+                                <Lock className="w-2.5 h-2.5 mr-0.5 text-slate-400" />
+                                禁止自学
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => handleToggleCourseSelfStudy(course.id, e)}
+                            title={allowStudy ? "点击切换为禁止自学" : "点击切换为允许自学"}
+                            className={`relative inline-flex h-3.5 w-6.5 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+                              allowStudy ? 'bg-emerald-500' : 'bg-slate-300'
+                            }`}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out mt-0.5 ${
+                                allowStudy ? 'translate-x-3' : 'translate-x-0.5'
+                              }`}
+                            />
+                          </button>
+                        </div>
                       </div>
 
                       {/* 底部操作行 */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
                         {/* 环境标签 */}
                         <div className="flex items-center space-x-1">
                           <span className="text-[11px] text-slate-400 font-medium">环境</span>
@@ -1338,7 +1538,7 @@ export default function Personal({
                             title="下发任务到班级"
                           >
                             <UploadCloud className="w-3 h-3 mr-1" />
-                            下发任务
+                            下发
                           </button>
                         </div>
                       </div>
@@ -1347,10 +1547,177 @@ export default function Personal({
                 );
               })}
             </div>
+          ) : (
+            /* 列表展示模式 */
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/90 border-b border-slate-200 text-[11px] font-semibold text-slate-500 select-none">
+                      <th className="py-3 px-4 w-12 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isAllFilteredSelected}
+                          onChange={() => handleToggleSelectAll(filteredCourses.map(c => c.id))}
+                          className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </th>
+                      <th className="py-3 px-4 min-w-[260px]">课程名称与简介</th>
+                      <th className="py-3 px-4 w-32">所属分类</th>
+                      <th className="py-3 px-4 w-32">课程类型</th>
+                      <th className="py-3 px-4 w-36">更新时间</th>
+                      <th className="py-3 px-4 w-44 text-center">学生自学权限</th>
+                      <th className="py-3 px-4 w-36 text-right">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs">
+                    {filteredCourses.map((course) => {
+                      const isCustom = !!course.isCustom;
+                      const isSelected = selectedCourseIds.includes(course.id);
+                      const allowStudy = course.allowSelfStudy !== false;
+
+                      return (
+                        <tr
+                          key={course.id}
+                          onClick={() => handleToggleSelectCourse(course.id)}
+                          className={`transition-colors cursor-pointer ${
+                            isSelected ? 'bg-blue-50/50 hover:bg-blue-50/80' : 'hover:bg-slate-50/80'
+                          }`}
+                        >
+                          {/* 复选框 */}
+                          <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectCourse(course.id)}
+                              className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                            />
+                          </td>
+
+                          {/* 封面缩略图与课程信息 */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-12 h-8 rounded-md shrink-0 flex items-center justify-center text-white text-[10px] font-bold shadow-2xs overflow-hidden ${
+                                isCustom
+                                  ? 'bg-gradient-to-br from-emerald-500 to-teal-700'
+                                  : course.theme === 'deep-blue'
+                                  ? 'bg-gradient-to-br from-blue-600 to-indigo-800'
+                                  : 'bg-gradient-to-br from-sky-400 to-blue-600'
+                              }`}>
+                                <BookOpen className="w-4 h-4 opacity-90" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center space-x-1.5">
+                                  {isCustom ? (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold shrink-0">
+                                      自建
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold shrink-0">
+                                      已购
+                                    </span>
+                                  )}
+                                  <h4 className="text-xs font-bold text-slate-800 truncate" title={course.title}>
+                                    {course.title}
+                                  </h4>
+                                </div>
+                                <p className="text-[11px] text-slate-400 truncate mt-0.5" title={course.desc}>
+                                  {course.desc}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* 分类 */}
+                          <td className="py-3.5 px-4 text-slate-600">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[11px] font-medium">
+                              {course.category}
+                            </span>
+                          </td>
+
+                          {/* 类型 */}
+                          <td className="py-3.5 px-4 text-slate-600 text-xs">
+                            {course.type}
+                          </td>
+
+                          {/* 时间 */}
+                          <td className="py-3.5 px-4 text-slate-400 text-[11px] font-mono">
+                            {course.time}
+                          </td>
+
+                          {/* 学生自学权限 Switch 与徽章 */}
+                          <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full border shadow-2xs transition-all bg-white border-slate-200">
+                              {allowStudy ? (
+                                <span className="inline-flex items-center text-[11px] font-semibold text-emerald-600">
+                                  <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-500" />
+                                  允许自学
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center text-[11px] font-medium text-slate-400">
+                                  <Lock className="w-3 h-3 mr-1 text-slate-400" />
+                                  禁止自学
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => handleToggleCourseSelfStudy(course.id, e)}
+                                title={allowStudy ? "点击切换为禁止学生自学" : "点击切换为允许学生自学"}
+                                className={`relative inline-flex h-4 w-7.5 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
+                                  allowStudy ? 'bg-emerald-500' : 'bg-slate-300'
+                                }`}
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out mt-0.5 ${
+                                    allowStudy ? 'translate-x-4' : 'translate-x-0.5'
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* 操作 */}
+                          <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end space-x-2">
+                              {isCustom && (
+                                <button
+                                  onClick={() => setEditingTeacherCourse(course)}
+                                  className="px-2.5 py-1 rounded border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-medium transition-colors cursor-pointer flex items-center shadow-2xs"
+                                  title="编辑自建课程教学大纲与步骤"
+                                >
+                                  <Edit3 className="w-3 h-3 mr-1" />
+                                  编辑
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  setSelectedCourseForDispatch(course);
+                                  setDispatchTaskName(`${course.title}-实训任务`);
+                                  setIsDispatchModalOpen(true);
+                                }}
+                                className={`px-2.5 py-1 rounded border text-xs font-medium transition-colors flex items-center cursor-pointer shadow-2xs ${
+                                  isCustom
+                                    ? 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                                    : 'border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-600'
+                                }`}
+                                title="下发任务到班级"
+                              >
+                                <UploadCloud className="w-3 h-3 mr-1" />
+                                下发
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* 底部分页区（参考截图） */}
+        {/* 底部分页区 */}
         <div className="px-6 py-3 bg-white border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
           <div className="flex items-center space-x-4">
             <span>共 {filteredCourses.length} 条</span>
@@ -1373,7 +1740,7 @@ export default function Personal({
             <button className="px-2.5 py-1 border border-slate-200 rounded hover:bg-slate-50 text-slate-600">
               2
             </button>
-            <button className="px-2 py-1 border border-slate-200 rounded hover:bg-slate-50 text-slate-600">
+            <button className="px-2.5 py-1 border border-slate-200 rounded hover:bg-slate-50 text-slate-600">
               &gt;
             </button>
             <span className="ml-2">前往</span>
@@ -1543,6 +1910,14 @@ export default function Personal({
     // 4. 超级管理员-课程管理 / 课程列表
     if (activeMenu === 'course-list' || activeMenu === 'course-management') {
       return <CourseManagement />;
+    }
+    // 4.1 题库管理 / 试题管理 (参考截图 1:1 实现)
+    if (activeMenu === 'questions' || activeMenu === 'question-list') {
+      return <QuestionManagement />;
+    }
+    // 4.2 自动评分
+    if (activeMenu === 'auto-grading') {
+      return <AutoGradingManagement />;
     }
     // 5. 成员管理
     if (activeMenu === 'members') {
@@ -1774,7 +2149,14 @@ export default function Personal({
             {sidebarItems.map((item) => {
               const Icon = item.icon;
               const hasChildren = !!item.children && item.children.length > 0;
-              const isChildActive = hasChildren && item.children?.some(c => c.id === activeMenu);
+              
+              // 递归判断当前菜单或任意后代子菜单是否激活
+              const isDescendantActive = (children?: MenuItem[]): boolean => {
+                if (!children) return false;
+                return children.some(c => c.id === activeMenu || isDescendantActive(c.children));
+              };
+
+              const isChildActive = hasChildren && isDescendantActive(item.children);
               const isActive = activeMenu === item.id || isChildActive;
 
               if (hasChildren) {
@@ -1807,6 +2189,72 @@ export default function Personal({
                       <div className="pl-6 space-y-0.5">
                         {item.children?.map(child => {
                           const ChildIcon = child.icon;
+                          const hasSubChildren = !!child.children && child.children.length > 0;
+                          const isSubChildActive = hasSubChildren && child.children?.some(sc => sc.id === activeMenu);
+                          const isCurrentActive = activeMenu === child.id || isSubChildActive;
+
+                          // 若二级菜单含有三级子菜单（如题库管理 -> 试题管理）
+                          if (hasSubChildren) {
+                            return (
+                              <div key={child.id} className="space-y-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsQuestionBankOpen(!isQuestionBankOpen);
+                                    // 点击题库管理时默认进入试题管理
+                                    if (activeMenu !== 'question-list' && activeMenu !== 'questions') {
+                                      setActiveMenu('question-list');
+                                    }
+                                  }}
+                                  className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-md font-medium transition-colors ${
+                                    isCurrentActive
+                                      ? 'bg-blue-50 text-blue-600 font-semibold'
+                                      : 'text-slate-600 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  <div className="flex items-center">
+                                    <ChildIcon className="w-3.5 h-3.5 mr-2" />
+                                    <span>{child.label}</span>
+                                  </div>
+                                  {isQuestionBankOpen ? (
+                                    <ChevronUp className="w-3 h-3 text-slate-400" />
+                                  ) : (
+                                    <ChevronDown className="w-3 h-3 text-slate-400" />
+                                  )}
+                                </button>
+
+                                {/* 三级子菜单列表 */}
+                                {isQuestionBankOpen && (
+                                  <div className="pl-5 space-y-0.5 border-l border-slate-200/60 ml-3 my-0.5">
+                                    {child.children?.map(subChild => {
+                                      const SubIcon = subChild.icon;
+                                      const isSubActive = activeMenu === subChild.id;
+                                      return (
+                                        <button
+                                          key={subChild.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setActiveMenu(subChild.id);
+                                            setEditingTeacherCourse(null);
+                                          }}
+                                          className={`w-full flex items-center px-2.5 py-1.5 text-[11px] rounded-md transition-colors ${
+                                            isSubActive
+                                              ? 'bg-blue-100/70 text-blue-700 font-semibold'
+                                              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                                          }`}
+                                        >
+                                          <SubIcon className="w-3 h-3 mr-1.5 text-slate-400" />
+                                          <span>{subChild.label}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          // 普通二级子菜单（如课程列表、自动评分）
                           const isSubActive = activeMenu === child.id;
                           return (
                             <button

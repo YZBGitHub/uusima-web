@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import UserProfileDropdown from '../../components/UserProfileDropdown';
-import { Book, LayoutGrid, Clock, Tag, Database, Home, PieChart, Shield, Trophy, Users, User, BookOpen, UserCheck, GraduationCap, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { Book, LayoutGrid, Clock, Tag, Database, Home, PieChart, Shield, Trophy, Users, User, BookOpen, UserCheck, GraduationCap, ChevronDown, ChevronUp, PanelLeftClose, PanelLeft, FileText } from 'lucide-react';
 import { Languages } from 'lucide-react';
 import CourseManagement from './CourseManagement';
+import { QuestionManagement } from './QuestionBankManagement';
+import { AutoGradingManagement } from './AutoGradingManagement';
 
 export default function TeachingManagement({ onNavigate }: { onNavigate?: (view: string) => void }) {
   const [activeMenu, setActiveMenu] = useState('course-list');
   const [isCourseManagementOpen, setIsCourseManagementOpen] = useState(true);
+  const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const sidebarItems = [
@@ -17,13 +20,20 @@ export default function TeachingManagement({ onNavigate }: { onNavigate?: (view:
       isOpen: isCourseManagementOpen,
       toggle: () => setIsCourseManagementOpen(!isCourseManagementOpen),
       children: [
-        { id: 'course-list', label: '课程列表', icon: Book }
+        { id: 'course-list', label: '课程列表', icon: Book },
+        { 
+          id: 'questions', 
+          label: '题库管理', 
+          icon: Database,
+          children: [
+            { id: 'question-list', label: '试题管理', icon: FileText }
+          ]
+        },
+        { id: 'auto-grading', label: '自动评分', icon: Clock }
       ]
     },
     { id: 'course-packages', label: '课程模块包', icon: LayoutGrid },
-    { id: 'auto-grading', label: '自动评分', icon: Clock },
     { id: 'tags', label: '标签管理', icon: Tag },
-    { id: 'questions', label: '题库管理', icon: Database },
     { id: 'admin-home', label: '管理员主页', icon: Home },
     { id: 'operations', label: '运营管理', icon: PieChart },
     { id: 'system-admin', label: '系统管理员主页', icon: Shield },
@@ -117,20 +127,70 @@ export default function TeachingManagement({ onNavigate }: { onNavigate?: (view:
                   </button>
                   {item.isOpen && isSidebarOpen && (
                     <div className="bg-[#f0f6ff] py-1">
-                      {item.children.map(child => (
-                        <button
-                          key={child.id}
-                          onClick={() => setActiveMenu(child.id)}
-                          className={`w-full flex items-center pl-14 pr-6 py-2.5 text-sm transition-colors ${
-                            activeMenu === child.id 
-                              ? 'bg-[#e6f7ff] text-[#1890ff] font-medium' 
-                              : 'text-slate-600 hover:bg-blue-50/50 hover:text-[#1890ff]'
-                          }`}
-                        >
-                          <child.icon className={`w-4 h-4 mr-2 ${activeMenu === child.id ? 'text-[#1890ff]' : 'text-[#1890ff]'}`} />
-                          {child.label}
-                        </button>
-                      ))}
+                      {item.children.map(child => {
+                        const hasSub = !!child.children && child.children.length > 0;
+                        if (hasSub) {
+                          return (
+                            <div key={child.id} className="space-y-0.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsQuestionBankOpen(!isQuestionBankOpen);
+                                  if (activeMenu !== 'question-list' && activeMenu !== 'questions') {
+                                    setActiveMenu('question-list');
+                                  }
+                                }}
+                                className={`w-full flex items-center justify-between pl-14 pr-6 py-2 text-sm transition-colors ${
+                                  activeMenu === child.id || child.children?.some(sc => sc.id === activeMenu)
+                                    ? 'bg-[#e6f7ff] text-[#1890ff] font-medium' 
+                                    : 'text-slate-600 hover:bg-blue-50/50 hover:text-[#1890ff]'
+                                }`}
+                              >
+                                <div className="flex items-center">
+                                  <child.icon className="w-4 h-4 mr-2 text-[#1890ff]" />
+                                  <span>{child.label}</span>
+                                </div>
+                                {isQuestionBankOpen ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
+                              </button>
+
+                              {isQuestionBankOpen && (
+                                <div className="bg-blue-50/50 py-0.5">
+                                  {child.children?.map(sub => (
+                                    <button
+                                      key={sub.id}
+                                      type="button"
+                                      onClick={() => setActiveMenu(sub.id)}
+                                      className={`w-full flex items-center pl-20 pr-6 py-1.5 text-xs transition-colors ${
+                                        activeMenu === sub.id
+                                          ? 'bg-blue-100 text-[#1890ff] font-semibold'
+                                          : 'text-slate-500 hover:text-[#1890ff] hover:bg-blue-50'
+                                      }`}
+                                    >
+                                      <sub.icon className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                                      <span>{sub.label}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={child.id}
+                            onClick={() => setActiveMenu(child.id)}
+                            className={`w-full flex items-center pl-14 pr-6 py-2.5 text-sm transition-colors ${
+                              activeMenu === child.id 
+                                ? 'bg-[#e6f7ff] text-[#1890ff] font-medium' 
+                                : 'text-slate-600 hover:bg-blue-50/50 hover:text-[#1890ff]'
+                            }`}
+                          >
+                            <child.icon className="w-4 h-4 mr-2 text-[#1890ff]" />
+                            {child.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -169,9 +229,13 @@ export default function TeachingManagement({ onNavigate }: { onNavigate?: (view:
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white">
-        {activeMenu === 'course-list' ? (
+      <div className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden">
+        {activeMenu === 'course-list' || activeMenu === 'course-management' ? (
           <CourseManagement />
+        ) : activeMenu === 'questions' || activeMenu === 'question-list' ? (
+          <QuestionManagement />
+        ) : activeMenu === 'auto-grading' ? (
+          <AutoGradingManagement />
         ) : (
           <div className="flex-1 flex items-center justify-center text-slate-400 bg-slate-50">
             {sidebarItems.find(i => i.id === activeMenu)?.label || '模块开发中...'}

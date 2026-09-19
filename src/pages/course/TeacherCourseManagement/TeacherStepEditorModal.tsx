@@ -4,6 +4,8 @@ import {
   X, 
   ChevronDown, 
   ChevronUp, 
+  ChevronLeft,
+  ChevronRight, 
   ExternalLink, 
   ArrowUp, 
   ArrowDown, 
@@ -11,7 +13,6 @@ import {
   Box, 
   Plus, 
   Minus, 
-  ChevronRight, 
   Bold, 
   Underline, 
   Italic, 
@@ -42,8 +43,13 @@ import {
   GitBranch,
   Layers,
   CheckSquare,
-  Square
+  Square,
+  Sliders,
+  Settings2,
+  ShieldCheck,
+  FileCode2
 } from 'lucide-react';
+import LabGradingRuleModal, { LabEnvGradingConfig, LabGradingRule, generateDefaultRulesForEnv } from './LabGradingRuleModal';
 
 export interface TeacherTask {
   id: string;
@@ -248,6 +254,29 @@ export default function TeacherStepEditorModal({
     paramAccuracy: 30,      // 参数设定正确率 (虚拟仿真)
     reportQuality: 30       // 实验总结报告 (通用)
   });
+
+  // 各实验环境评分规则配置集合（envId -> LabEnvGradingConfig）
+  const [envGradingConfigs, setEnvGradingConfigs] = useState<Record<string, LabEnvGradingConfig>>(() => {
+    return task.labGradingConfig?.envConfigs || {
+      'env-1': {
+        enabled: true,
+        totalScore: 100,
+        passScore: 60,
+        allowViewDiagnostics: true,
+        rules: generateDefaultRulesForEnv({ title: '大数据-jupyter', category: 'jupyter' })
+      },
+      'env-2': {
+        enabled: true,
+        totalScore: 100,
+        passScore: 60,
+        allowViewDiagnostics: true,
+        rules: generateDefaultRulesForEnv({ title: '工程虚拟仿真', category: 'simulation' })
+      }
+    };
+  });
+
+  // 当前正在打开弹窗配置评分规则的环境对象
+  const [editingGradingEnv, setEditingGradingEnv] = useState<typeof LAB_HALL_ENVIRONMENTS[0] | null>(null);
 
   // 判断选中的实验环境是否包含“虚拟仿真”或“Jupyter”
   const hasJupyterEnv = selectedLabEnvIds.some(id => {
@@ -518,6 +547,30 @@ export default function TeacherStepEditorModal({
       score: 4,
       skillIds: ['s-010']
     },
+    { id: 5, title: "使用 OpenCV 进行图像色彩空间转换时，BGR 转灰度图的常用色彩代码是（ ）。", type: '单选题', category: '编程基础', score: 2, skillIds: ['s-001'] },
+    { id: 6, title: "在图像标注任务中，以下关于目标检测矩形框标注规范说法正确的有（ ）。", type: '多选题', category: '设计', score: 3, skillIds: ['s-010'] },
+    { id: 7, title: "NumPy 中用于矩阵转置的属性是（ ）。", type: '单选题', category: '编程基础', score: 2, skillIds: ['s-001'] },
+    { id: 8, title: "下列哪些方法可以用来防止机器学习模型过拟合（ ）。", type: '多选题', category: '编程基础', score: 4, skillIds: ['s-002'] },
+    { id: 9, title: "虚拟现实与仿真系统中常采用的三维模型文件格式包括（ ）。", type: '多选题', category: '仿真', score: 3, skillIds: ['s-007'] },
+    { id: 10, title: "在进行多边形语义分割标注时，关键边缘点的贴合度要求应达到（ ）。", type: '单选题', category: '设计', score: 2, skillIds: ['s-009'] },
+    { id: 11, title: "简述在图像预处理阶段进行直方图均衡化的主要目的和基本原理。", type: '简答题', category: '编程基础', score: 5, skillIds: ['s-001'] },
+    { id: 12, title: "PyTorch 中用于定义神经网络层参数梯度的核心属性是 requires_grad。（ ）", type: '单选题', category: '编程基础', score: 2, skillIds: ['s-002'] },
+    { id: 13, title: "在 3D 点云仿真交互中，用于坐标系姿态描述的四元数包含几个分量（ ）。", type: '单选题', category: '仿真', score: 2, skillIds: ['s-008'] },
+    { id: 14, title: "UI 设计中遵循的无障碍对比度（WCAG AA级）对于普通文本的最小比值是（ ）。", type: '单选题', category: '设计', score: 3, skillIds: ['s-010'] },
+    { id: 15, title: "Pandas 中读取 CSV 文件并自动解析日期列的常用参数是（ ）。", type: '单选题', category: '编程基础', score: 2, skillIds: ['s-001'] },
+    { id: 16, title: "下列属于常见工业缺陷图像检测样本增强手段的有（ ）。", type: '多选题', category: '设计', score: 4, skillIds: ['s-009'] },
+    { id: 17, title: "在机器人轨迹仿真测试中，逆运动学求解的主要应用场景是什么？", type: '简答题', category: '仿真', score: 5, skillIds: ['s-008'] },
+    { id: 18, title: "Matplotlib 图表中保存高分辨率图像时，推荐设置的 dpi 数值是（ ）。", type: '单选题', category: '编程基础', score: 2, skillIds: ['s-006'] },
+    { id: 19, title: "交互式标注系统中快捷键撤销和重做的通用快捷键是（ ）。", type: '多选题', category: '设计', score: 2, skillIds: ['s-010'] },
+    { id: 20, title: "数字孪生车间建模中支持物理碰撞检测的物理引擎包括（ ）。", type: '多选题', category: '仿真', score: 4, skillIds: ['s-007'] },
+    { id: 21, title: "在卷积神经网络中，Pooling 池化层的主要作用包括（ ）。", type: '多选题', category: '编程基础', score: 3, skillIds: ['s-002'] },
+    { id: 22, title: "Labelme 工具导出的常用标注元数据保存格式为（ ）。", type: '单选题', category: '设计', score: 2, skillIds: ['s-009'] },
+    { id: 23, title: "简要说明虚拟仿真实验中“事件驱动机制”的工作过程。", type: '简答题', category: '仿真', score: 5, skillIds: ['s-008'] },
+    { id: 24, title: "Python 列表中向末尾追加多个元素的方法是（ ）。", type: '单选题', category: '编程基础', score: 2, skillIds: ['s-001'] },
+    { id: 25, title: "标注数据质检验收（QA）合格率通常需达到的行业基准要求是（ ）。", type: '单选题', category: '设计', score: 3, skillIds: ['s-009'] },
+    { id: 26, title: "三维物理仿真场景中光照渲染模型主要包含哪些分量？", type: '多选题', category: '仿真', score: 3, skillIds: ['s-007'] },
+    { id: 27, title: "在深度学习模型训练中，学习率衰减（Learning Rate Decay）的作用是（ ）。", type: '单选题', category: '编程基础', score: 2, skillIds: ['s-002'] },
+    { id: 28, title: "人机交互界面中关于“格式塔心理学”原则包括以下哪些？", type: '多选题', category: '设计', score: 4, skillIds: ['s-010'] },
   ]);
 
   const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
@@ -526,6 +579,11 @@ export default function TeacherStepEditorModal({
   const [searchCategory, setSearchCategory] = useState('');
   const [requireAllAnswered, setRequireAllAnswered] = useState(true);
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
+
+  // 习题分页状态：支持配置分页大小（10、50、100、500）
+  const [exercisePageSize, setExercisePageSize] = useState<number>(10);
+  const [exerciseCurrentPage, setExerciseCurrentPage] = useState<number>(1);
+  const [exerciseJumpPageInput, setExerciseJumpPageInput] = useState<string>('');
 
   // 单题关联技能点下拉树浮层状态
   const [activeQuestionDropdownId, setActiveQuestionDropdownId] = useState<number | null>(null);
@@ -657,6 +715,32 @@ export default function TeacherStepEditorModal({
     return true;
   });
 
+  const exerciseTotalCount = filteredQuestions.length;
+  const exerciseTotalPages = Math.max(1, Math.ceil(exerciseTotalCount / exercisePageSize));
+
+  useEffect(() => {
+    if (exerciseCurrentPage > exerciseTotalPages) {
+      setExerciseCurrentPage(1);
+    }
+  }, [exerciseTotalPages, exerciseCurrentPage]);
+
+  const paginatedExerciseQuestions = filteredQuestions.slice(
+    (exerciseCurrentPage - 1) * exercisePageSize,
+    exerciseCurrentPage * exercisePageSize
+  );
+
+  const isExerciseCurrentPageAllSelected = paginatedExerciseQuestions.length > 0 && paginatedExerciseQuestions.every(q => selectedQuestions.includes(q.id));
+
+  const handleSelectAllExerciseCurrentPage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const idsToAdd = paginatedExerciseQuestions.map(q => q.id).filter(id => !selectedQuestions.includes(id));
+      setSelectedQuestions(prev => [...prev, ...idsToAdd]);
+    } else {
+      const pageIds = paginatedExerciseQuestions.map(q => q.id);
+      setSelectedQuestions(prev => prev.filter(id => !pageIds.includes(id)));
+    }
+  };
+
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedQuestions(filteredQuestions.map(q => q.id));
@@ -737,7 +821,7 @@ export default function TeacherStepEditorModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="w-[88vw] max-w-7xl h-[88vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden select-none border border-slate-200"
+        className="w-[82vw] min-w-[980px] max-w-[1720px] h-[86vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden select-none border border-slate-200"
       >
         {/* Header */}
         <div className="h-16 border-b border-slate-200 flex items-center justify-between px-6 shrink-0 bg-slate-50/80">
@@ -1586,8 +1670,8 @@ export default function TeacherStepEditorModal({
                           <div className="flex items-center justify-center">
                             <input 
                               type="checkbox" 
-                              checked={selectedQuestions.length === filteredQuestions.length && filteredQuestions.length > 0}
-                              onChange={handleSelectAll}
+                              checked={isExerciseCurrentPageAllSelected}
+                              onChange={handleSelectAllExerciseCurrentPage}
                               className="rounded border-slate-300 text-[#1890ff] focus:ring-[#1890ff]" 
                             />
                           </div>
@@ -1604,7 +1688,10 @@ export default function TeacherStepEditorModal({
                         </div>
                         
                         <div className="divide-y divide-slate-100 overflow-y-auto flex-1">
-                          {filteredQuestions.map((q, index) => {
+                          {paginatedExerciseQuestions.map((q, index) => {
+                            const absoluteIdx = (exerciseCurrentPage - 1) * exercisePageSize + index;
+                            const isFirst = absoluteIdx === 0;
+                            const isLast = absoluteIdx === exerciseTotalCount - 1;
                             const qSkillIds = q.skillIds || [];
                             const isDropdownOpen = activeQuestionDropdownId === q.id;
 
@@ -1636,7 +1723,7 @@ export default function TeacherStepEditorModal({
                                   />
                                 </div>
                                 <div className="flex items-center justify-center font-medium text-slate-400">
-                                  {index + 1}
+                                  {absoluteIdx + 1}
                                 </div>
                                 <div className="text-slate-700 font-medium truncate pr-2" title={q.title}>
                                   {q.title}
@@ -1843,12 +1930,103 @@ export default function TeacherStepEditorModal({
                                 <div className="flex items-center space-x-2 text-[#1890ff]">
                                   <button className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" title="编辑"><ExternalLink className="w-3.5 h-3.5" /></button>
                                   <button onClick={() => setQuestions(prev => prev.filter(item => item.id !== q.id))} className="text-red-500 hover:text-red-600 p-1 rounded hover:bg-red-50" title="删除"><X className="w-3.5 h-3.5" /></button>
-                                  <button className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" title="上移" disabled={index === 0}><ArrowUp className={`w-3.5 h-3.5 ${index === 0 ? 'opacity-30 cursor-not-allowed' : ''}`} /></button>
-                                  <button className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" title="下移" disabled={index === filteredQuestions.length - 1}><ArrowDown className={`w-3.5 h-3.5 ${index === filteredQuestions.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}`} /></button>
+                                  <button className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" title="上移" disabled={isFirst}><ArrowUp className={`w-3.5 h-3.5 ${isFirst ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`} /></button>
+                                  <button className="hover:text-blue-700 p-1 rounded hover:bg-blue-50" title="下移" disabled={isLast}><ArrowDown className={`w-3.5 h-3.5 ${isLast ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`} /></button>
                                 </div>
                               </div>
                             );
                           })}
+                        </div>
+                      </div>
+
+                      {/* Pagination: 支持配置分页大小（10、50、100、500） */}
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 shrink-0 text-xs text-slate-500">
+                        {/* 左侧：条数统计与下拉选择分页大小 */}
+                        <div className="flex items-center space-x-3">
+                          <span>
+                            共 <span className="text-slate-800 font-semibold">{exerciseTotalCount}</span> 条
+                          </span>
+
+                          <div className="relative flex items-center">
+                            <select
+                              value={exercisePageSize}
+                              onChange={(e) => {
+                                setExercisePageSize(Number(e.target.value));
+                                setExerciseCurrentPage(1);
+                              }}
+                              className="appearance-none pl-2 pr-5 py-1 bg-white border border-slate-200 rounded text-slate-700 text-xs outline-none hover:border-[#1890ff] focus:border-[#1890ff] transition-colors cursor-pointer"
+                            >
+                              <option value={10}>10条/页</option>
+                              <option value={50}>50条/页</option>
+                              <option value={100}>100条/页</option>
+                              <option value={500}>500条/页</option>
+                            </select>
+                            <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          </div>
+                        </div>
+
+                        {/* 右侧：页码数字按钮与直接跳转 */}
+                        <div className="flex items-center space-x-1">
+                          {/* 上一页 */}
+                          <button
+                            type="button"
+                            onClick={() => setExerciseCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={exerciseCurrentPage <= 1}
+                            className="w-6 h-6 flex items-center justify-center rounded border border-slate-200 bg-white hover:border-[#1890ff] hover:text-[#1890ff] disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-500 cursor-pointer"
+                            title="上一页"
+                          >
+                            <ChevronLeft className="w-3 h-3" />
+                          </button>
+
+                          {/* 页码序列 */}
+                          {Array.from({ length: exerciseTotalPages }, (_, i) => i + 1).map((pageNum) => (
+                            <button
+                              key={pageNum}
+                              type="button"
+                              onClick={() => setExerciseCurrentPage(pageNum)}
+                              className={`min-w-[24px] h-6 px-1.5 flex items-center justify-center rounded text-xs transition-colors cursor-pointer ${
+                                exerciseCurrentPage === pageNum
+                                  ? 'border border-[#1890ff] bg-[#1890ff] text-white font-medium shadow-xs'
+                                  : 'border border-slate-200 bg-white text-slate-600 hover:border-[#1890ff] hover:text-[#1890ff]'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          ))}
+
+                          {/* 下一页 */}
+                          <button
+                            type="button"
+                            onClick={() => setExerciseCurrentPage(prev => Math.min(prev + 1, exerciseTotalPages))}
+                            disabled={exerciseCurrentPage >= exerciseTotalPages}
+                            className="w-6 h-6 flex items-center justify-center rounded border border-slate-200 bg-white hover:border-[#1890ff] hover:text-[#1890ff] disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-slate-500 cursor-pointer"
+                            title="下一页"
+                          >
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
+
+                          {/* 前往 N 页 */}
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const p = parseInt(exerciseJumpPageInput, 10);
+                              if (!isNaN(p) && p >= 1 && p <= exerciseTotalPages) {
+                                setExerciseCurrentPage(p);
+                              }
+                              setExerciseJumpPageInput('');
+                            }}
+                            className="flex items-center space-x-1 pl-1 text-slate-500 text-xs"
+                          >
+                            <span>前往</span>
+                            <input
+                              type="text"
+                              value={exerciseJumpPageInput}
+                              onChange={(e) => setExerciseJumpPageInput(e.target.value.replace(/\D/g, ''))}
+                              placeholder={String(exerciseCurrentPage)}
+                              className="w-8 h-6 text-center border border-slate-200 rounded outline-none focus:border-[#1890ff] text-xs text-slate-700 bg-white"
+                            />
+                            <span>页</span>
+                          </form>
                         </div>
                       </div>
                     </motion.div>
@@ -1863,419 +2041,310 @@ export default function TeacherStepEditorModal({
                       transition={{ duration: 0.2 }}
                       className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col h-full text-xs overflow-y-auto space-y-6"
                     >
-                      {/* 上半部分：实验资源包与实验环境配置 */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 shrink-0">
-                        {/* 资源包上传 */}
-                        <div className="space-y-2">
-                          <label className="font-semibold text-slate-700 block">
-                            实验实训资源包（代码工程、Jupyter、数据集等）：
+                      {/* 模块1：实验实训资源包 */}
+                      <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4 shrink-0 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="font-bold text-slate-800 flex items-center text-xs">
+                            <span className="w-1.5 h-3.5 bg-blue-600 rounded-full mr-2"></span>
+                            <span>实验实训资源包（代码工程、Jupyter、数据集等）</span>
                           </label>
-                          <div className="flex items-center space-x-3">
-                            <button className="px-4 py-2 border border-[#1890ff] text-[#1890ff] rounded-lg bg-white hover:bg-blue-50 transition-colors text-xs font-medium cursor-pointer shadow-2xs">
-                              上传教学实验包
-                            </button>
-                            <span className="text-slate-400 text-[11px]">支持 .zip, .tar.gz, .ipynb 格式包</span>
-                          </div>
+                          <span className="text-slate-400 text-[11px]">支持 .zip, .tar.gz, .ipynb 格式包</span>
                         </div>
-
-                        {/* 实验环境配置（原 实验云镜像环境，已去除测试环境按钮，升级为多选下拉搜索） */}
-                        <div className="space-y-2 relative" ref={labEnvDropdownRef}>
-                          <div className="flex items-center justify-between">
-                            <label className="font-semibold text-slate-700 flex items-center">
-                              <span>实验环境配置</span>
-                              <span className="text-red-500 ml-1">*</span>
-                            </label>
-                            <span className="text-[11px] text-slate-400 font-normal">
-                              已选择 <strong className="text-blue-600">{selectedLabEnvIds.length}</strong> 个环境
-                            </span>
+                        <div className="flex items-center space-x-3">
+                          <button className="px-4 py-2 border border-[#1890ff] text-[#1890ff] rounded-lg bg-white hover:bg-blue-50 transition-colors text-xs font-semibold cursor-pointer shadow-2xs flex items-center space-x-1.5">
+                            <UploadCloud className="w-4 h-4" />
+                            <span>上传教学实验包</span>
+                          </button>
+                          <div className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 text-xs flex items-center space-x-2">
+                            <FileCode2 className="w-4 h-4 text-purple-600" />
+                            <span className="font-medium">deep_learning_lab_v2.ipynb</span>
+                            <span className="text-slate-400 text-[11px]">(3.4 MB · 已就绪)</span>
                           </div>
-
-                          {/* 触发框 (Trigger) */}
-                          <div
-                            onClick={() => setIsLabEnvDropdownOpen(!isLabEnvDropdownOpen)}
-                            className={`min-h-[38px] p-1.5 bg-white rounded-lg border transition-all cursor-pointer flex items-center justify-between gap-1.5 ${
-                              isLabEnvDropdownOpen
-                                ? 'border-blue-500 ring-2 ring-blue-100 shadow-xs'
-                                : 'border-slate-200 hover:border-slate-300'
-                            }`}
-                          >
-                            <div className="flex-1 flex flex-wrap items-center gap-1.5 min-w-0">
-                              {selectedLabEnvIds.length === 0 ? (
-                                <span className="text-xs text-slate-400 px-1 select-none">
-                                  请选择实验环境（支持多选与关键字搜索）...
-                                </span>
-                              ) : (
-                                selectedLabEnvIds.map(envId => {
-                                  const env = LAB_HALL_ENVIRONMENTS.find(e => e.id === envId);
-                                  if (!env) return null;
-                                  return (
-                                    <span
-                                      key={envId}
-                                      className="inline-flex items-center space-x-1 px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-md text-[11px] font-medium"
-                                    >
-                                      <span className={`w-1.5 h-1.5 rounded-full ${env.typeColor}`}></span>
-                                      <span className="truncate max-w-[130px]">{env.title}</span>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedLabEnvIds(selectedLabEnvIds.filter(id => id !== envId));
-                                        }}
-                                        className="text-blue-400 hover:text-blue-700 p-0.5 rounded hover:bg-blue-100 ml-0.5"
-                                        title="移除此环境"
-                                      >
-                                        <X className="w-2.5 h-2.5" />
-                                      </button>
-                                    </span>
-                                  );
-                                })
-                              )}
-                            </div>
-
-                            <div className="flex items-center space-x-1 shrink-0 text-slate-400 pl-1 border-l border-slate-100">
-                              {selectedLabEnvIds.length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedLabEnvIds([]);
-                                    showModalToast('已清空所选实验环境');
-                                  }}
-                                  className="p-1 hover:text-red-500 hover:bg-red-50 rounded text-slate-400 transition-colors mr-0.5"
-                                  title="清空全部已选"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isLabEnvDropdownOpen ? 'rotate-180 text-blue-600' : ''}`} />
-                            </div>
-                          </div>
-
-                          {/* 下拉浮层面板 */}
-                          {isLabEnvDropdownOpen && (
-                            <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-30 overflow-hidden animate-fadeIn">
-                              {/* 搜索框与全选工具栏 */}
-                              <div className="p-2.5 bg-slate-50 border-b border-slate-100 space-y-2">
-                                <div className="relative">
-                                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                                  <input
-                                    type="text"
-                                    value={labEnvSearchText}
-                                    onChange={(e) => setLabEnvSearchText(e.target.value)}
-                                    placeholder="搜索实验大厅环境名称、类型或简介..."
-                                    className="w-full pl-8 pr-7 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                    onClick={(e) => e.stopPropagation()}
-                                    autoFocus
-                                  />
-                                  {labEnvSearchText && (
-                                    <button
-                                      onClick={() => setLabEnvSearchText('')}
-                                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                    >
-                                      <X className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                </div>
-
-                                <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
-                                  <span>
-                                    显示 {LAB_HALL_ENVIRONMENTS.filter(env =>
-                                      env.title.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
-                                      env.type.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
-                                      env.desc.toLowerCase().includes(labEnvSearchText.toLowerCase())
-                                    ).length} / 10 个实验大厅环境
-                                  </span>
-                                  <div className="flex items-center space-x-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const matchingIds = LAB_HALL_ENVIRONMENTS.filter(env =>
-                                          env.title.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
-                                          env.type.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
-                                          env.desc.toLowerCase().includes(labEnvSearchText.toLowerCase())
-                                        ).map(e => e.id);
-                                        setSelectedLabEnvIds(Array.from(new Set([...selectedLabEnvIds, ...matchingIds])));
-                                      }}
-                                      className="text-blue-600 hover:text-blue-700 font-semibold cursor-pointer"
-                                    >
-                                      全选匹配项
-                                    </button>
-                                    <span className="text-slate-300">|</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedLabEnvIds([])}
-                                      className="text-slate-500 hover:text-red-600 cursor-pointer"
-                                    >
-                                      全部清空
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* 实验大厅全部环境列表项 */}
-                              <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 p-1">
-                                {(() => {
-                                  const filtered = LAB_HALL_ENVIRONMENTS.filter(env =>
-                                    env.title.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
-                                    env.type.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
-                                    env.desc.toLowerCase().includes(labEnvSearchText.toLowerCase())
-                                  );
-
-                                  if (filtered.length === 0) {
-                                    return (
-                                      <div className="py-8 text-center text-slate-400 text-xs">
-                                        未找到包含「{labEnvSearchText}」的相关实验环境
-                                      </div>
-                                    );
-                                  }
-
-                                  return filtered.map(env => {
-                                    const isChecked = selectedLabEnvIds.includes(env.id);
-                                    const isHighlightGrading = env.category === 'jupyter' || env.category === 'simulation' || env.title.includes('仿真') || env.title.includes('jupyter');
-
-                                    return (
-                                      <div
-                                        key={env.id}
-                                        onClick={() => {
-                                          if (isChecked) {
-                                            setSelectedLabEnvIds(selectedLabEnvIds.filter(id => id !== env.id));
-                                          } else {
-                                            setSelectedLabEnvIds([...selectedLabEnvIds, env.id]);
-                                          }
-                                        }}
-                                        className={`p-2.5 rounded-lg cursor-pointer transition-colors flex items-start space-x-2.5 ${
-                                          isChecked
-                                            ? 'bg-blue-50/60 hover:bg-blue-50 text-blue-900'
-                                            : 'hover:bg-slate-50 text-slate-700'
-                                        }`}
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={isChecked}
-                                          onChange={() => {}}
-                                          className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center space-x-2">
-                                            <span className={`text-xs ${isChecked ? 'font-bold text-blue-900' : 'font-medium text-slate-800'}`}>
-                                              {env.title}
-                                            </span>
-                                            <span className={`text-[10px] px-1.5 py-0.2 rounded text-white ${env.typeColor}`}>
-                                              {env.type}
-                                            </span>
-                                            {isHighlightGrading && (
-                                              <span className="text-[10px] px-1 py-0.2 bg-purple-100 text-purple-700 rounded font-semibold">
-                                                支持智能评分
-                                              </span>
-                                            )}
-                                          </div>
-                                          <p className="text-[11px] text-slate-400 mt-0.5 truncate">{env.desc}</p>
-                                        </div>
-                                      </div>
-                                    );
-                                  });
-                                })()}
-                              </div>
-
-                              {/* 底部确认栏 */}
-                              <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                                <span className="text-[11px] text-slate-500">
-                                  已勾选 <strong className="text-blue-600">{selectedLabEnvIds.length}</strong> 项环境
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setIsLabEnvDropdownOpen(false)}
-                                  className="px-3.5 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-2xs cursor-pointer"
-                                >
-                                  完成选择
-                                </button>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
 
-                      {/* 中间功能区：评分设置功能（当选择虚拟仿真和jupyter的时候支持） */}
-                      {isGradingSupported ? (
-                        <div className="border border-purple-200/80 rounded-xl p-4 bg-gradient-to-r from-purple-50/40 via-blue-50/30 to-indigo-50/40 space-y-4 animate-fadeIn shadow-2xs">
-                          <div className="flex items-center justify-between border-b border-purple-100 pb-3">
+                      {/* 模块2：实验环境配置（独立占一个模块） */}
+                      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4 shrink-0">
+                        {/* 模块头部 */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                          <div>
                             <div className="flex items-center space-x-2">
-                              <div className="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center shadow-xs">
-                                <Sparkles className="w-4 h-4 text-amber-300" />
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-slate-800 text-xs flex items-center">
-                                  实验评分设置
-                                  <span className="ml-2 px-1.5 py-0.2 rounded bg-purple-100 text-purple-700 font-medium text-[10px]">
-                                    {hasJupyterEnv ? 'Jupyter 代码实训' : ''}
-                                    {hasJupyterEnv && hasSimulationEnv ? ' · ' : ''}
-                                    {hasSimulationEnv ? '虚拟仿真运行' : ''}
-                                  </span>
-                                </h4>
-                                <p className="text-[11px] text-slate-500 mt-0.5">
-                                  系统已检测到包含 {hasJupyterEnv ? '「Jupyter」' : ''}{hasSimulationEnv ? '「虚拟仿真」' : ''} 环境，支持开启代码自动判定、仿真参数校验与智能评分
-                                </p>
-                              </div>
+                              <span className="w-1.5 h-3.5 bg-indigo-600 rounded-full"></span>
+                              <h4 className="font-bold text-slate-800 text-xs flex items-center">
+                                <span>实验环境配置</span>
+                                <span className="text-red-500 ml-1">*</span>
+                              </h4>
+                              <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                独立运行实训环境
+                              </span>
                             </div>
-
-                            {/* 启用自动评分开关 */}
-                            <label className="flex items-center space-x-2 cursor-pointer select-none">
-                              <span className="text-xs font-semibold text-slate-700">启用自动评分</span>
-                              <input
-                                type="checkbox"
-                                checked={isAutoGradingEnabled}
-                                onChange={(e) => setIsAutoGradingEnabled(e.target.checked)}
-                                className="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
-                              />
-                            </label>
+                            <p className="text-[11px] text-slate-400 mt-1">
+                              配置本实验步骤的运行镜像与实训平台，并支持为自动评分环境设置精细化评分规则
+                            </p>
                           </div>
 
-                          {isAutoGradingEnabled && (
-                            <div className="space-y-4 pt-1">
-                              {/* 分值与及格线配置 */}
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white p-3 rounded-lg border border-slate-200">
-                                <div>
-                                  <label className="text-[11px] text-slate-500 block mb-1">实验满分值</label>
-                                  <div className="flex items-center space-x-1">
+                          {/* 添加实验环境选择器与工具按钮 */}
+                          <div className="flex items-center space-x-3 relative" ref={labEnvDropdownRef}>
+                            <span className="text-[11px] text-slate-500 font-normal">
+                              已选 <strong className="text-blue-600 font-bold">{selectedLabEnvIds.length}</strong> 个实训环境
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => setIsLabEnvDropdownOpen(!isLabEnvDropdownOpen)}
+                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 shadow-xs transition-colors cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>添加实验环境</span>
+                              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isLabEnvDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* 环境选择下拉弹层 */}
+                            {isLabEnvDropdownOpen && (
+                              <div className="absolute right-0 top-full mt-2 w-96 bg-white border border-slate-200 rounded-xl shadow-2xl z-40 overflow-hidden animate-fadeIn">
+                                {/* 搜索框与快捷操作 */}
+                                <div className="p-3 bg-slate-50 border-b border-slate-100 space-y-2">
+                                  <div className="relative">
+                                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                                     <input
-                                      type="number"
-                                      value={gradingTotalScore}
-                                      onChange={(e) => setGradingTotalScore(Number(e.target.value))}
-                                      className="w-24 px-2 py-1 border border-slate-200 rounded text-xs text-slate-700 font-bold focus:border-purple-500 outline-none"
+                                      type="text"
+                                      value={labEnvSearchText}
+                                      onChange={(e) => setLabEnvSearchText(e.target.value)}
+                                      placeholder="搜索实验大厅环境名称、类型或简介..."
+                                      className="w-full pl-8 pr-7 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                                      onClick={(e) => e.stopPropagation()}
+                                      autoFocus
                                     />
-                                    <span className="text-slate-400 text-xs">分</span>
+                                    {labEnvSearchText && (
+                                      <button
+                                        onClick={() => setLabEnvSearchText('')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
                                   </div>
-                                </div>
-                                <div>
-                                  <label className="text-[11px] text-slate-500 block mb-1">及格基准线</label>
-                                  <div className="flex items-center space-x-1">
-                                    <input
-                                      type="number"
-                                      value={gradingPassScore}
-                                      onChange={(e) => setGradingPassScore(Number(e.target.value))}
-                                      className="w-24 px-2 py-1 border border-slate-200 rounded text-xs text-slate-700 font-bold focus:border-purple-500 outline-none"
-                                    />
-                                    <span className="text-slate-400 text-xs">分</span>
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-[11px] text-slate-500 block mb-1">学生即时反馈</label>
-                                  <label className="flex items-center space-x-2 mt-1.5 cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={allowViewDiagnostics}
-                                      onChange={(e) => setAllowViewDiagnostics(e.target.checked)}
-                                      className="rounded border-slate-300 text-purple-600 focus:ring-purple-500"
-                                    />
-                                    <span className="text-xs text-slate-600">允许查看测试用例得分与报错排错建议</span>
-                                  </label>
-                                </div>
-                              </div>
 
-                              {/* 评分维度与权重配置 */}
-                              <div>
-                                <label className="text-xs font-semibold text-slate-700 block mb-2">
-                                  评分考核维度与权重配比（自动综合折算）：
-                                </label>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                  {hasJupyterEnv && (
-                                    <>
-                                      <div className="bg-white p-2.5 rounded-lg border border-purple-100 flex items-center justify-between">
-                                        <div>
-                                          <div className="font-semibold text-slate-800">Notebook 单元执行率</div>
-                                          <div className="text-[10px] text-slate-400">代码单元按序无异常运行</div>
-                                        </div>
-                                        <div className="flex items-center space-x-1">
-                                          <input
-                                            type="number"
-                                            value={gradingWeights.codeExecution}
-                                            onChange={(e) => setGradingWeights({ ...gradingWeights, codeExecution: Number(e.target.value) })}
-                                            className="w-14 px-1.5 py-0.5 border border-slate-200 rounded text-xs text-center font-bold text-purple-700"
-                                          />
-                                          <span className="text-slate-400">%</span>
-                                        </div>
-                                      </div>
-
-                                      <div className="bg-white p-2.5 rounded-lg border border-purple-100 flex items-center justify-between">
-                                        <div>
-                                          <div className="font-semibold text-slate-800">关键变量与断言检测</div>
-                                          <div className="text-[10px] text-slate-400">输出张量、指标与断言测试</div>
-                                        </div>
-                                        <div className="flex items-center space-x-1">
-                                          <input
-                                            type="number"
-                                            value={gradingWeights.assertionTest}
-                                            onChange={(e) => setGradingWeights({ ...gradingWeights, assertionTest: Number(e.target.value) })}
-                                            className="w-14 px-1.5 py-0.5 border border-slate-200 rounded text-xs text-center font-bold text-purple-700"
-                                          />
-                                          <span className="text-slate-400">%</span>
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
-
-                                  {hasSimulationEnv && (
-                                    <>
-                                      <div className="bg-white p-2.5 rounded-lg border border-blue-100 flex items-center justify-between">
-                                        <div>
-                                          <div className="font-semibold text-slate-800">仿真操作规范度</div>
-                                          <div className="text-[10px] text-slate-400">设备组装、接线与交互顺序</div>
-                                        </div>
-                                        <div className="flex items-center space-x-1">
-                                          <input
-                                            type="number"
-                                            value={gradingWeights.simulationOperation}
-                                            onChange={(e) => setGradingWeights({ ...gradingWeights, simulationOperation: Number(e.target.value) })}
-                                            className="w-14 px-1.5 py-0.5 border border-slate-200 rounded text-xs text-center font-bold text-blue-700"
-                                          />
-                                          <span className="text-slate-400">%</span>
-                                        </div>
-                                      </div>
-
-                                      <div className="bg-white p-2.5 rounded-lg border border-blue-100 flex items-center justify-between">
-                                        <div>
-                                          <div className="font-semibold text-slate-800">仿真参数正确率</div>
-                                          <div className="text-[10px] text-slate-400">环境参数、阈值与物理量匹配</div>
-                                        </div>
-                                        <div className="flex items-center space-x-1">
-                                          <input
-                                            type="number"
-                                            value={gradingWeights.paramAccuracy}
-                                            onChange={(e) => setGradingWeights({ ...gradingWeights, paramAccuracy: Number(e.target.value) })}
-                                            className="w-14 px-1.5 py-0.5 border border-slate-200 rounded text-xs text-center font-bold text-blue-700"
-                                          />
-                                          <span className="text-slate-400">%</span>
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
-
-                                  <div className="bg-white p-2.5 rounded-lg border border-slate-200 flex items-center justify-between">
-                                    <div>
-                                      <div className="font-semibold text-slate-800">实验总结与思考题</div>
-                                      <div className="text-[10px] text-slate-400">分析报告与结论心得撰写</div>
-                                    </div>
-                                    <div className="flex items-center space-x-1">
-                                      <input
-                                        type="number"
-                                        value={gradingWeights.reportQuality}
-                                        onChange={(e) => setGradingWeights({ ...gradingWeights, reportQuality: Number(e.target.value) })}
-                                        className="w-14 px-1.5 py-0.5 border border-slate-200 rounded text-xs text-center font-bold text-slate-700"
-                                      />
-                                      <span className="text-slate-400">%</span>
+                                  <div className="flex items-center justify-between text-[11px] text-slate-500 px-0.5">
+                                    <span>
+                                      显示 {LAB_HALL_ENVIRONMENTS.filter(env =>
+                                        env.title.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
+                                        env.type.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
+                                        env.desc.toLowerCase().includes(labEnvSearchText.toLowerCase())
+                                      ).length} / 10 个可用实训环境
+                                    </span>
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const matchingIds = LAB_HALL_ENVIRONMENTS.filter(env =>
+                                            env.title.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
+                                            env.type.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
+                                            env.desc.toLowerCase().includes(labEnvSearchText.toLowerCase())
+                                          ).map(e => e.id);
+                                          setSelectedLabEnvIds(Array.from(new Set([...selectedLabEnvIds, ...matchingIds])));
+                                        }}
+                                        className="text-blue-600 hover:text-blue-700 font-semibold cursor-pointer"
+                                      >
+                                        全选匹配项
+                                      </button>
+                                      <span className="text-slate-300">|</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedLabEnvIds([])}
+                                        className="text-slate-500 hover:text-red-600 cursor-pointer"
+                                      >
+                                        清空
+                                      </button>
                                     </div>
                                   </div>
                                 </div>
+
+                                {/* 环境候选项列表 */}
+                                <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 p-1">
+                                  {(() => {
+                                    const filtered = LAB_HALL_ENVIRONMENTS.filter(env =>
+                                      env.title.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
+                                      env.type.toLowerCase().includes(labEnvSearchText.toLowerCase()) ||
+                                      env.desc.toLowerCase().includes(labEnvSearchText.toLowerCase())
+                                    );
+
+                                    if (filtered.length === 0) {
+                                      return (
+                                        <div className="py-8 text-center text-slate-400 text-xs">
+                                          未找到包含「{labEnvSearchText}」的相关实验环境
+                                        </div>
+                                      );
+                                    }
+
+                                    return filtered.map(env => {
+                                      const isChecked = selectedLabEnvIds.includes(env.id);
+                                      const isHighlightGrading = env.category === 'jupyter' || env.category === 'simulation' || env.title.includes('仿真') || env.title.includes('jupyter');
+
+                                      return (
+                                        <div
+                                          key={env.id}
+                                          onClick={() => {
+                                            if (isChecked) {
+                                              setSelectedLabEnvIds(selectedLabEnvIds.filter(id => id !== env.id));
+                                            } else {
+                                              setSelectedLabEnvIds([...selectedLabEnvIds, env.id]);
+                                            }
+                                          }}
+                                          className={`p-2.5 rounded-lg cursor-pointer transition-colors flex items-start space-x-2.5 ${
+                                            isChecked
+                                              ? 'bg-blue-50/70 hover:bg-blue-50 text-blue-900'
+                                              : 'hover:bg-slate-50 text-slate-700'
+                                          }`}
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={() => {}}
+                                            className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
+                                          />
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center space-x-2">
+                                              <span className={`text-xs ${isChecked ? 'font-bold text-blue-900' : 'font-medium text-slate-800'}`}>
+                                                {env.title}
+                                              </span>
+                                              <span className={`text-[10px] px-1.5 py-0.2 rounded text-white ${env.typeColor}`}>
+                                                {env.type}
+                                              </span>
+                                              {isHighlightGrading && (
+                                                <span className="text-[10px] px-1.5 py-0.2 bg-purple-100 text-purple-700 rounded font-semibold">
+                                                  支持自动评分
+                                                </span>
+                                              )}
+                                            </div>
+                                            <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{env.desc}</p>
+                                          </div>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
+                                </div>
+
+                                {/* 底部完成按钮 */}
+                                <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                                  <span className="text-[11px] text-slate-500">
+                                    已勾选 <strong className="text-blue-600">{selectedLabEnvIds.length}</strong> 个环境
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsLabEnvDropdownOpen(false)}
+                                    className="px-3.5 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-2xs cursor-pointer"
+                                  >
+                                    完成选择
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      ) : (
-                        <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-slate-400 flex items-center space-x-2">
-                          <span className="text-base">💡</span>
-                          <span>提示：在上方【实验环境配置】中勾选包含「虚拟仿真」或「Jupyter」的实训环境时，即可开启实验智能自动评分设置。</span>
-                        </div>
-                      )}
+
+                        {/* 选中的实验环境列表 */}
+                        {selectedLabEnvIds.length === 0 ? (
+                          <div className="py-8 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 space-y-2 bg-slate-50/50">
+                            <Box className="w-8 h-8 text-slate-300" />
+                            <div className="text-xs font-medium text-slate-600">尚未选择任何实验环境</div>
+                            <p className="text-[11px] text-slate-400">
+                              请点击上方「+ 添加实验环境」按钮勾选本次实验所需的实训环境
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {selectedLabEnvIds.map((envId) => {
+                              const env = LAB_HALL_ENVIRONMENTS.find(e => e.id === envId);
+                              if (!env) return null;
+
+                              const isAutoGradable = env.category === 'jupyter' || env.category === 'simulation' || env.title.includes('仿真') || env.title.includes('jupyter');
+                              const envGrading = envGradingConfigs[env.id];
+                              const hasConfiguredRules = envGrading && envGrading.rules && envGrading.rules.length > 0;
+
+                              return (
+                                <div
+                                  key={env.id}
+                                  className="bg-white rounded-xl border border-slate-200/80 hover:border-blue-300 p-3.5 shadow-2xs hover:shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                                >
+                                  {/* 左侧：环境信息 */}
+                                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                                    <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+                                      <Cpu className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center space-x-2">
+                                        <span className="font-bold text-slate-800 text-xs truncate">
+                                          {env.title}
+                                        </span>
+                                        <span className={`text-[10px] px-1.5 py-0.2 rounded text-white ${env.typeColor}`}>
+                                          {env.type}
+                                        </span>
+                                      </div>
+                                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                                        {env.desc}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* 中间：自动评分支持状态与规则概要 */}
+                                  <div className="flex items-center space-x-3 shrink-0">
+                                    {isAutoGradable ? (
+                                      <div className="flex items-center space-x-2 bg-purple-50/80 border border-purple-100 px-3 py-1.5 rounded-lg text-xs">
+                                        <Sparkles className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                                        <div>
+                                          <div className="text-[11px] font-bold text-purple-700 flex items-center space-x-1">
+                                            <span>支持自动评分</span>
+                                            {envGrading && !envGrading.enabled && (
+                                              <span className="text-[10px] text-slate-400 font-normal">(已停用)</span>
+                                            )}
+                                          </div>
+                                          <div className="text-[10px] text-purple-600/80">
+                                            {hasConfiguredRules
+                                              ? `已配置 ${envGrading.rules.length} 条评测规则 · 满分 ${envGrading.totalScore}分`
+                                              : '已预置标准评测规则 · 可自定义'}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="px-2.5 py-1 bg-slate-100 text-slate-400 rounded-lg text-[11px] border border-slate-200">
+                                        仅支持手动批阅
+                                      </div>
+                                    )}
+
+                                    {/* 右侧操作栏：支持自动评分时展示【设置评分规则】按钮 */}
+                                    <div className="flex items-center space-x-2">
+                                      {isAutoGradable && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditingGradingEnv(env)}
+                                          className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200 hover:border-blue-600 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-2xs cursor-pointer"
+                                        >
+                                          <Sliders className="w-3.5 h-3.5" />
+                                          <span>设置评分规则</span>
+                                        </button>
+                                      )}
+
+                                      {/* 移除当前环境 */}
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedLabEnvIds(selectedLabEnvIds.filter(id => id !== env.id));
+                                          showModalToast(`已移除环境「${env.title}」`);
+                                        }}
+                                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                        title="移除此环境"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
 
                       {/* 下半部分：实验指导书正文在线编辑 */}
                       <div className="space-y-3 flex-1 flex flex-col min-h-[300px]">
@@ -2377,7 +2446,8 @@ export default function TeacherStepEditorModal({
                       totalScore: gradingTotalScore,
                       passScore: gradingPassScore,
                       weights: gradingWeights,
-                      allowViewDiagnostics
+                      allowViewDiagnostics,
+                      envConfigs: envGradingConfigs
                     }
                   });
                 }
@@ -2389,6 +2459,23 @@ export default function TeacherStepEditorModal({
             </button>
           </div>
         </div>
+
+        {/* 实验评分规则配置独立弹窗 */}
+        {editingGradingEnv && (
+          <LabGradingRuleModal
+            envInfo={editingGradingEnv}
+            initialConfig={envGradingConfigs[editingGradingEnv.id]}
+            skillCategories={skillCategories}
+            onClose={() => setEditingGradingEnv(null)}
+            onSave={(savedConfig) => {
+              setEnvGradingConfigs(prev => ({
+                ...prev,
+                [editingGradingEnv.id]: savedConfig
+              }));
+              showModalToast(`已成功保存【${editingGradingEnv.title}】的实验评分规则！`);
+            }}
+          />
+        )}
 
         {/* 浮动 Toast 提示 */}
         <AnimatePresence>
