@@ -1,19 +1,65 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Search, Bot, BookOpen, Activity } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, ChevronUp, Search, Bot, BookOpen, Activity, Sparkles } from 'lucide-react';
 import AppHeader from '../../components/AppHeader';
 
-export default function CourseHall({ onNavigate }: { onNavigate?: (view: string) => void }) {
+export default function CourseHall({ onNavigate }: { onNavigate?: (view: string, extra?: any) => void }) {
   const [isTenantOpen, setIsTenantOpen] = useState(false);
   const activeTenant = { name: "教育公司" };
   const [activeSort, setActiveSort] = useState('默认排序');
   const [selectedMajor, setSelectedMajor] = useState('全部');
   const [selectedType, setSelectedType] = useState('全部');
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+  const [onlyPurchased, setOnlyPurchased] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   const majors = ['全部', '物联网', '人工智能', '工业互联网', '大数据', '区块链', '专业技术技能', '岗位课程'];
   const types = ['全部', '岗位技能认证', '基础通识', '专业基础课', '专业核心课', '行业应用课', '技能课程', '岗位认证课'];
 
+  // 从 localStorage 动态读取自建课程中状态为“已发布”的课程（未发布的课程不可在大厅展示）
+  const [publishedCustomCourses, setPublishedCustomCourses] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadPublishedCourses = () => {
+      try {
+        const stored = localStorage.getItem('uusima_custom_courses');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const published = parsed
+              .filter((c: any) => c.status === '已发布')
+              .map((c: any) => ({
+                id: c.id,
+                title: c.title,
+                category: c.category || '自建课程',
+                students: 86,
+                desc: c.desc || '自建特色实训课程',
+                isPurchased: true,
+                isCustom: true,
+                gradient: c.gradient || 'from-emerald-500 to-teal-600'
+              }));
+            setPublishedCustomCourses(published);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    loadPublishedCourses();
+    window.addEventListener('storage', loadPublishedCourses);
+    return () => window.removeEventListener('storage', loadPublishedCourses);
+  }, []);
+
   const courses = [
+    {
+      id: 'ai-trainer',
+      title: 'AI学伴-人工智能训练师（高级工）软件版',
+      category: '人工智能/机器学习',
+      students: 520,
+      desc: '人工智能训练师（高级工）无人超市商品智慧结算与业务优化...',
+      isPurchased: true,
+      gradient: 'from-blue-600 to-indigo-600'
+    },
     {
       id: 1,
       title: '边缘计算技术应用',
@@ -88,6 +134,19 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
     }
   ];
 
+  // 合并平台默认课程与已发布的自建课程
+  const allCourses = [...publishedCustomCourses, ...courses];
+
+  const filteredCourses = allCourses.filter(course => {
+    if (onlyPurchased && !course.isPurchased) {
+      return false;
+    }
+    if (searchKeyword.trim() && !course.title.toLowerCase().includes(searchKeyword.toLowerCase().trim())) {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-[#f5f7f9] flex flex-col font-sans">
       {/* Header */}
@@ -100,7 +159,7 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
 
       {/* Main Content */}
       <div className="flex-1 w-full max-w-[1440px] mx-auto pb-10">
-        
+
         {/* Search & Filter Top Section */}
         <div className="bg-[#eff2f6] px-8 py-6 rounded-b-xl border border-slate-200 border-t-0 mb-6">
           <div className="flex items-center justify-between mb-8">
@@ -113,7 +172,7 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
                 <p className="text-sm text-slate-500 mt-0.5">真实行业项目实战学习</p>
               </div>
             </div>
-            
+
             <div className="flex items-center border border-slate-200 bg-white rounded-md overflow-hidden w-96 shadow-sm">
               <div className="relative flex-1 border-r border-slate-200">
                 <select className="w-full appearance-none px-3 py-2 text-sm text-slate-600 bg-transparent outline-none cursor-pointer">
@@ -122,7 +181,21 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
                 <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
               <div className="flex-[2] flex items-center px-3 py-2 relative">
-                <input type="text" placeholder="请输入课程名进行搜索" className="w-full text-sm outline-none text-slate-600 bg-transparent" />
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  placeholder="请输入课程名进行搜索"
+                  className="w-full text-sm outline-none text-slate-600 bg-transparent"
+                />
+                {searchKeyword && (
+                  <button
+                    onClick={() => setSearchKeyword('')}
+                    className="text-xs text-slate-400 hover:text-slate-600 mr-1"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
               <button className="px-4 py-2 hover:bg-slate-50 transition-colors text-slate-400 border-l border-slate-200">
                 <Search className="w-4 h-4" />
@@ -135,7 +208,7 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
               <div className="text-sm font-medium text-slate-700 w-20 shrink-0 mt-1.5">专业：</div>
               <div className="flex flex-wrap gap-2 flex-1 relative pr-16">
                 {majors.map(m => (
-                  <button 
+                  <button
                     key={m}
                     onClick={() => setSelectedMajor(m)}
                     className={`px-3 py-1.5 text-sm rounded ${selectedMajor === m ? 'bg-blue-100 text-blue-600 border border-blue-200' : 'text-slate-600 hover:text-blue-500 border border-transparent'}`}
@@ -143,7 +216,7 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
                     {m}
                   </button>
                 ))}
-                <button 
+                <button
                   onClick={() => setIsFilterExpanded(!isFilterExpanded)}
                   className="absolute right-0 top-1.5 flex items-center space-x-1 text-sm text-slate-500 hover:text-slate-800 transition-colors"
                 >
@@ -152,13 +225,13 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
                 </button>
               </div>
             </div>
-            
+
             {isFilterExpanded && (
               <div className="flex items-start">
                 <div className="text-sm font-medium text-slate-700 w-20 shrink-0 mt-1.5">课程类型：</div>
                 <div className="flex flex-wrap gap-2 flex-1 relative">
                   {types.map(t => (
-                    <button 
+                    <button
                       key={t}
                       onClick={() => setSelectedType(t)}
                       className={`px-3 py-1.5 text-sm rounded ${selectedType === t ? 'bg-blue-100 text-blue-600 border border-blue-200' : 'text-slate-600 hover:text-blue-500 border border-transparent'}`}
@@ -173,68 +246,99 @@ export default function CourseHall({ onNavigate }: { onNavigate?: (view: string)
         </div>
 
         <div className="px-8">
-          {/* Tabs */}
-          <div className="flex items-center space-x-6 border-b border-slate-200 mb-6 pb-2">
-            {['默认排序', '最新', '使用最多'].map(tab => (
-              <button 
-                key={tab}
-                onClick={() => setActiveSort(tab)}
-                className={`text-sm pb-2 -mb-2.5 transition-colors relative ${activeSort === tab ? 'text-blue-600 font-medium' : 'text-slate-500 hover:text-slate-800'}`}
-              >
-                {tab}
-                {activeSort === tab && (
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></div>
-                )}
-              </button>
-            ))}
+          {/* Tabs & Only Purchased Filter */}
+          <div className="flex items-center justify-between border-b border-slate-200 mb-6 pb-2">
+            <div className="flex items-center space-x-6">
+              {['默认排序', '最新', '使用最多'].map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveSort(tab)}
+                  className={`text-sm pb-2 -mb-2.5 transition-colors relative ${activeSort === tab ? 'text-blue-600 font-medium' : 'text-slate-500 hover:text-slate-800'}`}
+                >
+                  {tab}
+                  {activeSort === tab && (
+                    <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600"></div>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <label className="flex items-center space-x-2 text-sm text-slate-600 hover:text-slate-900 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={onlyPurchased}
+                onChange={(e) => setOnlyPurchased(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+              <span>显示已购课程</span>
+            </label>
           </div>
 
           {/* Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {courses.map(course => (
-              <div key={course.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-slate-100 overflow-hidden flex flex-col cursor-pointer group">
-                <div className={`h-36 w-full relative bg-gradient-to-br ${course.gradient} overflow-hidden flex items-center justify-center p-4`}>
-                  {course.isPurchased && (
-                    <div className="absolute top-2 left-2 bg-[#8cc63f] text-white text-[11px] font-medium px-2 py-0.5 rounded shadow-sm z-10">
-                      已购买
-                    </div>
-                  )}
-                  {/* Decorative backdrop elements (simulating 3D) */}
-                  <div className="absolute right-[-20%] bottom-[-20%] w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-500"></div>
-                  <div className="absolute left-[-10%] top-[-10%] w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-110 transition-transform duration-500"></div>
-                  <h3 className="text-white font-bold text-lg text-center relative z-10 shadow-sm opacity-90 group-hover:opacity-100 transition-opacity leading-tight px-2">{course.title}</h3>
-                </div>
-                
-                <div className="p-4 flex flex-col flex-1">
-                  <h3 className="text-[15px] font-bold text-slate-800 mb-3 line-clamp-1 group-hover:text-blue-600 transition-colors">{course.title}</h3>
-                  
-                  <div className="flex items-center mb-3 text-xs">
-                    <span className="text-blue-500 font-medium truncate pr-2">{course.category}</span>
-                  </div>
-                  
-                  <p className="text-xs text-slate-500 mb-4 line-clamp-2 leading-relaxed flex-1">
-                    课程概述：{course.desc}
-                  </p>
-                  
-                  <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-50">
-                    <div className="flex items-center space-x-1.5">
-                      <span className="text-xs text-slate-400 mr-1">实验环境：</span>
-                      <div className="w-4 h-4 rounded bg-blue-50 flex items-center justify-center text-blue-500">
-                        <Activity className="w-2.5 h-2.5" />
+          {filteredCourses.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {filteredCourses.map(course => (
+                <div 
+                  key={course.id} 
+                  onClick={() => onNavigate?.('course-detail', course)}
+                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-slate-100 overflow-hidden flex flex-col cursor-pointer group"
+                >
+                  <div className={`h-36 w-full relative bg-gradient-to-br ${course.gradient} overflow-hidden flex items-center justify-center p-4`}>
+                    {course.isCustom ? (
+                      <div className="absolute top-2 left-2 bg-emerald-600 text-white text-[11px] font-medium px-2 py-0.5 rounded shadow-sm z-10 flex items-center">
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        自建
                       </div>
-                      <div className="w-4 h-4 rounded bg-indigo-50 flex items-center justify-center text-indigo-500">
-                        <Bot className="w-2.5 h-2.5" />
+                    ) : course.isPurchased ? (
+                      <div className="absolute top-2 left-2 bg-[#8cc63f] text-white text-[11px] font-medium px-2 py-0.5 rounded shadow-sm z-10">
+                        已购买
                       </div>
+                    ) : null}
+                    {/* Decorative backdrop elements (simulating 3D) */}
+                    <div className="absolute right-[-20%] bottom-[-20%] w-32 h-32 bg-white/20 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-500"></div>
+                    <div className="absolute left-[-10%] top-[-10%] w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-110 transition-transform duration-500"></div>
+                    <h3 className="text-white font-bold text-lg text-center relative z-10 shadow-sm opacity-90 group-hover:opacity-100 transition-opacity leading-tight px-2">{course.title}</h3>
+                  </div>
+
+                  <div className="p-4 flex flex-col flex-1">
+                    <h3 className="text-[15px] font-bold text-slate-800 mb-3 line-clamp-1 group-hover:text-blue-600 transition-colors">{course.title}</h3>
+
+                    <div className="flex items-center mb-3 text-xs">
+                      <span className="text-blue-500 font-medium truncate pr-2">{course.category}</span>
                     </div>
-                    
-                    <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-[10px] font-bold text-purple-600 shadow-sm">
-                      AI
+
+                    <p className="text-xs text-slate-500 mb-4 line-clamp-2 leading-relaxed flex-1">
+                      课程概述：{course.desc}
+                    </p>
+
+                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-50">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="text-xs text-slate-400 mr-1">实验环境：</span>
+                        <div className="w-4 h-4 rounded bg-blue-50 flex items-center justify-center text-blue-500">
+                          <Activity className="w-2.5 h-2.5" />
+                        </div>
+                        <div className="w-4 h-4 rounded bg-indigo-50 flex items-center justify-center text-indigo-500">
+                          <Bot className="w-2.5 h-2.5" />
+                        </div>
+                      </div>
+
+                      <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-[10px] font-bold text-purple-600 shadow-sm">
+                        AI
+                      </div>
                     </div>
                   </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 text-center bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                <BookOpen className="w-6 h-6" />
               </div>
-            ))}
-          </div>
+              <p className="text-base font-medium text-slate-600">暂无已购课程</p>
+              <p className="text-sm text-slate-400 mt-1">取消勾选后可浏览全部课程</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

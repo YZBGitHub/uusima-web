@@ -47,7 +47,10 @@ import {
   Sliders,
   Settings2,
   ShieldCheck,
-  FileCode2
+  FileCode2,
+  Download,
+  FileText,
+  FileCheck
 } from 'lucide-react';
 import LabGradingRuleModal, { LabEnvGradingConfig, LabGradingRule, generateDefaultRulesForEnv } from './LabGradingRuleModal';
 
@@ -60,6 +63,15 @@ export interface TeacherTask {
   skillIds?: string[];
   labEnvIds?: string[];
   labGradingConfig?: any;
+}
+
+export interface UploadedStepDocument {
+  id: string;
+  name: string;
+  size: string;
+  type: string; // 'pdf' | 'word' | 'md' | 'txt'
+  uploadTime: string;
+  fileObj?: File;
 }
 
 export interface TeacherChapter {
@@ -305,6 +317,130 @@ export default function TeacherStepEditorModal({
       document.removeEventListener('mousedown', handleOutsideLabEnv);
     };
   }, [isLabEnvDropdownOpen]);
+
+  // -------------------------------------------------------------
+  // 文档上传、预览与下载管理状态（图文与实验步骤共用支持）
+  // -------------------------------------------------------------
+  const [docContentType, setDocContentType] = useState<'online' | 'upload'>('online');
+  
+  // 各步骤上传的文档存储（包含默认高质量示例文档）
+  const [taskDocuments, setTaskDocuments] = useState<Record<string, UploadedStepDocument>>({
+    't-exp': {
+      id: 'doc-init-exp',
+      name: '【实验指导书】物联网感知与仿真交互实验操作手册.pdf',
+      size: '2.4 MB',
+      type: 'pdf',
+      uploadTime: '2026-09-20 10:28'
+    },
+    't-text': {
+      id: 'doc-init-text',
+      name: '【理论讲义】深度学习网络拓扑结构核心理论讲义.docx',
+      size: '1.8 MB',
+      type: 'word',
+      uploadTime: '2026-09-20 10:25'
+    }
+  });
+
+  // 文档全屏高保真预览弹窗状态
+  const [previewingDoc, setPreviewingDoc] = useState<UploadedStepDocument | null>(null);
+  const [previewPage, setPreviewPage] = useState(1);
+  const [previewZoom, setPreviewZoom] = useState(100);
+
+  // 文件上传隐藏 input 引用
+  const docFileInputRef = useRef<HTMLInputElement>(null);
+
+  // 上传教学实验文档
+  const handleDocFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    let docType = 'txt';
+    if (ext === 'pdf') docType = 'pdf';
+    else if (ext === 'doc' || ext === 'docx') docType = 'word';
+    else if (ext === 'md' || ext === 'markdown') docType = 'md';
+
+    const sizeStr = file.size > 1024 * 1024 
+      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
+      : `${Math.round(file.size / 1024)} KB`;
+
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    const newDoc: UploadedStepDocument = {
+      id: `doc-${Date.now()}`,
+      name: file.name,
+      size: sizeStr,
+      type: docType,
+      uploadTime: timeStr,
+      fileObj: file
+    };
+
+    setTaskDocuments(prev => ({
+      ...prev,
+      [currentTask.id]: newDoc,
+      ...(currentType === 'experiment' ? { 't-exp': newDoc } : {}),
+      ...(currentType === 'text' ? { 't-text': newDoc } : {})
+    }));
+
+    showModalToast(`文档「${file.name}」上传成功！`);
+  };
+
+  // 下载教学实验文档
+  const handleDownloadDocument = (doc: UploadedStepDocument) => {
+    try {
+      if (doc.fileObj) {
+        const url = URL.createObjectURL(doc.fileObj);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        const content = `=====================================================
+【教学实验指导书】
+文档名称：${doc.name}
+文件规格：${doc.size} | 格式：${doc.type.toUpperCase()}
+更新时间：${doc.uploadTime}
+课程归属：${courseName || '专业核心实训课程'}
+=====================================================
+
+一、实验目标与考核要点
+1. 理解实验拓扑设计原则与各节点协同工作流程；
+2. 按照步骤规范完成实验考核与数据验证；
+3. 掌握关键环境运行参数排查与自动化评测诊断。
+
+二、实验软硬件准备
+- 运行环境：内置容器与仿真测试平台
+- 判分模式：自动化断言与能力雷达评测
+- 关联技能点：已智能绑定课程大纲核心能力项
+
+三、实验操作核心规程
+1. 建立通讯连线与硬件参数自测；
+2. 运行实验主程序并收集持久化结果；
+3. 验证通过后提交实验任务以生成雷达图能力报告。
+
+四、注意事项
+请确保在指定时间内提交实验结果，切勿随意修改仿真环境基础配置。
+=====================================================`;
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.name.endsWith('.pdf') || doc.name.endsWith('.docx') ? `${doc.name}.txt` : doc.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+      showModalToast(`已成功开始下载文档「${doc.name}」！`);
+    } catch (err) {
+      showModalToast(`下载文档失败，请重试`);
+    }
+  };
 
   // -------------------------------------------------------------
   // 技能点穿梭框状态与 AI 智能关联
@@ -758,61 +894,293 @@ export default function TeacherStepEditorModal({
     setSelectedQuestions([]);
   };
 
-  const renderDocumentEditor = () => (
-    <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm flex flex-col h-full">
-      <div className="space-y-4 flex-1 flex flex-col min-h-0">
-        <div className="flex items-center space-x-6 shrink-0">
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input type="radio" name="teacher_doc_content_type" className="text-[#1890ff] focus:ring-[#1890ff]" defaultChecked />
-            <span className="text-[#1890ff] text-sm font-medium">在线编辑</span>
-          </label>
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input type="radio" name="teacher_doc_content_type" className="text-[#1890ff] focus:ring-[#1890ff]" />
-            <span className="text-slate-600 text-sm">上传文档</span>
-          </label>
-        </div>
-        
-        <div className="flex-1 border border-slate-200 rounded flex flex-col min-h-0">
-          {/* Editor Toolbar */}
-          <div className="h-12 border-b border-slate-200 flex items-center px-4 space-x-2 text-slate-500 shrink-0 bg-slate-50">
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><Bold className="w-4 h-4" /></button>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><Underline className="w-4 h-4" /></button>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><Italic className="w-4 h-4" /></button>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><Strikethrough className="w-4 h-4" /></button>
-            <div className="w-px h-5 bg-slate-300 mx-2"></div>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><Heading className="w-4 h-4" /></button>
-            <div className="w-px h-5 bg-slate-300 mx-2"></div>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><List className="w-4 h-4" /></button>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><ListOrdered className="w-4 h-4" /></button>
-            <div className="w-px h-5 bg-slate-300 mx-2"></div>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><Code className="w-4 h-4" /></button>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><Image className="w-4 h-4" /></button>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><Link2 className="w-4 h-4" /></button>
-            <div className="flex-1"></div>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><Undo className="w-4 h-4" /></button>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><Redo className="w-4 h-4" /></button>
-            <div className="w-px h-5 bg-slate-300 mx-2"></div>
-            <button className="p-1.5 hover:bg-slate-200 rounded text-slate-700"><Eye className="w-4 h-4" /></button>
+  const renderDocumentEditor = () => {
+    const doc = taskDocuments[currentTask.id] || (currentType === 'experiment' ? taskDocuments['t-exp'] : taskDocuments['t-text']);
+
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col h-full">
+        <div className="space-y-4 flex-1 flex flex-col min-h-0">
+          {/* 模式选择 Radio：在线编辑 vs 上传文档 */}
+          <div className="flex items-center justify-between shrink-0 pb-3 border-b border-slate-100">
+            <div className="flex items-center space-x-6">
+              <label 
+                className="flex items-center space-x-2 cursor-pointer select-none"
+                onClick={() => setDocContentType('online')}
+              >
+                <input 
+                  type="radio" 
+                  name={`doc_mode_${currentTask.id}`} 
+                  checked={docContentType === 'online'} 
+                  onChange={() => setDocContentType('online')}
+                  className="text-[#1890ff] focus:ring-[#1890ff] cursor-pointer" 
+                />
+                <span className={`text-sm font-medium transition-colors ${docContentType === 'online' ? 'text-[#1890ff]' : 'text-slate-600'}`}>
+                  在线编辑
+                </span>
+              </label>
+              <label 
+                className="flex items-center space-x-2 cursor-pointer select-none"
+                onClick={() => setDocContentType('upload')}
+              >
+                <input 
+                  type="radio" 
+                  name={`doc_mode_${currentTask.id}`} 
+                  checked={docContentType === 'upload'} 
+                  onChange={() => setDocContentType('upload')}
+                  className="text-[#1890ff] focus:ring-[#1890ff] cursor-pointer" 
+                />
+                <span className={`text-sm font-medium transition-colors ${docContentType === 'upload' ? 'text-[#1890ff]' : 'text-slate-600'}`}>
+                  上传文档
+                </span>
+                {doc && (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-bold">
+                    已上传
+                  </span>
+                )}
+              </label>
+            </div>
+
+            {/* 当在上传文档模式且已有文档时，右上角提供快捷操作提示 */}
+            {docContentType === 'upload' && doc && (
+              <div className="flex items-center space-x-2 text-xs text-slate-500">
+                <span>支持直接预览与下载指导书</span>
+              </div>
+            )}
           </div>
           
-          {/* Split Editor Area */}
-          <div className="flex-1 flex divide-x divide-slate-200 bg-white">
-            <div className="flex-1 p-6 text-slate-400 text-sm focus:outline-none" contentEditable suppressContentEditableWarning>请输入步骤教学正文、实验要求或操作说明...</div>
-            <div className="flex-1 p-6 bg-slate-50/50"></div>
-          </div>
-          
-          {/* Editor Footer */}
-          <div className="h-8 border-t border-slate-200 flex items-center justify-between px-4 text-xs text-slate-500 bg-slate-50 shrink-0">
-            <span>字数：0</span>
-            <label className="flex items-center space-x-1 cursor-pointer">
-              <span>同步滚动</span>
-              <input type="checkbox" className="rounded-sm border-slate-300 text-slate-500 focus:ring-0 w-3 h-3" defaultChecked />
-            </label>
-          </div>
+          {/* 在线编辑模式 */}
+          {docContentType === 'online' ? (
+            <div className="flex-1 border border-slate-200 rounded-lg flex flex-col min-h-0 overflow-hidden shadow-2xs">
+              {/* Editor Toolbar */}
+              <div className="h-11 border-b border-slate-200 flex items-center px-4 space-x-1.5 text-slate-500 shrink-0 bg-slate-50/80">
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><Bold className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><Underline className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><Italic className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><Strikethrough className="w-3.5 h-3.5" /></button>
+                <div className="w-px h-4 bg-slate-300 mx-1.5"></div>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><Heading className="w-3.5 h-3.5" /></button>
+                <div className="w-px h-4 bg-slate-300 mx-1.5"></div>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><List className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><ListOrdered className="w-3.5 h-3.5" /></button>
+                <div className="w-px h-4 bg-slate-300 mx-1.5"></div>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><Code className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><Image className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><Link2 className="w-3.5 h-3.5" /></button>
+                <div className="flex-1"></div>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><Undo className="w-3.5 h-3.5" /></button>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><Redo className="w-3.5 h-3.5" /></button>
+                <div className="w-px h-4 bg-slate-300 mx-1.5"></div>
+                <button type="button" className="p-1.5 hover:bg-slate-200 rounded text-slate-700 cursor-pointer"><Eye className="w-3.5 h-3.5" /></button>
+              </div>
+              
+              {/* Split Editor Area */}
+              <div className="flex-1 flex divide-x divide-slate-200 bg-white min-h-[220px]">
+                <div className="flex-1 p-5 text-slate-500 text-xs focus:outline-none leading-relaxed overflow-y-auto" contentEditable suppressContentEditableWarning>
+                  {currentType === 'experiment' ? (
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 mb-2">【实验步骤】物联网交互与综合仿真实验</h3>
+                      <p className="mb-2">一、实验准备：请在上方选择所需的实验环境（支持三维虚拟仿真与 Jupyter 交互编程）。</p>
+                      <p className="mb-2">二、实验流程：启动环境后，根据评测要求完成接线、参数选型与时序联动测试。</p>
+                      <p className="text-slate-400">（支持 Markdown 语法，可直接输入或复制实验指导书正文内容）</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 mb-2">【教学内容】核心理论与知识点精讲</h3>
+                      <p className="mb-2">在此输入图文课时正文，配合富文本排版、代码高亮与外链参考资料。</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 p-5 bg-slate-50/40 text-slate-400 text-xs overflow-y-auto">
+                  <div className="font-medium text-slate-400 mb-2">实时效果预览区</div>
+                  <div className="p-3 bg-white rounded border border-slate-200 text-slate-600 text-xs">
+                    内容将实时在此同步排版展示...
+                  </div>
+                </div>
+              </div>
+              
+              {/* Editor Footer */}
+              <div className="h-8 border-t border-slate-200 flex items-center justify-between px-4 text-xs text-slate-500 bg-slate-50/80 shrink-0">
+                <span>字数：286</span>
+                <label className="flex items-center space-x-1 cursor-pointer">
+                  <span>同步滚动</span>
+                  <input type="checkbox" className="rounded-sm border-slate-300 text-slate-500 focus:ring-0 w-3 h-3 cursor-pointer" defaultChecked />
+                </label>
+              </div>
+            </div>
+          ) : (
+            /* 上传文档模式（核心需求：上传后支持预览和下载） */
+            <div className="flex-1 flex flex-col min-h-0 space-y-4">
+              {/* 隐藏的上传 input */}
+              <input
+                type="file"
+                ref={docFileInputRef}
+                onChange={handleDocFileUpload}
+                accept=".pdf,.doc,.docx,.md,.markdown,.txt"
+                className="hidden"
+              />
+
+              {doc ? (
+                /* 已上传文档展示卡片（带有预览、下载、重传、删除） */
+                <div className="space-y-4 flex-1 flex flex-col min-h-0">
+                  <div className="border border-slate-200 rounded-xl p-4 bg-gradient-to-r from-blue-50/40 via-white to-slate-50/50 shadow-xs flex items-center justify-between">
+                    <div className="flex items-center space-x-3.5 min-w-0">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
+                        doc.type === 'pdf' ? 'bg-red-50 text-red-600 border border-red-200' :
+                        doc.type === 'word' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
+                        doc.type === 'md' ? 'bg-purple-50 text-purple-600 border border-purple-200' :
+                        'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}>
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="text-sm font-bold text-slate-800 truncate" title={doc.name}>
+                            {doc.name}
+                          </h4>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 shrink-0">
+                            {doc.type.toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-3 text-xs text-slate-400 mt-1">
+                          <span>大小: {doc.size}</span>
+                          <span>·</span>
+                          <span>上传时间: {doc.uploadTime}</span>
+                          <span>·</span>
+                          <span className="text-emerald-600 font-medium flex items-center">
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-0.5" /> 已就绪
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 操作按钮组：预览、下载、重新上传、删除 */}
+                    <div className="flex items-center space-x-2 shrink-0">
+                      {/* 预览按钮 */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewingDoc(doc);
+                          setPreviewPage(1);
+                          setPreviewZoom(100);
+                        }}
+                        className="px-3.5 py-1.5 bg-[#1890ff] hover:bg-blue-600 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 shadow-xs transition-colors cursor-pointer"
+                        title="在线预览文档全文"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>预览文档</span>
+                      </button>
+
+                      {/* 下载按钮 */}
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadDocument(doc)}
+                        className="px-3.5 py-1.5 border border-[#1890ff] text-[#1890ff] hover:bg-blue-50/60 bg-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
+                        title="下载文档至本地"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>下载</span>
+                      </button>
+
+                      {/* 重新上传 */}
+                      <button
+                        type="button"
+                        onClick={() => docFileInputRef.current?.click()}
+                        className="px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 bg-white rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        重新上传
+                      </button>
+
+                      {/* 删除 */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTaskDocuments(prev => {
+                            const updated = { ...prev };
+                            delete updated[currentTask.id];
+                            if (currentType === 'experiment') delete updated['t-exp'];
+                            if (currentType === 'text') delete updated['t-text'];
+                            return updated;
+                          });
+                          showModalToast(`已移除当前上传的文档`);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        title="删除当前文档"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 内嵌预览概览视窗 (Inline Document Preview Window) */}
+                  <div className="flex-1 border border-slate-200 rounded-xl bg-slate-50/40 p-4 flex flex-col min-h-[220px] overflow-hidden">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 mb-3">
+                      <div className="flex items-center space-x-2 text-xs font-bold text-slate-700">
+                        <FileCheck className="w-4 h-4 text-blue-600" />
+                        <span>文档内容快速速览</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewingDoc(doc);
+                          setPreviewPage(1);
+                          setPreviewZoom(100);
+                        }}
+                        className="text-xs text-[#1890ff] hover:underline flex items-center cursor-pointer"
+                      >
+                        <span>打开全屏高保真阅读器</span>
+                        <ExternalLink className="w-3 h-3 ml-1" />
+                      </button>
+                    </div>
+
+                    {/* 速览纸张排版容器 */}
+                    <div className="flex-1 bg-white rounded-lg border border-slate-200/80 p-5 overflow-y-auto text-xs space-y-3 leading-relaxed shadow-2xs">
+                      <div className="text-center pb-3 border-b border-slate-100">
+                        <h3 className="text-sm font-bold text-slate-800">{doc.name.replace(/\.[^/.]+$/, '')}</h3>
+                        <p className="text-[11px] text-slate-400 mt-1">教学步骤指导文件 · 正文解析已完成</p>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 mb-1">【第一部分：实训目标与背景】</h4>
+                        <p className="text-slate-600">本步骤重点针对当前阶段核心技能点进行强化训练，学生需在规定时间内按序完成各项指导规程并提交结果。</p>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 mb-1">【第二部分：实验环境配置与启动参数】</h4>
+                        <p className="text-slate-600">依赖镜像已集成在云端实训平台中，学生启动后系统将自动挂载判分脚本，所有实验控制台输出与事件将由自动评测引擎捕获。</p>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 mb-1">【第三部分：考核评价准则】</h4>
+                        <p className="text-slate-600">实验评测采用细粒度规则断言机制，完成接线、阈值校准及测试用例跑通后将自动输出各能力项雷达图分析报告。</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* 尚未上传文档：展示大方整洁的拖拽上传区域 */
+                <div 
+                  onClick={() => docFileInputRef.current?.click()}
+                  className="flex-1 border-2 border-dashed border-slate-300 hover:border-[#1890ff] bg-slate-50/50 hover:bg-blue-50/30 rounded-xl flex flex-col items-center justify-center p-8 text-center cursor-pointer transition-all group min-h-[260px]"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-blue-50 text-[#1890ff] group-hover:bg-[#1890ff] group-hover:text-white flex items-center justify-center mb-3.5 transition-colors shadow-xs">
+                    <UploadCloud className="w-7 h-7" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-800 mb-1">
+                    点击或拖拽上传教学文档
+                  </h4>
+                  <p className="text-xs text-slate-500 max-w-md mb-3">
+                    上传后学生端可直接阅读指导书，并支持一键在线预览与下载
+                  </p>
+                  <div className="inline-flex items-center space-x-2 px-3 py-1 bg-white border border-slate-200 rounded-full text-[11px] text-slate-400">
+                    <span>支持格式：PDF、Word (.doc/.docx)、Markdown (.md)、TXT</span>
+                    <span>·</span>
+                    <span>单文件 ≤ 50MB</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
@@ -2492,6 +2860,208 @@ export default function TeacherStepEditorModal({
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* 全屏高保真文档阅读预览弹窗（核心功能：上传文档后支持在线预览和下载） */}
+      <AnimatePresence>
+        {previewingDoc && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 select-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              className="w-[92vw] max-w-5xl h-[90vh] bg-slate-100 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200"
+            >
+              {/* 顶部工具栏 */}
+              <div className="h-14 px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-xs">
+                <div className="flex items-center space-x-3 min-w-0">
+                  <div className={`p-1.5 rounded-lg shrink-0 ${
+                    previewingDoc.type === 'pdf' ? 'bg-red-50 text-red-600' :
+                    previewingDoc.type === 'word' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
+                  }`}>
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-xs font-bold text-slate-800 truncate max-w-md">
+                      {previewingDoc.name}
+                    </h3>
+                    <p className="text-[10px] text-slate-400">
+                      文档在线预览器 · 格式：{previewingDoc.type.toUpperCase()} · 大小：{previewingDoc.size}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 控制器：翻页与缩放 */}
+                <div className="flex items-center space-x-4">
+                  {/* 翻页 */}
+                  <div className="flex items-center space-x-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs">
+                    <button
+                      type="button"
+                      disabled={previewPage <= 1}
+                      onClick={() => setPreviewPage(p => Math.max(1, p - 1))}
+                      className="p-1 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-slate-600 font-medium px-2">第 {previewPage} / 3 页</span>
+                    <button
+                      type="button"
+                      disabled={previewPage >= 3}
+                      onClick={() => setPreviewPage(p => Math.min(3, p + 1))}
+                      className="p-1 text-slate-600 hover:text-slate-900 disabled:opacity-30 cursor-pointer"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* 缩放 */}
+                  <div className="flex items-center space-x-1 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewZoom(z => Math.max(70, z - 10))}
+                      className="p-1 text-slate-600 hover:text-slate-900 cursor-pointer"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-slate-600 font-medium px-1.5 w-12 text-center">{previewZoom}%</span>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewZoom(z => Math.min(150, z + 10))}
+                      className="p-1 text-slate-600 hover:text-slate-900 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 右侧：下载与关闭 */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadDocument(previewingDoc)}
+                    className="px-3.5 py-1.5 bg-[#1890ff] hover:bg-blue-600 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>下载文档</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewingDoc(null)}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* 预览纸张内容展示区（仿 PDF 纸张仿真排版） */}
+              <div className="flex-1 min-h-0 overflow-auto p-8 flex justify-center bg-slate-200/70">
+                <div 
+                  className="bg-white shadow-xl rounded-lg p-12 w-[720px] min-h-[960px] text-slate-800 transition-all space-y-6 shrink-0 border border-slate-200 relative"
+                  style={{ transform: `scale(${previewZoom / 100})`, transformOrigin: 'top center' }}
+                >
+                  {/* 页眉 */}
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-200 text-[11px] text-slate-400">
+                    <span>高等院校工程与实验实训教学规范指导书</span>
+                    <span>编号：EXP-GUIDE-2026</span>
+                  </div>
+
+                  {/* 页面内容（按页码动态切换） */}
+                  {previewPage === 1 && (
+                    <div className="space-y-6">
+                      <div className="text-center pt-4 pb-6 border-b border-slate-100">
+                        <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                          {previewingDoc.name.replace(/\.[^/.]+$/, '')}
+                        </h2>
+                        <p className="text-xs text-slate-500 mt-2">
+                          课程：{courseName || '专业核心实训课程'} · 授课教师编制 · 适用版本 2026-V1.0
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-bold text-blue-700 flex items-center">
+                          <span className="w-2 h-2 rounded-full bg-blue-600 mr-2"></span>
+                          一、实验目的与教学要求
+                        </h3>
+                        <ul className="list-disc pl-5 text-xs text-slate-600 space-y-1.5 leading-relaxed">
+                          <li>掌握实验环境的拓扑设计原则与端到端协同通信机理。</li>
+                          <li>严格遵循规范进行设备选型、引脚接线与控制参数整定。</li>
+                          <li>通过自动化评测引擎校验系统在稳态和瞬态工况下的可靠性指标。</li>
+                          <li>培养学生面对实际工程异常时的排查、定位与综合分析解决能力。</li>
+                        </ul>
+                      </div>
+
+                      <div className="space-y-3 pt-3">
+                        <h3 className="text-sm font-bold text-blue-700 flex items-center">
+                          <span className="w-2 h-2 rounded-full bg-blue-600 mr-2"></span>
+                          二、实验软硬件实训拓扑准备
+                        </h3>
+                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-2">
+                          <div className="flex items-center justify-between font-semibold text-slate-800">
+                            <span>运行镜像与平台</span>
+                            <span className="text-emerald-600 font-normal">已完成云端容器预置</span>
+                          </div>
+                          <p>本实验依托轻量化云端容器，内置 Python 交互式编程环境与三维虚拟仿真引擎，支持双向实时事件通信与遥测数据持久化。</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {previewPage === 2 && (
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-bold text-blue-700 flex items-center">
+                          <span className="w-2 h-2 rounded-full bg-blue-600 mr-2"></span>
+                          三、关键实验步骤与指令规范
+                        </h3>
+                        <div className="space-y-3 text-xs text-slate-600">
+                          <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                            <div className="font-bold text-slate-800 mb-1">步骤 1：建立通信信道与握手测试</div>
+                            <p>在仿真控制面板中启动虚拟目标机服务，监听端口 1883，确认 MQTT 客户端成功收到心跳回执包。</p>
+                          </div>
+                          <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                            <div className="font-bold text-slate-800 mb-1">步骤 2：端子连线与物理量采样校验</div>
+                            <p>按引脚定义表连接模拟量传感器输入端子，调整采样频率至 100Hz，观察波形是否平稳无毛刺。</p>
+                          </div>
+                          <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                            <div className="font-bold text-slate-800 mb-1">步骤 3：超温超压工况安全联锁响应测试</div>
+                            <p>人为注入过载故障信号，断言联锁机构在 200ms 内正确触发切断，并生成报警事件日志。</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {previewPage === 3 && (
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-bold text-blue-700 flex items-center">
+                          <span className="w-2 h-2 rounded-full bg-blue-600 mr-2"></span>
+                          四、考核评分要点与注意事项
+                        </h3>
+                        <div className="text-xs text-slate-600 space-y-2 leading-relaxed">
+                          <p>1. 实验评分规则将在学生提交实验时由评测引擎自动运行打分并生成能力雷达图诊断报告。</p>
+                          <p>2. 切勿修改默认的容器端口映射与测试断言脚本，否则可能导致自动化测试执行失败。</p>
+                          <p>3. 实验完成后请及时点击保存配置并下载本次实验报告留存归档。</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-12 p-4 bg-blue-50/50 rounded-xl border border-blue-200 text-center text-xs text-blue-800">
+                        —— 本教学步骤指导文档完，支持随时在线复习与下载 ——
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 页脚 */}
+                  <div className="absolute bottom-6 left-12 right-12 flex items-center justify-between pt-3 border-t border-slate-200 text-[11px] text-slate-400">
+                    <span>文档安全等级：校内实训公开</span>
+                    <span>第 {previewPage} 页 / 共 3 页</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

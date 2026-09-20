@@ -12,7 +12,8 @@ import {
   ChevronDown,
   X,
   Play,
-  Check
+  Check,
+  User
 } from 'lucide-react';
 
 // ======================= 数据类型定义 =======================
@@ -44,6 +45,7 @@ export interface FlatTaskRow extends CourseTaskItem {
   courseId: string;
   courseName: string;
   isSelfStudy: boolean;
+  teacher?: string;
 }
 
 // ======================= 10 门扩充模拟课程数据 =======================
@@ -275,11 +277,12 @@ const MOCK_SELF_COURSES: StudentCourse[] = [
   }
 ];
 
-interface StudentStudiesProps {
+export interface StudentStudiesProps {
   onNavigate?: (view: string) => void;
+  onStartStudy?: (taskInfo?: { id?: string; title?: string; courseName?: string; isCompleted?: boolean }) => void;
 }
 
-export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
+export default function StudentStudies({ onNavigate, onStartStudy }: StudentStudiesProps) {
   // ======================= 顶层 Tab：我学的课 / 我的任务 =======================
   const [activeMainTab, setActiveMainTab] = useState<'courses' | 'tasks'>('courses');
 
@@ -342,6 +345,7 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
   
   // 搜索筛选字段
   const [searchTaskName, setSearchTaskName] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
   
   // 课程下拉选择（支持在下拉面板内关键字即时过滤）
   const [selectedCourseName, setSelectedCourseName] = useState('');
@@ -367,7 +371,8 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
           ...t,
           courseId: c.id,
           courseName: c.name,
-          isSelfStudy: !!c.isSelfStudy
+          isSelfStudy: !!c.isSelfStudy,
+          teacher: c.teacher || '-'
         });
       });
     });
@@ -414,6 +419,9 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
       // 课程名称精准或匹配
       const matchCourse = !selectedCourseName.trim() || row.courseName === selectedCourseName.trim();
       
+      // 任务状态匹配
+      const matchStatus = !selectedStatus || row.status === selectedStatus;
+
       // 时间范围匹配 (截取 YYYY-MM-DD 部分比较)
       let matchDate = true;
       const rowDateStr = row.issueTime.slice(0, 10);
@@ -424,9 +432,9 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
         matchDate = false;
       }
 
-      return matchTask && matchCourse && matchDate;
+      return matchTask && matchCourse && matchStatus && matchDate;
     });
-  }, [flatTaskList, searchTaskName, selectedCourseName, startDate, endDate]);
+  }, [flatTaskList, searchTaskName, selectedCourseName, selectedStatus, startDate, endDate]);
 
   // 分页截取
   const totalItems = filteredTaskList.length;
@@ -440,15 +448,28 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
   const handleResetSearch = () => {
     setSearchTaskName('');
     setSelectedCourseName('');
+    setSelectedStatus('');
     setStartDate('');
     setEndDate('');
     setActiveDateQuickTag(null);
     setCurrentPage(1);
   };
 
-  // 跳转继续学习
-  const handleContinueStudy = (_taskId?: string) => {
-    if (onNavigate) {
+  // 跳转继续学习/查看（优先在当前页面切换右侧内容）
+  const handleContinueStudy = (
+    _taskId?: string,
+    taskTitle?: string,
+    courseTitle?: string,
+    isCompleted?: boolean
+  ) => {
+    if (onStartStudy) {
+      onStartStudy({
+        id: _taskId,
+        title: taskTitle || '自然语言处理技术与应用17888340735441',
+        courseName: courseTitle || '自然语言处理技术与应用',
+        isCompleted: !!isCompleted
+      });
+    } else if (onNavigate) {
       onNavigate('course-learning');
     }
   };
@@ -639,7 +660,7 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
 
                         {/* 最近任务卡片（重点交互：可直接点击快速跳转学习） */}
                         <div
-                          onClick={() => handleContinueStudy(latestTask?.id)}
+                          onClick={() => handleContinueStudy(latestTask?.id, latestTask?.name, course.title, latestTask?.progress === 100)}
                           className="p-2.5 rounded-lg bg-blue-50/60 hover:bg-blue-100/70 border border-blue-100/80 transition-all cursor-pointer group/quick"
                           title="点击快速继续该任务学习"
                         >
@@ -668,7 +689,7 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
                             {course.tasks.slice(0, 5).map((task, idx) => (
                               <div
                                 key={task.id}
-                                onClick={() => handleContinueStudy(task.id)}
+                                onClick={() => handleContinueStudy(task.id, task.name, course.title, task.progress === 100)}
                                 className="flex items-center justify-between px-2 py-1 rounded bg-slate-50 hover:bg-blue-50 text-[11px] text-slate-600 hover:text-blue-600 cursor-pointer transition-colors"
                               >
                                 <span className="truncate pr-1">
@@ -776,6 +797,7 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
                   setTaskListTab('task');
                   setSelectedCourseName('');
                   setCourseFilterKeyword('');
+                  setSelectedStatus('');
                   setCurrentPage(1);
                 }}
                 className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
@@ -791,6 +813,7 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
                   setTaskListTab('self');
                   setSelectedCourseName('');
                   setCourseFilterKeyword('');
+                  setSelectedStatus('');
                   setCurrentPage(1);
                 }}
                 className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all ${
@@ -827,7 +850,7 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
             </div>
 
             {/* 2. 课程搜索：下拉显示课程并支持关键字搜索 */}
-            <div className="md:col-span-4 relative">
+            <div className="md:col-span-3 relative">
               <span className="text-[11px] font-medium text-slate-500 block mb-1">所属课程</span>
               <div 
                 onClick={() => setIsCourseDropdownOpen(prev => !prev)}
@@ -916,8 +939,26 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
               )}
             </div>
 
-            {/* 3. 时间范围选择（开始日期 ~ 结束日期） */}
-            <div className="md:col-span-5">
+            {/* 3. 任务状态筛选 */}
+            <div className="md:col-span-2">
+              <span className="text-[11px] font-medium text-slate-500 block mb-1">任务状态</span>
+              <select
+                value={selectedStatus}
+                onChange={(e) => {
+                  setSelectedStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100 text-slate-700 cursor-pointer"
+              >
+                <option value="">全部状态</option>
+                <option value="in_progress">进行中</option>
+                <option value="completed">已完成</option>
+                <option value="not_started">未开始</option>
+              </select>
+            </div>
+
+            {/* 4. 时间范围选择（开始日期 ~ 结束日期） */}
+            <div className="md:col-span-4">
               <span className="text-[11px] font-medium text-slate-500 block mb-1">
                 {taskListTab === 'task' ? '下发时间范围' : '加入学习时间范围'}
               </span>
@@ -991,15 +1032,19 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-slate-50/95 backdrop-blur-xs text-slate-500 text-xs border-b border-slate-200 font-semibold">
-                  <th className="py-3 px-4 w-14 text-center">序号</th>
-                  <th className="py-3 px-4 w-52">课程名称</th>
+                  <th className="py-3 px-4 w-12 text-center">序号</th>
+                  <th className="py-3 px-4 w-44">课程名称</th>
                   <th className="py-3 px-4">任务名称</th>
-                  <th className="py-3 px-4 w-40">
+                  {taskListTab === 'task' && (
+                    <th className="py-3 px-4 w-28">下发教师</th>
+                  )}
+                  <th className="py-3 px-4 w-28 text-center">任务状态</th>
+                  <th className="py-3 px-4 w-36">
                     {taskListTab === 'task' ? '下发时间' : '加入学习时间'}
                   </th>
-                  <th className="py-3 px-4 w-44">完成进度</th>
-                  <th className="py-3 px-4 w-40">最近学习时间</th>
-                  <th className="py-3 px-4 w-28 text-center">操作</th>
+                  <th className="py-3 px-4 w-36">完成进度</th>
+                  <th className="py-3 px-4 w-36">最近学习时间</th>
+                  <th className="py-3 px-4 w-24 text-center">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
@@ -1014,7 +1059,7 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
                         </td>
 
                         {/* 课程名称 */}
-                        <td className="py-3.5 px-4 font-medium text-slate-800 max-w-[200px] truncate" title={row.courseName}>
+                        <td className="py-3.5 px-4 font-medium text-slate-800 max-w-[180px] truncate" title={row.courseName}>
                           {row.courseName}
                         </td>
 
@@ -1027,11 +1072,43 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
                             <span 
                               className="font-medium text-slate-700 hover:text-blue-600 cursor-pointer line-clamp-1" 
                               title={row.name}
-                              onClick={() => handleContinueStudy(row.id)}
+                              onClick={() => handleContinueStudy(row.id, row.name, row.courseName, row.progress === 100 || row.status === 'completed')}
                             >
                               {row.name}
                             </span>
                           </div>
+                        </td>
+
+                        {/* 下发教师 */}
+                        {taskListTab === 'task' && (
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5 text-slate-700 font-medium">
+                              <span className="w-5 h-5 rounded-full bg-blue-50 border border-blue-200/60 flex items-center justify-center text-[10px] text-blue-600 font-semibold shrink-0">
+                                {row.teacher && row.teacher !== '-' ? row.teacher.slice(0, 1) : '师'}
+                              </span>
+                              <span>{row.teacher || '-'}</span>
+                            </span>
+                          </td>
+                        )}
+
+                        {/* 任务状态（进行中、已完成） */}
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          {row.status === 'completed' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600 shrink-0" />
+                              已完成
+                            </span>
+                          ) : row.status === 'in_progress' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5 animate-pulse shrink-0" />
+                              进行中
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                              <Clock className="w-3 h-3 mr-1 text-slate-400 shrink-0" />
+                              未开始
+                            </span>
+                          )}
                         </td>
 
                         {/* 下发时间 / 加入学习时间 */}
@@ -1061,14 +1138,18 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
                           {row.lastStudyTime}
                         </td>
 
-                        {/* 继续学习按钮 */}
+                        {/* 操作按钮 */}
                         <td className="py-3.5 px-4 text-center">
                           <button
                             type="button"
-                            onClick={() => handleContinueStudy(row.id)}
-                            className="px-3 py-1 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded text-xs font-medium transition-colors"
+                            onClick={() => handleContinueStudy(row.id, row.name, row.courseName, row.progress === 100 || row.status === 'completed')}
+                            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                              row.status === 'completed' || row.progress === 100
+                                ? 'border border-slate-200 hover:border-blue-500 text-slate-600 hover:text-blue-600 hover:bg-blue-50/50'
+                                : 'bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white'
+                            }`}
                           >
-                            继续学习
+                            {row.status === 'completed' || row.progress === 100 ? '查看' : row.status === 'in_progress' ? '继续学习' : '开始学习'}
                           </button>
                         </td>
                       </tr>
@@ -1076,7 +1157,7 @@ export default function StudentStudies({ onNavigate }: StudentStudiesProps) {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                    <td colSpan={taskListTab === 'task' ? 9 : 8} className="py-12 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center">
                         <BookOpen className="w-8 h-8 text-slate-300 mb-2" />
                         <p className="text-xs text-slate-500">未找到符合检索条件的课程任务</p>

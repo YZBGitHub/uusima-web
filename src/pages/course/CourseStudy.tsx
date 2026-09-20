@@ -954,8 +954,33 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
   const [volume, setVolume] = useState<number>(80);
   const [isPlayerFullscreen, setIsPlayerFullscreen] = useState<boolean>(false);
 
-  // 笔记内容与字数统计
-  const [noteContent, setNoteContent] = useState('');
+  // 笔记抽屉独立宽度（默认 760px 双栏舒适展示）
+  const [noteDrawerWidth, setNoteDrawerWidth] = useState<number>(760);
+  // 笔记弹窗内章节目录切换栏显隐（默认展开，支持收起）
+  const [isNoteChapterNavOpen, setIsNoteChapterNavOpen] = useState<boolean>(true);
+  // 笔记弹窗内当前选中的课节 ID（默认关联当前上课章节 currentStepId）
+  const [selectedNoteStepId, setSelectedNoteStepId] = useState<string>('1-2');
+  // 笔记目录内部章节折叠展开状态（默认展开）
+  const [noteExpandedChapters, setNoteExpandedChapters] = useState<Record<string, boolean>>({
+    'dir-chap-1': true,
+    'dir-chap-2': true,
+    'dir-chap-3': true,
+    'dir-chap-4': true,
+  });
+  // 笔记目录搜索关键词
+  const [noteSearchKeyword, setNoteSearchKeyword] = useState<string>('');
+
+  // 多章节随堂笔记内容集合（按 stepId 索引隔离，支持跨章节查看与编辑）
+  const [notesByStep, setNotesByStep] = useState<Record<string, string>>({
+    '1-1': `# 1-1 自然语言处理概述与基础体系\n\n- 核心概念：自然语言处理 (NLP) 融合计算机科学、人工智能及语言学，致力于实现人机顺畅语言通信。\n- 发展阶段：\n  1. 规则驱动与专家系统（20世纪50-80年代）\n  2. 统计机器学习与隐马尔可夫模型（90年代-2010年）\n  3. 深度学习与预训练大模型（Transformer、BERT、GPT）\n\n> 思考：分词标注是下游一切分类与抽取任务的基石。`,
+    '1-2': `# 1-2 NLTK预处理方法实战重点笔记\n\n- **分词 (Tokenization)**：文本预处理第一步，将连续字符切分为语义单元单词或标点。\n- **停用词过滤 (Stopwords)**：去除 'the', 'is', 'at' 等无实义高频虚词。\n- **词干提取 (Stemming)** 与 **词形还原 (Lemmatization)**：\n  - PorterStemmer 属于启发式规则截断\n  - WordNetLemmatizer 基于词典词性还原原型\n\n\`\`\`python\nimport nltk\nfrom nltk.tokenize import word_tokenize\nfrom nltk.corpus import stopwords\n\nraw_text = "Natural Language Processing with Python is amazing!"\ntokens = word_tokenize(raw_text.lower())\nfiltered = [w for w in tokens if w not in stopwords.words('english')]\nprint("过滤后有效Token:", filtered)\n\`\`\`\n\n> 重点提醒：中文分词需要使用 jieba 或 pkuseg，英文可以直接使用 nltk.word_tokenize。`,
+    '1-4': `# 1-4 NLTK预处理精讲视频随堂速记\n\n- **12分35秒**：主讲老师强调分词词表中自定义专有名词字典的注入方法。\n- **28分10秒**：TF-IDF特征提取矩阵稀疏度较高时，推荐结合TruncatedSVD降维。\n- 随堂测试错题点：PorterStemmer 产生的结果不一定是合法单词，而 Lemmatizer 输出必为词典原型。`,
+    '2-1': `# 2-1 垃圾邮件分类器特征工程\n\n- 文本向量化方法对比：\n  - 词频统计（CountVectorizer）\n  - TF-IDF 逆文档频率加权（TfidfVectorizer）\n- 朴素贝叶斯分类器：多项式贝叶斯 (MultinomialNB) 对离散文本词频特征表现优异。`,
+    '2-2': `# 2-2 开发中文垃圾邮件分类器笔记\n\n- 数据清洗：正则过滤html标签、标点符号、特殊空白符。\n- 交叉验证与准确率评测：Precision, Recall, F1-Score。`,
+    '3-1': `# 3-1 情感极性判定原理\n\n- 情感分析三大粒度：词级、句级、篇章级。\n- 情感极性倾向：正向 (Positive)、负向 (Negative)、中性 (Neutral)。`,
+    '4-1': `# 4-1 实体识别BIO标注体系\n\n- BIO标注标准规范：\n  - B- (Begin)：实体起始字\n  - I- (Inside)：实体内部字\n  - O (Outside)：非实体字\n- 示例：新(B-LOC)大(I-LOC)陆(I-LOC)时代(O)...`,
+  });
+
   const [isNotePreview, setIsNotePreview] = useState(false);
   const [isNoteSaved, setIsNoteSaved] = useState(false);
 
@@ -1333,6 +1358,32 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
     document.body.style.userSelect = 'none';
   };
 
+  // 笔记弹窗横向拖拽手柄事件监听处理（独立宽度，支持宽屏拖拽）
+  const handleNoteMouseDownResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = noteDrawerWidth;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const minW = isNoteChapterNavOpen ? 520 : 360;
+      const newWidth = Math.max(minW, Math.min(window.innerWidth * 0.9, Math.min(1380, startWidth + deltaX)));
+      setNoteDrawerWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
   // 资源面板左右分栏拖拽手柄事件监听处理（实时改变左侧资源与右侧内容占比）
   const handleResourceMouseDownResize = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -1462,6 +1513,19 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
   };
 
   const { chapter: activeChapter, step: activeStep } = getCurrentStepInfo();
+
+  // 查找笔记抽屉当前选中的步骤和章节信息（支持跨章节查看随堂笔记）
+  const getNoteTargetStepInfo = () => {
+    for (const chapter of directoryData) {
+      const found = chapter.steps.find(s => s.id === selectedNoteStepId);
+      if (found) {
+        return { chapter, step: found };
+      }
+    }
+    return { chapter: directoryData[0], step: directoryData[0].steps[0] };
+  };
+
+  const { chapter: noteTargetChapter, step: noteTargetStep } = getNoteTargetStepInfo();
 
   // 1. 图文学习数据
   const textChapters: ChapterData[] = [
@@ -1837,9 +1901,14 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
 
   const currentChapters = getCurrentChapters();
 
-  // 插入富文本标记辅助函数
+  // 插入富文本标记辅助函数（支持当前选中的笔记课节）
   const handleInsertToolbarTag = (prefix: string, suffix: string = '') => {
-    setNoteContent(prev => prev ? `${prev}\n${prefix}${suffix}` : `${prefix}${suffix}`);
+    const current = notesByStep[selectedNoteStepId] ?? '';
+    const updated = current ? `${current}\n${prefix}${suffix}` : `${prefix}${suffix}`;
+    setNotesByStep(prev => ({
+      ...prev,
+      [selectedNoteStepId]: updated,
+    }));
   };
 
   // 步骤切换操作（附带 Toast 提示；当切换到实验类型时，自动打开资源面板切换到手册并打开手册查看器）
@@ -2063,7 +2132,14 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
             {/* 2. 笔记 */}
             <button 
               type="button"
-              onClick={() => setFloatingDrawer(floatingDrawer === 'notes' ? null : 'notes')}
+              onClick={() => {
+                if (floatingDrawer !== 'notes') {
+                  if (!selectedNoteStepId) {
+                    setSelectedNoteStepId(currentStepId);
+                  }
+                }
+                setFloatingDrawer(floatingDrawer === 'notes' ? null : 'notes');
+              }}
               className={`w-12 h-12 flex flex-col items-center justify-center rounded-lg mb-3 transition-colors cursor-pointer relative z-10 pointer-events-auto ${
                 floatingDrawer === 'notes' 
                   ? 'text-[#4f46e5] bg-[#eef2ff] font-medium shadow-xs' 
@@ -2398,22 +2474,54 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
           </aside>
         )}
 
-        {/* 2. 笔记浮动抽屉（当资源面板打开时浮动覆盖在其上方） */}
+        {/* 2. 笔记浮动抽屉（支持左侧章节目录切换、跨章节查阅笔记、默认展开且支持收起） */}
         {floatingDrawer === 'notes' && (
           <aside 
-            style={{ width: `${drawerWidth}px` }}
-            className={`absolute top-0 ${isLeftNavHidden ? 'left-0' : 'left-16'} bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150`}
+            style={{ width: `${noteDrawerWidth}px` }}
+            className={`absolute top-0 ${isLeftNavHidden ? 'left-0' : 'left-16'} bottom-0 bg-white border-r border-slate-200/90 flex flex-col z-40 shadow-[8px_0_30px_rgba(0,0,0,0.18)] transition-none animate-in fade-in duration-150 overflow-hidden`}
           >
             {/* 笔记顶部标题与控制操作栏 */}
             <div className="px-3.5 py-2.5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white overflow-hidden">
-              {/* 左侧：章节大标题与任务副标题 */}
-              <div className="min-w-0 flex-1 pr-2.5 flex items-center space-x-2">
-                <h2 className="text-[13px] sm:text-[14px] font-bold text-slate-900 tracking-tight shrink-0">
-                  {activeChapter.chapterTitle}
-                </h2>
-                <span className="text-[11px] text-slate-500 font-normal leading-tight line-clamp-2 min-w-0">
-                  {activeStep.title}
-                </span>
+              {/* 左侧：章节切换展开按钮与当前小节标题 */}
+              <div className="min-w-0 flex-1 pr-2 flex items-center space-x-2">
+                {!isNoteChapterNavOpen ? (
+                  <button 
+                    onClick={() => {
+                      setIsNoteChapterNavOpen(true);
+                      if (noteDrawerWidth < 680) setNoteDrawerWidth(760);
+                    }}
+                    className="flex items-center space-x-1.5 px-2.5 py-1 text-xs text-blue-600 bg-blue-50/80 hover:bg-blue-100 rounded-md border border-blue-200/80 transition-colors font-medium cursor-pointer shadow-2xs group shrink-0"
+                    title="展开章节目录导航"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>展开目录</span>
+                    <ChevronsRight className="w-3 h-3 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                ) : (
+                  <div className="flex items-center space-x-1.5 text-blue-600 shrink-0 font-medium text-xs select-none">
+                    <BookMarked className="w-4 h-4" />
+                    <span>随堂笔记</span>
+                  </div>
+                )}
+
+                {/* 当前查看笔记的章节及课节标签 */}
+                <div className="flex items-center space-x-1.5 truncate min-w-0">
+                  <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-700 rounded shrink-0">
+                    {noteTargetChapter.chapterTitle.split('：')[0] || '当前章'}
+                  </span>
+                  <h2 className="text-[13px] font-bold text-slate-900 truncate" title={`${noteTargetChapter.chapterTitle} - ${noteTargetStep.title}`}>
+                    {noteTargetStep.title}
+                  </h2>
+                  {selectedNoteStepId === currentStepId ? (
+                    <span className="px-1.5 py-0.2 text-[10px] font-medium bg-emerald-50 text-emerald-600 border border-emerald-200 rounded shrink-0">
+                      正在学习
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.2 text-[10px] font-medium bg-purple-50 text-purple-600 border border-purple-200 rounded shrink-0">
+                      跨章节查阅
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* 右侧工具图标组：保存、分栏、全屏、关闭（蓝紫色） */}
@@ -2423,14 +2531,18 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
                     setIsNoteSaved(true);
                     setTimeout(() => setIsNoteSaved(false), 2500);
                   }}
-                  className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer shrink-0"
-                  title="保存笔记"
+                  className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer shrink-0 flex items-center space-x-1 px-1.5"
+                  title="保存当前章节笔记"
                 >
                   <Save className="w-[17px] h-[17px] stroke-[2.2]" />
+                  <span className="text-[11px] font-medium">保存</span>
                 </button>
                 
                 <button 
-                  onClick={() => setDrawerWidth(drawerWidth === 560 ? 420 : 560)}
+                  onClick={() => {
+                    const normalW = isNoteChapterNavOpen ? 760 : 480;
+                    setNoteDrawerWidth(noteDrawerWidth >= 960 ? normalW : 1000);
+                  }}
                   className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer shrink-0"
                   title="分栏/扩展宽度"
                 >
@@ -2438,7 +2550,11 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
                 </button>
                 
                 <button 
-                  onClick={() => setDrawerWidth(drawerWidth === 840 ? 420 : 840)}
+                  onClick={() => {
+                    const maxWidth = Math.round(window.innerWidth * 0.88);
+                    const normalW = isNoteChapterNavOpen ? 760 : 480;
+                    setNoteDrawerWidth(noteDrawerWidth >= maxWidth - 40 ? normalW : maxWidth);
+                  }}
                   className="p-1 rounded hover:bg-blue-50 transition-colors cursor-pointer shrink-0"
                   title="最大化"
                 >
@@ -2455,57 +2571,236 @@ export default function CourseStudy({ onNavigate }: { onNavigate?: (view: string
               </div>
             </div>
 
-            {/* 富文本编辑工具条 */}
-            <div className="px-3 py-1.5 border-b border-slate-200/80 bg-[#fafbfe] flex items-center space-x-1 shrink-0 text-slate-700 overflow-x-auto no-scrollbar">
-              <button onClick={() => handleInsertToolbarTag('**粗体文本**')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors font-bold text-sm" title="加粗"><Bold className="w-3.5 h-3.5 stroke-[2.5]" /></button>
-              <button onClick={() => handleInsertToolbarTag('<u>下划线文本</u>')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors text-sm" title="下划线"><Underline className="w-3.5 h-3.5 stroke-[2.2]" /></button>
-              <button onClick={() => handleInsertToolbarTag('*斜体文本*')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors text-sm italic" title="斜体"><Italic className="w-3.5 h-3.5 stroke-[2.2]" /></button>
-              <button onClick={() => handleInsertToolbarTag('~~删除文本~~')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors text-sm" title="删除线"><Strikethrough className="w-3.5 h-3.5 stroke-[2.2]" /></button>
-              <div className="h-4 w-px bg-slate-300 mx-1"></div>
-              <button onClick={() => handleInsertToolbarTag('### ')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors font-semibold text-sm" title="标题"><Heading className="w-3.5 h-3.5 stroke-[2.2]" /></button>
-              <button onClick={() => handleInsertToolbarTag('X<sub>2</sub>')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors text-xs font-mono" title="下标"><Subscript className="w-3.5 h-3.5 stroke-[2.2]" /></button>
-              <button onClick={() => handleInsertToolbarTag('X<sup>2</sup>')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors text-xs font-mono" title="上标"><Superscript className="w-3.5 h-3.5 stroke-[2.2]" /></button>
-              <button onClick={() => handleInsertToolbarTag('- 列表条目')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors" title="无序列表"><List className="w-3.5 h-3.5 stroke-[2.2]" /></button>
-              <button onClick={() => handleInsertToolbarTag('1. 列表条目')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors" title="有序列表"><ListOrdered className="w-3.5 h-3.5 stroke-[2.2]" /></button>
-              <button onClick={() => handleInsertToolbarTag('- [ ] 待办任务')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors" title="待办清单"><ListTodo className="w-3.5 h-3.5 stroke-[2.2]" /></button>
-              <div className="h-4 w-px bg-slate-300 mx-1"></div>
-              <button onClick={() => handleInsertToolbarTag('```python\n# 请输入代码\n```')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors" title="插入代码块"><Code className="w-3.5 h-3.5 stroke-[2.2]" /></button>
-              <button onClick={() => setIsNotePreview(prev => !prev)} className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${isNotePreview ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-200/70'}`} title={isNotePreview ? '切换到编辑模式' : '预览排版'}><Eye className="w-3.5 h-3.5 stroke-[2.2]" /></button>
-            </div>
+            {/* 抽屉内容主体双栏区域：左侧章节目录树 + 右侧笔记编辑/预览区 */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* 左侧章节目录切换栏（默认展开，支持收起） */}
+              {isNoteChapterNavOpen && (
+                <div className="w-[260px] shrink-0 border-r border-slate-200/90 bg-slate-50/70 flex flex-col h-full overflow-hidden select-none animate-in slide-in-from-left-2 duration-150">
+                  {/* 目录栏顶部标题与收起按钮 */}
+                  <div className="h-10 px-3 border-b border-slate-200/80 bg-white flex items-center justify-between shrink-0">
+                    <div className="flex items-center space-x-1.5 text-slate-800 font-semibold text-xs">
+                      <BookOpen className="w-3.5 h-3.5 text-blue-600" />
+                      <span>章节目录切换</span>
+                    </div>
 
-            {/* 保存成功提示 */}
-            {isNoteSaved && (
-              <div className="px-4 py-1.5 bg-emerald-50 text-emerald-700 text-xs flex items-center border-b border-emerald-100 animate-in fade-in duration-150">
-                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 shrink-0" />
-                笔记内容已成功自动同步保存
-              </div>
-            )}
+                    <button 
+                      onClick={() => {
+                        setIsNoteChapterNavOpen(false);
+                        if (noteDrawerWidth > 580) setNoteDrawerWidth(480);
+                      }}
+                      className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 px-1.5 py-0.5 rounded text-xs transition-colors flex items-center space-x-0.5 cursor-pointer"
+                      title="收起章节目录"
+                    >
+                      <span>收起</span>
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
 
-            {/* 笔记编辑正文区域 */}
-            <div className="flex-1 p-4 flex flex-col overflow-hidden bg-white">
-              {isNotePreview ? (
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">
-                  {noteContent || <span className="text-slate-400">暂无内容，请点击工具栏眼睛图标返回编辑。</span>}
+                  {/* 目录课节快速搜索栏 */}
+                  <div className="p-2 border-b border-slate-200/60 bg-white/60">
+                    <div className="relative flex items-center">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+                      <input 
+                        type="text" 
+                        value={noteSearchKeyword}
+                        onChange={(e) => setNoteSearchKeyword(e.target.value)}
+                        placeholder="搜索课节快速切笔记..." 
+                        className="w-full bg-slate-100 hover:bg-slate-200/60 focus:bg-white text-xs text-slate-700 pl-7 pr-6 py-1 rounded-md outline-none border border-transparent focus:border-blue-300 transition-all placeholder:text-slate-400"
+                      />
+                      {noteSearchKeyword && (
+                        <button 
+                          onClick={() => setNoteSearchKeyword('')} 
+                          className="absolute right-2 text-slate-400 hover:text-slate-600 p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 章节与步骤列表 */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                    {directoryData.map((chapter) => {
+                      const isExpanded = noteSearchKeyword ? true : !!noteExpandedChapters[chapter.id];
+                      const filteredSteps = chapter.steps.filter(step => 
+                        !noteSearchKeyword.trim() || 
+                        step.title.toLowerCase().includes(noteSearchKeyword.trim().toLowerCase())
+                      );
+
+                      if (noteSearchKeyword.trim() && filteredSteps.length === 0) {
+                        return null;
+                      }
+
+                      // 统计当前章节记了笔记的小节数量
+                      const chapterNoteCount = chapter.steps.filter(s => !!notesByStep[s.id]?.trim()).length;
+
+                      return (
+                        <div key={chapter.id} className="rounded-lg border border-slate-200/80 bg-white overflow-hidden shadow-2xs">
+                          {/* 章节折叠触发条 */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!noteSearchKeyword) {
+                                setNoteExpandedChapters(prev => ({
+                                  ...prev,
+                                  [chapter.id]: !prev[chapter.id]
+                                }));
+                              }
+                            }}
+                            className="w-full px-2.5 py-2 flex items-center justify-between text-left hover:bg-slate-50 transition-colors bg-slate-50/50"
+                          >
+                            <div className="flex items-center space-x-1.5 min-w-0 pr-1">
+                              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180 text-blue-600' : ''}`} />
+                              <span className="text-[12px] font-bold text-slate-800 truncate" title={chapter.chapterTitle}>
+                                {chapter.chapterTitle}
+                              </span>
+                            </div>
+
+                            {chapterNoteCount > 0 && (
+                              <span className="px-1.5 py-0.2 bg-blue-50 text-blue-600 border border-blue-200/70 text-[10px] rounded-full shrink-0 font-medium">
+                                {chapterNoteCount} 篇
+                              </span>
+                            )}
+                          </button>
+
+                          {/* 展开的课节列表 */}
+                          {isExpanded && (
+                            <div className="py-1 border-t border-slate-100 divide-y divide-slate-50">
+                              {filteredSteps.map((step) => {
+                                const isTarget = step.id === selectedNoteStepId;
+                                const isCurrentStudy = step.id === currentStepId;
+                                const hasNote = !!notesByStep[step.id]?.trim();
+
+                                return (
+                                  <div
+                                    key={step.id}
+                                    onClick={() => setSelectedNoteStepId(step.id)}
+                                    className={`px-2.5 py-1.5 flex items-center justify-between text-xs transition-colors cursor-pointer border-l-2 ${
+                                      isTarget 
+                                        ? 'bg-blue-50/90 text-blue-700 font-semibold border-blue-600' 
+                                        : 'hover:bg-slate-50 text-slate-700 border-transparent'
+                                    }`}
+                                  >
+                                    <div className="flex items-center space-x-1.5 truncate flex-1 pr-1">
+                                      {renderStepTag(step.tag)}
+                                      <span className={`truncate text-[11.5px] ${isTarget ? 'text-blue-700 font-medium' : 'text-slate-600'}`} title={step.title}>
+                                        {step.title}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center space-x-1 shrink-0">
+                                      {hasNote && (
+                                        <span title="该小节已有笔记">
+                                          <Edit2 className="w-3 h-3 text-blue-500 shrink-0" />
+                                        </span>
+                                      )}
+                                      {isCurrentStudy && (
+                                        <span className="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-1 py-0.2 rounded font-medium">
+                                          在学
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* 目录底部简要信息 */}
+                  <div className="px-3 py-2 border-t border-slate-200/80 bg-white text-[11px] text-slate-400 flex items-center justify-between shrink-0">
+                    <span>共 {directoryData.length} 章</span>
+                    <span className="text-blue-600 font-medium">
+                      已记 {Object.keys(notesByStep).filter(k => !!notesByStep[k]?.trim()).length} 篇笔记
+                    </span>
+                  </div>
                 </div>
-              ) : (
-                <textarea 
-                  value={noteContent}
-                  onChange={(e) => setNoteContent(e.target.value)}
-                  placeholder="请输入正文"
-                  className="w-full flex-1 resize-none outline-none border-none text-[14px] text-slate-800 placeholder-slate-400 leading-relaxed font-sans"
-                  autoFocus
-                />
               )}
-            </div>
 
-            {/* 底部信息栏 */}
-            <div className="px-4 py-2 border-t border-slate-100 text-[12px] text-slate-500 bg-white flex items-center justify-between shrink-0 select-none">
-              <span>字数: {noteContent.length}</span>
-              <span className="text-slate-400 text-[11px]">随堂笔记自动缓存</span>
+              {/* 右侧笔记正文与编辑区 */}
+              <div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
+                {/* 跨章节查看提示横幅（当查看的不是当前课堂正在学习的步骤时显示） */}
+                {selectedNoteStepId !== currentStepId && (
+                  <div className="px-3 py-1.5 bg-blue-50/90 border-b border-blue-100 flex items-center justify-between text-xs text-blue-700 animate-in fade-in duration-150 shrink-0 select-none">
+                    <div className="flex items-center space-x-1.5 truncate">
+                      <BookMarked className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                      <span className="truncate">
+                        提示：当前正在查阅【{noteTargetStep.title}】的笔记
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedNoteStepId(currentStepId)}
+                      className="text-[11px] bg-white hover:bg-blue-600 hover:text-white text-blue-600 border border-blue-200 px-2 py-0.5 rounded font-medium transition-colors shrink-0 cursor-pointer shadow-2xs"
+                      title="一键切回当前正在学习的课节笔记"
+                    >
+                      切回在学课节 ({currentStepId})
+                    </button>
+                  </div>
+                )}
+
+                {/* 富文本编辑工具条 */}
+                <div className="px-3 py-1.5 border-b border-slate-200/80 bg-[#fafbfe] flex items-center space-x-1 shrink-0 text-slate-700 overflow-x-auto no-scrollbar">
+                  <button onClick={() => handleInsertToolbarTag('**粗体文本**')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors font-bold text-sm" title="加粗"><Bold className="w-3.5 h-3.5 stroke-[2.5]" /></button>
+                  <button onClick={() => handleInsertToolbarTag('<u>下划线文本</u>')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors text-sm" title="下划线"><Underline className="w-3.5 h-3.5 stroke-[2.2]" /></button>
+                  <button onClick={() => handleInsertToolbarTag('*斜体文本*')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors text-sm italic" title="斜体"><Italic className="w-3.5 h-3.5 stroke-[2.2]" /></button>
+                  <button onClick={() => handleInsertToolbarTag('~~删除文本~~')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors text-sm" title="删除线"><Strikethrough className="w-3.5 h-3.5 stroke-[2.2]" /></button>
+                  <div className="h-4 w-px bg-slate-300 mx-1"></div>
+                  <button onClick={() => handleInsertToolbarTag('### ')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors font-semibold text-sm" title="标题"><Heading className="w-3.5 h-3.5 stroke-[2.2]" /></button>
+                  <button onClick={() => handleInsertToolbarTag('X<sub>2</sub>')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors text-xs font-mono" title="下标"><Subscript className="w-3.5 h-3.5 stroke-[2.2]" /></button>
+                  <button onClick={() => handleInsertToolbarTag('X<sup>2</sup>')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors text-xs font-mono" title="上标"><Superscript className="w-3.5 h-3.5 stroke-[2.2]" /></button>
+                  <button onClick={() => handleInsertToolbarTag('- 列表条目')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors" title="无序列表"><List className="w-3.5 h-3.5 stroke-[2.2]" /></button>
+                  <button onClick={() => handleInsertToolbarTag('1. 列表条目')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors" title="有序列表"><ListOrdered className="w-3.5 h-3.5 stroke-[2.2]" /></button>
+                  <button onClick={() => handleInsertToolbarTag('- [ ] 待办任务')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors" title="待办清单"><ListTodo className="w-3.5 h-3.5 stroke-[2.2]" /></button>
+                  <div className="h-4 w-px bg-slate-300 mx-1"></div>
+                  <button onClick={() => handleInsertToolbarTag('```python\n# 请输入代码\n```')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-200/70 transition-colors" title="插入代码块"><Code className="w-3.5 h-3.5 stroke-[2.2]" /></button>
+                  <button onClick={() => setIsNotePreview(prev => !prev)} className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${isNotePreview ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-200/70'}`} title={isNotePreview ? '切换到编辑模式' : '预览排版'}><Eye className="w-3.5 h-3.5 stroke-[2.2]" /></button>
+                </div>
+
+                {/* 保存成功提示 */}
+                {isNoteSaved && (
+                  <div className="px-4 py-1.5 bg-emerald-50 text-emerald-700 text-xs flex items-center border-b border-emerald-100 animate-in fade-in duration-150">
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                    【{noteTargetStep.title}】随堂笔记已成功保存同步
+                  </div>
+                )}
+
+                {/* 笔记正文区域（支持编辑与预览） */}
+                <div className="flex-1 p-4 flex flex-col overflow-hidden bg-white">
+                  {isNotePreview ? (
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-2 text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">
+                      {notesByStep[selectedNoteStepId] || <span className="text-slate-400">当前章节暂无笔记内容，请点击上方眼睛图标切换为编辑模式进行记录。</span>}
+                    </div>
+                  ) : (
+                    <textarea 
+                      value={notesByStep[selectedNoteStepId] || ''}
+                      onChange={(e) => setNotesByStep(prev => ({
+                        ...prev,
+                        [selectedNoteStepId]: e.target.value
+                      }))}
+                      placeholder={`请输入【${noteTargetStep.title}】的随堂笔记内容...`}
+                      className="w-full flex-1 resize-none outline-none border-none text-[14px] text-slate-800 placeholder-slate-400 leading-relaxed font-sans"
+                      autoFocus
+                    />
+                  )}
+                </div>
+
+                {/* 底部信息栏 */}
+                <div className="px-4 py-2 border-t border-slate-100 text-[12px] text-slate-500 bg-white flex items-center justify-between shrink-0 select-none">
+                  <span>字数: {(notesByStep[selectedNoteStepId] || '').length}</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-slate-400 text-[11px]">随堂笔记自动缓存</span>
+                    <span className="text-slate-300">|</span>
+                    <span className="text-blue-500 text-[11px]">已支持跨章节切换笔记</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* 拖拽手柄 */}
-            <ResizeHandle onMouseDown={handleMouseDownResize} />
+            <ResizeHandle onMouseDown={handleNoteMouseDownResize} />
           </aside>
         )}
 

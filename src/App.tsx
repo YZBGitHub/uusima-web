@@ -15,7 +15,7 @@ import {
 import { CourseHall, LabHall, DatasetHall } from "./pages/hall";
 
 // 3. 课程研学模块
-import { CourseLearning, CourseStudy, TeachingManagement } from "./pages/course";
+import { CourseLearning, CourseStudy, CourseDetail, TeachingManagement } from "./pages/course";
 
 // 4. 个人中心模块
 import { Personal, Profile } from "./pages/personal";
@@ -58,14 +58,18 @@ export default function App() {
     | "teaching-management"
     | "course-learning"
     | "course-study"
+    | "course-detail"
     | "student-studies"
   >((new URLSearchParams(window.location.search).get("view") as any) || "student-studies");
+  const [currentCourseData, setCurrentCourseData] = useState<any>(null);
+  const [currentLearningTask, setCurrentLearningTask] = useState<{ taskTitle?: string; courseName?: string } | null>(null);
   const [isNavOpen, setIsNavOpen] = useState(false);
 
   const navItems = [
     { id: "student-studies", label: "学生-我的学习" },
     { id: "personal", label: "我的主页" },
     { id: "course-hall", label: "课程大厅" },
+    { id: "course-detail", label: "课程大厅-课程详情" },
     { id: "login", label: "登录" },
     { id: "registration", label: "用户注册" },
     { id: "config", label: "系统管理" },
@@ -124,7 +128,25 @@ export default function App() {
       {/* 动态页面渲染内容区域 */}
       <div className="flex-1 relative overflow-x-hidden">
         {activeView === "course-hall" && (
-          <CourseHall onNavigate={(view) => setActiveView(view as any)} />
+          <CourseHall 
+            onNavigate={(view, course) => {
+              if (course) {
+                setCurrentCourseData(course);
+              }
+              setActiveView(view as any);
+            }} 
+          />
+        )}
+        {activeView === "course-detail" && (
+          <CourseDetail
+            courseData={currentCourseData}
+            onNavigate={(view, extra) => {
+              if (view === "course-learning" && extra) {
+                setCurrentLearningTask(extra);
+              }
+              setActiveView(view as any);
+            }}
+          />
         )}
         {activeView === "login" && (
           <Login onNavigate={(view) => setActiveView(view)} />
@@ -163,7 +185,12 @@ export default function App() {
           <LabHall onNavigate={(view) => setActiveView(view as any)} />
         )}
         {activeView === "course-learning" && (
-          <CourseLearning onNavigate={(view) => setActiveView(view as any)} />
+          <CourseLearning 
+            onNavigate={(view) => setActiveView(view as any)}
+            onBack={() => setActiveView("course-detail")}
+            taskTitle={currentLearningTask?.taskTitle}
+            courseName={currentLearningTask?.courseName}
+          />
         )}
         {activeView === "course-study" && (
           <CourseStudy onNavigate={(view) => setActiveView(view as any)} />

@@ -13,22 +13,284 @@ import {
   Users
 } from 'lucide-react';
 
-export default function CourseLearning({ onNavigate }: { onNavigate?: (view: string) => void }) {
+export interface CourseLearningProps {
+  onNavigate?: (view: string) => void;
+  embedded?: boolean;
+  onBack?: () => void;
+  taskTitle?: string;
+  courseName?: string;
+  isCompleted?: boolean;
+  isTrialOnly?: boolean;
+}
+
+export default function CourseLearning({
+  onNavigate,
+  embedded = false,
+  onBack,
+  taskTitle = '自然语言处理技术与应用17888340735441',
+  courseName = '自然语言处理技术与应用',
+  isCompleted = false,
+  isTrialOnly = false
+}: CourseLearningProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
-  const learningSteps = [
-    { id: '1-1', title: '1-1 任务1 NLTK预处理方法（教材）', type: 'book', tag: '图文', status: '已提交', isLastStudied: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
-    { id: '1-2', title: '1-2 任务1 NLTK预处理方法（理论）', type: 'doc', tag: '图文', status: '已提交', isLastStudied: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
-    { id: '1-3', title: '1-3 任务1 NLTK预处理方法（实操）', type: 'lab', tag: '实验', status: '已提交', isLastStudied: false, icon: <Wrench className="w-4 h-4 text-slate-400" /> },
-    { id: '1-4', title: '1-4 任务1 NLTK预处理方法（视频）', type: 'video', tag: '视频', status: '已提交', isLastStudied: false, icon: <MonitorPlay className="w-4 h-4 text-slate-400" /> },
-    { id: '1-5', title: '1-5 任务2 中文文本分词方法与工具使用（教材）', type: 'book', tag: '图文', status: '进行中', isLastStudied: true, icon: <FileText className="w-4 h-4 text-blue-500" /> },
-    { id: '1-6', title: '1-6 任务2 中文文本分词方法与工具使用（理论）', type: 'doc', tag: '图文', status: '未开始', isLastStudied: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
-    { id: '1-7', title: '1-7 任务2 中文文本分词方法与工具使用（实操）', type: 'lab', tag: '实验', status: '未开始', isLastStudied: false, icon: <Wrench className="w-4 h-4 text-slate-400" /> },
-    { id: '1-8', title: '1-8 任务2 中文文本分词方法与工具使用（视频）', type: 'video', tag: '视频', status: '未开始', isLastStudied: false, icon: <MonitorPlay className="w-4 h-4 text-slate-400" /> },
-    { id: '1-9', title: '1-9 任务3 核心词汇识别与云图开发（报告）', type: 'report', tag: '报告', status: '未开始', isLastStudied: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
-    { id: '1-10', title: '1-10 任务3 核心词汇识别与云图开发（习题）', type: 'exercise', tag: '习题', status: '未开始', isLastStudied: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
+  const defaultNlpSteps = [
+    { id: '1-1', title: '1-1 任务1 NLTK预处理方法（教材）', type: 'book', tag: '图文', status: '已提交', isLastStudied: false, isLocked: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
+    { id: '1-2', title: '1-2 任务1 NLTK预处理方法（理论）', type: 'doc', tag: '图文', status: '已提交', isLastStudied: false, isLocked: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
+    { id: '1-3', title: '1-3 任务1 NLTK预处理方法（实操）', type: 'lab', tag: '实验', status: '已提交', isLastStudied: false, isLocked: false, icon: <Wrench className="w-4 h-4 text-slate-400" /> },
+    { id: '1-4', title: '1-4 任务1 NLTK预处理方法（视频）', type: 'video', tag: '视频', status: '已提交', isLastStudied: false, isLocked: false, icon: <MonitorPlay className="w-4 h-4 text-slate-400" /> },
+    { id: '1-5', title: '1-5 任务2 中文文本分词方法与工具使用（教材）', type: 'book', tag: '图文', status: '进行中', isLastStudied: true, isLocked: false, icon: <FileText className="w-4 h-4 text-blue-500" /> },
+    { id: '1-6', title: '1-6 任务2 中文文本分词方法与工具使用（理论）', type: 'doc', tag: '图文', status: '未开始', isLastStudied: false, isLocked: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
+    { id: '1-7', title: '1-7 任务2 中文文本分词方法与工具使用（实操）', type: 'lab', tag: '实验', status: '未开始', isLastStudied: false, isLocked: false, icon: <Wrench className="w-4 h-4 text-slate-400" /> },
+    { id: '1-8', title: '1-8 任务2 中文文本分词方法与工具使用（视频）', type: 'video', tag: '视频', status: '未开始', isLastStudied: false, isLocked: false, icon: <MonitorPlay className="w-4 h-4 text-slate-400" /> },
+    { id: '1-9', title: '1-9 任务3 核心词汇识别与云图开发（报告）', type: 'report', tag: '报告', status: '未开始', isLastStudied: false, isLocked: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
+    { id: '1-10', title: '1-10 任务3 核心词汇识别与云图开发（习题）', type: 'exercise', tag: '习题', status: '未开始', isLastStudied: false, isLocked: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
   ];
 
+  const aiTrainerSteps = [
+    { id: 't-1', title: '1.无人超市商品智慧结算业务流程设计（教材）', type: 'book', tag: '图文', status: '未开始', isLastStudied: true, isLocked: false, isTrial: true, icon: <FileText className="w-4 h-4 text-blue-500" /> },
+    { id: 't-2', title: '2.无人超市商品智慧结算业务流程设计（PPT）', type: 'doc', tag: '课件', status: '未开始', isLastStudied: false, isLocked: false, isTrial: true, icon: <MonitorPlay className="w-4 h-4 text-slate-400" /> },
+    { id: 't-3', title: '3.无人超市商品智慧结算业务流程设计（理论试题）', type: 'exercise', tag: '试题', status: '未开始', isLastStudied: false, isLocked: isTrialOnly, isTrial: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
+    { id: 't-4', title: '4.无人超市自动识别业务模块效果优化（教材）', type: 'book', tag: '图文', status: '未开始', isLastStudied: false, isLocked: isTrialOnly, isTrial: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
+    { id: 't-5', title: '5.无人超市自动识别业务模块效果优化（PPT）', type: 'doc', tag: '课件', status: '未开始', isLastStudied: false, isLocked: isTrialOnly, isTrial: false, icon: <MonitorPlay className="w-4 h-4 text-slate-400" /> },
+    { id: 't-6', title: '6.无人超市自动识别业务模块效果优化（实操）', type: 'lab', tag: '实验', status: '未开始', isLastStudied: false, isLocked: isTrialOnly, isTrial: false, icon: <Wrench className="w-4 h-4 text-slate-400" /> },
+    { id: 't-7', title: '7.无人超市自动识别业务模块效果优化（理论试题）', type: 'exercise', tag: '试题', status: '未开始', isLastStudied: false, isLocked: isTrialOnly, isTrial: false, icon: <FileText className="w-4 h-4 text-slate-400" /> },
+    { id: 't-8', title: '8.业务流程设计与模块优化总结（报告）', type: 'report', tag: '报告', status: '未开始', isLastStudied: false, isLocked: isTrialOnly, isTrial: false, icon: <FileText className="w-4 h-4 text-slate-400" /> }
+  ];
+
+  const learningSteps = courseName?.includes('人工智能训练师') ? aiTrainerSteps : defaultNlpSteps;
+
+  // 渲染主体学习内容区域
+  const renderLearningContent = () => (
+    <div className="flex-1 flex flex-col mx-auto w-full h-full overflow-y-auto bg-[#f8fafc]">
+      {/* Title Section */}
+      <div className="bg-white px-8 py-5 flex items-center justify-between border-b border-slate-200/80 shrink-0">
+        <div className="flex items-center">
+          <button 
+            type="button"
+            onClick={() => onBack ? onBack() : onNavigate ? onNavigate('personal') : null}
+            className="mr-4 text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center p-2 rounded-lg hover:bg-slate-100 border border-slate-200"
+            title="返回上一级"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1 text-slate-600" />
+            <span className="text-xs font-medium text-slate-700">返回</span>
+          </button>
+          <div className="flex items-center space-x-3">
+            <h1 className="text-lg font-bold text-slate-800 tracking-tight" title={taskTitle}>
+              {taskTitle}
+            </h1>
+            {isCompleted ? (
+              <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs px-2.5 py-0.5 rounded-full font-medium">
+                已完成
+              </span>
+            ) : (
+              <span className="bg-[#e6f0ff] text-blue-600 border border-blue-200 text-xs px-2.5 py-0.5 rounded-full font-medium">
+                进行中
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 顶部右侧快捷状态 */}
+        <div className="hidden sm:flex items-center space-x-3 text-xs text-slate-500">
+          <span>所属课程：<strong className="text-slate-700 font-semibold">{courseName}</strong></span>
+          <span className="text-slate-300">|</span>
+          <span>学生：<strong className="text-slate-700 font-semibold">杨振邦</strong></span>
+        </div>
+      </div>
+
+      {/* Info Banner */}
+      <div className="bg-white px-8 py-4 border-b border-slate-200/70 grid grid-cols-2 sm:grid-cols-5 gap-4 shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <div>
+          <p className="text-slate-400 text-xs mb-1">所属课程</p>
+          <p className="text-slate-700 text-xs font-medium truncate" title={courseName}>{courseName}</p>
+        </div>
+        <div>
+          <p className="text-slate-400 text-xs mb-1">指导老师</p>
+          <p className="text-slate-700 text-xs font-medium">杨振邦</p>
+        </div>
+        <div>
+          <p className="text-slate-400 text-xs mb-1">下发时间</p>
+          <p className="text-slate-700 text-xs font-medium">2026-09-08 10:32</p>
+        </div>
+        <div>
+          <p className="text-slate-400 text-xs mb-1">任务类型</p>
+          <p className="text-slate-700 text-xs font-medium">实训任务</p>
+        </div>
+        <div>
+          <p className="text-slate-400 text-xs mb-1">任务时长</p>
+          <p className="text-slate-700 text-xs font-medium">1000分钟</p>
+        </div>
+      </div>
+
+      {/* Content Layout */}
+      <div className="flex-1 p-6 flex flex-col lg:flex-row gap-6 max-w-[1600px] w-full mx-auto">
+        {/* Left Column - Task List */}
+        <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col min-h-[500px]">
+          <div className="p-5 pb-3 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-base font-bold text-slate-800">第一章：认识自然语言处理</h2>
+            <span className="text-xs text-slate-400">共 10 个学习节点</span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="space-y-2.5">
+              {learningSteps.map((step, index) => {
+                const stepStatus = isCompleted ? '已提交' : step.status;
+                const isOngoing = !isCompleted && step.isLastStudied;
+
+                return (
+                  <div 
+                    key={step.id} 
+                    className={`flex items-center justify-between p-3.5 rounded-lg transition-all border ${
+                      isOngoing 
+                        ? 'bg-blue-50/60 border-blue-200 shadow-sm' 
+                        : (index % 2 === 1 ? 'bg-slate-50/70 border-slate-100' : 'bg-white border-slate-100')
+                    } hover:border-blue-200 group`}
+                  >
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <div className="shrink-0">{step.icon}</div>
+                      <span className={`text-xs truncate ${stepStatus === '未开始' ? 'text-slate-500' : 'text-slate-800 font-medium'}`}>
+                        {step.title}
+                      </span>
+                      <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-medium border border-slate-200 shrink-0">
+                        {step.tag}
+                      </span>
+                      {step.type === 'lab' && (
+                        <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                          <span className="text-[9px] text-blue-600 font-bold">jup</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center space-x-3 shrink-0">
+                      {isOngoing && (
+                        <span className="text-[11px] text-slate-400 hidden sm:inline">最近学习: 2026-09-14 10:30</span>
+                      )}
+                      <span className={`text-xs font-medium ${
+                        stepStatus === '已提交' ? 'text-emerald-600' : 
+                        stepStatus === '进行中' ? 'text-blue-600' : 'text-slate-400'
+                      }`}>
+                        {stepStatus}
+                      </span>
+                      
+                      {step.isLocked ? (
+                        <span className="text-[11px] text-slate-400 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded font-medium">
+                          未购买锁定
+                        </span>
+                      ) : isCompleted ? (
+                        <button 
+                          type="button"
+                          onClick={() => window.open('/?view=course-study', '_blank')}
+                          className="border border-slate-200 hover:border-blue-500 text-slate-600 hover:text-blue-600 hover:bg-blue-50/50 text-xs px-3 py-1 rounded transition-colors"
+                        >
+                          查看
+                        </button>
+                      ) : isOngoing ? (
+                        <button 
+                          type="button"
+                          onClick={() => window.open('/?view=course-study', '_blank')}
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3.5 py-1.2 rounded transition-colors shadow-sm font-medium"
+                        >
+                          继续任务
+                        </button>
+                      ) : (
+                        <button 
+                          type="button"
+                          onClick={() => window.open('/?view=course-study', '_blank')}
+                          className="opacity-0 group-hover:opacity-100 border border-blue-500 text-blue-600 hover:bg-blue-50 text-xs px-3 py-1 rounded transition-all"
+                        >
+                          开始
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Status and Tools */}
+        <div className="w-full lg:w-[320px] flex flex-col gap-5 shrink-0">
+          {/* Progress Card */}
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80">
+            {isCompleted ? (
+              <>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-bold text-slate-800 text-sm">已完成 100.00%</span>
+                  <span className="text-[11px] text-emerald-600 font-medium">任务已全部达成</span>
+                </div>
+                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-3 flex">
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: '100%' }}></div>
+                </div>
+                <p className="text-[11px] text-slate-500">已用时长 380 分钟，总评分 95 分</p>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-bold text-slate-800 text-sm">已完成 9.00%</span>
+                  <span className="text-[11px] text-slate-400">任务耗时: 12/1000 分钟</span>
+                </div>
+                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-3 flex">
+                  <div className="h-full bg-gradient-to-r from-green-400 to-blue-500 rounded-full" style={{ width: '9%' }}></div>
+                </div>
+                <p className="text-[11px] text-slate-500">上次进度：1-6 任务2 中文文本分词方法与工具使用 (理论)</p>
+              </>
+            )}
+          </div>
+
+          {/* Environment Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200/80 overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-1 h-3.5 bg-blue-600 rounded-full mr-2"></div>
+                <h3 className="font-bold text-slate-700 text-xs">实验环境</h3>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded border border-emerald-200">运行中</span>
+            </div>
+            <div className="p-5 text-center">
+              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-2 relative border border-blue-100 shadow-inner">
+                <span className="text-blue-600 font-bold text-xs uppercase tracking-wider">Jupyter</span>
+              </div>
+              <p className="text-center text-xs text-slate-600 font-medium">JupyterLab 实验环境</p>
+              <button 
+                type="button"
+                onClick={() => window.open('/?view=course-study', '_blank')}
+                className="mt-3 w-full py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs rounded font-medium transition-colors"
+              >
+                {isCompleted ? '进入查看实验记录' : '启动实验环境'}
+              </button>
+            </div>
+          </div>
+
+          {/* Resources Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200/80 overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center">
+              <div className="w-1 h-3.5 bg-slate-700 rounded-full mr-2"></div>
+              <h3 className="font-bold text-slate-700 text-xs">实训资源包</h3>
+            </div>
+            <div className="p-5 flex flex-col space-y-2">
+              <div className="flex items-center justify-between text-xs p-2 bg-slate-50 rounded border border-slate-100">
+                <span className="text-slate-600 truncate mr-2">nltk_data_zh_corpus.zip</span>
+                <span className="text-blue-600 font-medium cursor-pointer hover:underline shrink-0">下载</span>
+              </div>
+              <div className="flex items-center justify-between text-xs p-2 bg-slate-50 rounded border border-slate-100">
+                <span className="text-slate-600 truncate mr-2">实验指导讲义_任务一.pdf</span>
+                <span className="text-blue-600 font-medium cursor-pointer hover:underline shrink-0">下载</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // 如果是作为内嵌组件在当前页面渲染，直接返回主体内容
+  if (embedded) {
+    return renderLearningContent();
+  }
+
+  // 独立全屏视图模式
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Header */}
@@ -109,158 +371,7 @@ export default function CourseLearning({ onNavigate }: { onNavigate?: (view: str
         </aside>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col mx-auto w-full overflow-y-auto">
-          {/* Title Section */}
-        <div className="bg-white px-8 py-6 flex items-center border-b border-slate-100">
-          <button 
-            onClick={() => onNavigate && onNavigate('personal')}
-            className="mr-4 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center p-1.5 rounded-full hover:bg-slate-100"
-            title="返回"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-xl font-bold text-slate-800 mr-4">自然语言处理技术与应用17888340735441</h1>
-          <span className="bg-[#e6f0ff] text-blue-500 text-xs px-3 py-1 rounded-md font-medium">进行中</span>
-        </div>
-
-        {/* Info Banner */}
-        <div className="bg-white px-8 py-6 border-b border-slate-200 grid grid-cols-5 gap-4">
-          <div>
-            <p className="text-slate-400 text-sm mb-2">所属课程</p>
-            <p className="text-slate-700 text-sm">自然语言处理技术与应用</p>
-          </div>
-          <div>
-            <p className="text-slate-400 text-sm mb-2">指导老师</p>
-            <p className="text-slate-700 text-sm">杨振邦</p>
-          </div>
-          <div>
-            <p className="text-slate-400 text-sm mb-2">下发时间</p>
-            <p className="text-slate-700 text-sm">2026-9-8 10:32:04</p>
-          </div>
-          <div>
-            <p className="text-slate-400 text-sm mb-2">任务类型</p>
-            <p className="text-slate-700 text-sm">实训任务</p>
-          </div>
-          <div>
-            <p className="text-slate-400 text-sm mb-2">任务时长</p>
-            <p className="text-slate-700 text-sm">1000分钟</p>
-          </div>
-        </div>
-
-        {/* Content Layout */}
-        <div className="flex-1 p-6 flex gap-6 max-w-[1600px] mx-auto w-full">
-          {/* Left Column - Task List */}
-          <div className="flex-1 bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[calc(100vh-280px)]">
-            <div className="p-6 pb-4">
-              <h2 className="text-lg font-bold text-slate-800">第一章：认识自然语言处理</h2>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
-              <div className="space-y-2">
-                {learningSteps.map((step, index) => (
-                  <div 
-                    key={step.id} 
-                    className={`flex items-center justify-between p-4 rounded-md transition-colors border border-transparent ${
-                      step.isLastStudied 
-                        ? 'bg-blue-50/50 border-blue-100' 
-                        : (index % 2 === 1 ? 'bg-slate-50' : 'bg-white')
-                    } hover:border-blue-200 group`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      {step.icon}
-                      <span className={`text-sm ${step.status === '未开始' ? 'text-slate-500' : 'text-slate-800'}`}>
-                        {step.title}
-                      </span>
-                      <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-medium border border-slate-200">
-                        {step.tag}
-                      </span>
-                      {step.type === 'lab' && (
-                        <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center ml-2">
-                          <span className="text-[10px] text-blue-600 font-bold">jup</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center space-x-4">
-                      {step.isLastStudied && (
-                        <span className="text-xs text-slate-400 mr-2">最近学习: 2026-09-14 10:30</span>
-                      )}
-                      <span className={`text-xs ${
-                        step.status === '已提交' ? 'text-green-500' : 
-                        step.status === '进行中' ? 'text-blue-500' : 'text-slate-400'
-                      }`}>
-                        {step.status}
-                      </span>
-                      
-                      {step.isLastStudied ? (
-                        <button 
-                          onClick={() => window.open('/?view=course-study', '_blank')}
-                          className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-4 py-1.5 rounded transition-colors shadow-sm"
-                        >
-                          继续任务
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={() => window.open('/?view=course-study', '_blank')}
-                          className="opacity-0 group-hover:opacity-100 border border-blue-500 text-blue-500 hover:bg-blue-50 text-xs px-4 py-1.5 rounded transition-all"
-                        >
-                          开始
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Status and Tools */}
-          <div className="w-[320px] flex flex-col gap-6">
-            {/* Progress Card */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-100">
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-bold text-slate-800">已完成 9.00%</span>
-                <span className="text-xs text-slate-400">任务耗时: 12/1000 分钟</span>
-              </div>
-              
-              {/* Progress Bar */}
-              <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden mb-6 flex">
-                <div className="h-full bg-gradient-to-r from-green-400 to-blue-400" style={{ width: '9%' }}></div>
-              </div>
-
-              <p className="text-xs text-slate-500">1-6 任务2 中文文本分词方法与工具使用 (理论)</p>
-            </div>
-
-            {/* Environment Card */}
-            <div className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-50 flex items-center">
-                <div className="w-1 h-3.5 bg-slate-700 mr-2"></div>
-                <h3 className="font-medium text-slate-700">实验环境</h3>
-              </div>
-              <div className="p-5">
-                <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-2 relative border border-blue-100">
-                  <div className="absolute top-0 right-[-10px] bg-slate-200 text-slate-500 text-[10px] px-1.5 py-0.5 rounded cursor-pointer hover:bg-slate-300">
-                    重置
-                  </div>
-                  <span className="text-blue-500 font-bold text-sm">jupyter</span>
-                </div>
-                <p className="text-center text-xs text-slate-500">jupyter</p>
-              </div>
-            </div>
-
-            {/* Resources Card */}
-            <div className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden flex-1">
-              <div className="px-5 py-4 border-b border-slate-50 flex items-center">
-                <div className="w-1 h-3.5 bg-slate-700 mr-2"></div>
-                <h3 className="font-medium text-slate-700">资源下载</h3>
-              </div>
-              <div className="p-8 flex items-center justify-center text-slate-400 text-sm">
-                暂无数据
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        {renderLearningContent()}
       </div>
     </div>
   );

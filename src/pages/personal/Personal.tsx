@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { 
-  Home, 
-  Hourglass, 
-  Users, 
-  GraduationCap, 
-  Building2, 
+import React, { useState, useEffect } from 'react';
+import {
+  Home,
+  Hourglass,
+  Users,
+  GraduationCap,
+  Building2,
   BookOpen,
   Search,
   CheckSquare,
@@ -52,15 +52,22 @@ import {
   Code2,
   List,
   Lock,
-  Unlock
+  Unlock,
+  Globe,
+  EyeOff,
+  BookMarked
 } from 'lucide-react';
 import CourseManagement from '../course/CourseManagement';
+import CustomCourseManagement from '../course/CustomCourseManagement';
 import UsersManagement from '../system/UsersManagement';
 import OrdersManagement from '../operation/OrdersManagement';
+import LabManagement from '../operation/LabManagement';
 import TeacherTeaching from './TeacherTeaching';
 import StudentStudies from './StudentStudies';
+import CourseLearning from '../course/CourseLearning';
 import TeacherCourseEditor from '../course/TeacherCourseManagement/TeacherCourseEditor';
 import { QuestionManagement, AutoGradingManagement } from '../course';
+import TeacherTaskDispatchModal, { BASE_COURSE_SELECT_OPTIONS } from './TeacherTaskDispatchModal';
 
 // 角色标识类型
 export type UserRole = 'student' | 'teacher' | 'school_admin' | 'course_developer' | 'super_admin';
@@ -296,11 +303,11 @@ const TEACHER_PURCHASED_COURSES = [
   }
 ];
 
-export default function Personal({ 
+export default function Personal({
   onNavigate,
   initialRole,
   initialMenu
-}: { 
+}: {
   onNavigate?: (view: string) => void;
   initialRole?: UserRole;
   initialMenu?: string;
@@ -313,7 +320,43 @@ export default function Personal({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCourseManagementOpen, setIsCourseManagementOpen] = useState(true);
   const [isQuestionBankOpen, setIsQuestionBankOpen] = useState(true);
-  
+  const [openMenuIds, setOpenMenuIds] = useState<Record<string, boolean>>({
+    'course-management': true,
+    'questions': true,
+    'ops-management': true,
+    'lab-management': true
+  });
+
+  const toggleMenuOpen = (menuId: string) => {
+    setOpenMenuIds(prev => ({
+      ...prev,
+      [menuId]: prev[menuId] !== undefined ? !prev[menuId] : false
+    }));
+  };
+
+  // 记录学习页面前置菜单与任务详情（实现右侧内容无缝跳转）
+  const [previousMenu, setPreviousMenu] = useState<string>('student-home');
+  const [learningTaskInfo, setLearningTaskInfo] = useState<{
+    id?: string;
+    title?: string;
+    courseName?: string;
+    isCompleted?: boolean;
+  } | null>(null);
+
+  // 在当前页面右侧打开学习任务或查看已完成任务
+  const handleOpenStudy = (
+    taskInfo?: { id?: string; title?: string; courseName?: string; isCompleted?: boolean },
+    fromMenu?: string
+  ) => {
+    if (fromMenu) {
+      setPreviousMenu(fromMenu);
+    } else if (activeMenu !== 'course-learning') {
+      setPreviousMenu(activeMenu);
+    }
+    setLearningTaskInfo(taskInfo || null);
+    setActiveMenu('course-learning');
+  };
+
   // 顶部与用户信息状态
   const [activeTeachingTab, setActiveTeachingTab] = useState('进行中');
   const [activeTaskListTab, setActiveTaskListTab] = useState('进行中');
@@ -349,45 +392,150 @@ export default function Personal({
   const [dispatchTaskName, setDispatchTaskName] = useState('');
   const [dispatchSuccessToast, setDispatchSuccessToast] = useState('');
 
-  // 自建课程数据列表（增加 allowSelfStudy 属性）
-  const [customCourses, setCustomCourses] = useState([
+  // 自建课程数据类型定义
+  interface CustomCourseItem {
+    id: number;
+    title: string;
+    category: string;
+    time: string;
+    desc: string;
+    schoolName?: string;
+    creator?: string;
+    createdAt?: string;
+    gradient?: string;
+    bannerText?: string;
+    bannerSub?: string;
+    theme?: string;
+    isCustom: boolean;
+    allowSelfStudy?: boolean;
+    status: '已发布' | '未发布';
+  }
+
+  const INITIAL_CUSTOM_COURSES: CustomCourseItem[] = [
     {
       id: 101,
       title: 'Python程序设计进阶与网络爬虫',
       category: '专业核心课',
       time: '2026-09-12 14:00:00',
+      schoolName: '清华大学',
+      creator: '张伟 教授',
+      createdAt: '2026-09-02 09:30:00',
       desc: '课程简介：计算机学院自建课程，聚焦异步并发爬虫、数据清洗与Scrapy实训。',
       gradient: 'from-blue-500 to-indigo-600',
       bannerText: 'Python进阶与爬虫',
       bannerSub: '校本特色实战',
       isCustom: true,
-      allowSelfStudy: true
+      allowSelfStudy: true,
+      status: '已发布'
     },
     {
       id: 102,
       title: '深度学习实训：目标检测与YOLO项目',
       category: '行业应用课',
       time: '2026-09-02 09:30:00',
+      schoolName: '北京航空航天大学',
+      creator: '李明 副教授',
+      createdAt: '2026-08-28 15:45:00',
       desc: '课程简介：计算机视觉方向自建实训项目，含工业质检缺陷识别与自动评分。',
       gradient: 'from-indigo-600 to-purple-600',
       bannerText: '深度学习实训',
       bannerSub: 'YOLOv8目标检测',
       isCustom: true,
-      allowSelfStudy: true
+      allowSelfStudy: true,
+      status: '已发布'
     },
     {
       id: 103,
       title: '边缘计算与智能网关协议开发',
       category: '专业基础课',
       time: '2026-08-25 16:20:00',
+      schoolName: '浙江大学',
+      creator: '王华 教授',
+      createdAt: '2026-08-15 10:15:00',
       desc: '课程简介：本校教师自研网关开发实验，覆盖Modbus、MQTT上云与边缘推理。',
       gradient: 'from-cyan-500 to-blue-600',
       bannerText: '边缘计算与智能网关',
       bannerSub: '协议开发与上云',
       isCustom: true,
-      allowSelfStudy: false
+      allowSelfStudy: false,
+      status: '未发布'
     }
-  ]);
+  ];
+
+  // 自建课程数据列表（含 status: '已发布' | '未发布'，支持与课程大厅/任务下发联动）
+  const [customCourses, setCustomCourses] = useState<CustomCourseItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('uusima_custom_courses');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return INITIAL_CUSTOM_COURSES;
+  });
+
+  // 状态自动同步到 localStorage，方便与课程大厅跨页面联动
+  useEffect(() => {
+    try {
+      localStorage.setItem('uusima_custom_courses', JSON.stringify(customCourses));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [customCourses]);
+
+  // 单门自建课程发布/取消发布切换
+  const handleTogglePublishCourse = (courseId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    let updatedTitle = '';
+    let nextStatus: '已发布' | '未发布' = '已发布';
+
+    setCustomCourses(prev => prev.map(c => {
+      if (c.id === courseId) {
+        updatedTitle = c.title;
+        nextStatus = c.status === '已发布' ? '未发布' : '已发布';
+        return { ...c, status: nextStatus };
+      }
+      return c;
+    }));
+
+    if (nextStatus === '已发布') {
+      setDispatchSuccessToast(`自建课程《${updatedTitle}》已发布！已同步至课程大厅与任务下发库。`);
+    } else {
+      setDispatchSuccessToast(`自建课程《${updatedTitle}》已取消发布！已从课程大厅与下发功能下架。`);
+    }
+    setTimeout(() => setDispatchSuccessToast(''), 3500);
+  };
+
+  // 批量发布/取消发布自建课程
+  const handleBatchPublishCustomCourses = (publish: boolean) => {
+    if (selectedCourseIds.length === 0) return;
+
+    // 筛选出选中的自建课程
+    const customInSelected = customCourses.filter(c => selectedCourseIds.includes(c.id));
+    if (customInSelected.length === 0) {
+      setDispatchSuccessToast('所选课程中没有自建课程，仅自建课程支持发布/取消发布管理');
+      setTimeout(() => setDispatchSuccessToast(''), 3000);
+      return;
+    }
+
+    const targetStatus: '已发布' | '未发布' = publish ? '已发布' : '未发布';
+    setCustomCourses(prev => prev.map(c => {
+      if (selectedCourseIds.includes(c.id)) {
+        return { ...c, status: targetStatus };
+      }
+      return c;
+    }));
+
+    setSelectedCourseIds([]);
+    if (publish) {
+      setDispatchSuccessToast(`已成功批量【发布】选中的 ${customInSelected.length} 门自建课程！已同步至课程大厅与任务下发功能。`);
+    } else {
+      setDispatchSuccessToast(`已成功批量【取消发布】选中的 ${customInSelected.length} 门自建课程！已从课程大厅与任务下发功能下架。`);
+    }
+    setTimeout(() => setDispatchSuccessToast(''), 3500);
+  };
 
   // 单门课程快速切换学生自学权限
   const handleToggleCourseSelfStudy = (courseId: number, e?: React.MouseEvent) => {
@@ -444,7 +592,7 @@ export default function Personal({
   // 勾选/取消勾选课程
   const handleToggleSelectCourse = (courseId: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setSelectedCourseIds(prev => 
+    setSelectedCourseIds(prev =>
       prev.includes(courseId) ? prev.filter(id => id !== courseId) : [...prev, courseId]
     );
   };
@@ -501,9 +649,10 @@ export default function Personal({
             icon: Book,
             children: [
               { id: 'course-list', label: '课程列表', icon: Book },
-              { 
-                id: 'questions', 
-                label: '题库管理', 
+              { id: 'custom-courses-admin', label: '自建课程管理', icon: BookMarked },
+              {
+                id: 'questions',
+                label: '题库管理',
                 icon: Database,
                 children: [
                   { id: 'question-list', label: '试题管理', icon: FileText }
@@ -523,9 +672,10 @@ export default function Personal({
             icon: Book,
             children: [
               { id: 'course-list', label: '课程列表', icon: Book },
-              { 
-                id: 'questions', 
-                label: '题库管理', 
+              { id: 'custom-courses-admin', label: '自建课程管理', icon: BookMarked },
+              {
+                id: 'questions',
+                label: '题库管理',
                 icon: Database,
                 children: [
                   { id: 'question-list', label: '试题管理', icon: FileText }
@@ -537,6 +687,21 @@ export default function Personal({
           { id: 'course-packages', label: '课程模块包', icon: LayoutGrid },
           { id: 'tags', label: '标签管理', icon: Tag },
           { id: 'admin-home', label: '管理员主页', icon: Home },
+          {
+            id: 'ops-management',
+            label: '运维管理',
+            icon: Cpu,
+            children: [
+              {
+                id: 'lab-management',
+                label: '实验管理',
+                icon: Terminal,
+                children: [
+                  { id: 'lab-list', label: '实验列表', icon: List }
+                ]
+              }
+            ]
+          },
           { id: 'operations', label: '运营管理', icon: PieChart },
           { id: 'system-admin', label: '系统管理员主页', icon: Shield },
           { id: 'exams', label: '考试竞赛', icon: Trophy },
@@ -565,8 +730,8 @@ export default function Personal({
           <div className="pl-3 pr-2 text-slate-400">
             <Search className="w-4 h-4" />
           </div>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -577,8 +742,8 @@ export default function Personal({
             placeholder={placeholder}
             className="w-full py-1.5 text-xs outline-none text-slate-600 bg-transparent"
           />
-          <div 
-            className="px-2 border-l border-slate-200 bg-slate-50 flex items-center justify-center cursor-pointer hover:bg-slate-100 h-full" 
+          <div
+            className="px-2 border-l border-slate-200 bg-slate-50 flex items-center justify-center cursor-pointer hover:bg-slate-100 h-full"
             onMouseDown={(e) => {
               e.preventDefault();
               setIsOpen(!isOpen);
@@ -587,11 +752,11 @@ export default function Personal({
             <ChevronDown className="w-4 h-4 text-slate-400" />
           </div>
         </div>
-        
+
         {isOpen && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
             {filtered.length > 0 ? filtered.map((c, idx) => (
-              <div 
+              <div
                 key={idx}
                 className="px-3 py-2 text-xs text-slate-700 hover:bg-blue-50 cursor-pointer"
                 onMouseDown={(e) => {
@@ -611,15 +776,16 @@ export default function Personal({
     );
   };
 
-  const mockCourses = [
+  // 学生主页任务数据（区分进行中与已完成）
+  const mockOngoingTasks = [
     {
       id: 1,
       title: '自然语言处理技术与应用17888340735441',
       courseName: '自然语言处理技术与应用',
-      progress: 0,
-      lastProgress: '1-6 任务2 中文文本分词方法与工具使用 （理论）',
-      issueTime: '2023-09-01 10:00',
-      lastStudyTime: '2023-09-15 14:30',
+      progress: 9,
+      lastProgress: '1-6 任务2 中文文本分词方法与工具使用 (理论)',
+      issueTime: '2026-09-08 10:00',
+      lastStudyTime: '2026-09-15 14:30',
       cover: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=300&h=200'
     },
     {
@@ -628,50 +794,170 @@ export default function Personal({
       courseName: 'Python程序设计进阶',
       progress: 45,
       lastProgress: '2-1 面向对象编程基础',
-      issueTime: '2023-08-20 09:00',
-      lastStudyTime: '2023-09-14 16:20',
+      issueTime: '2026-09-01 09:00',
+      lastStudyTime: '2026-09-14 16:20',
       cover: 'https://images.unsplash.com/photo-1526379095098-d400fd0bfce8?auto=format&fit=crop&q=80&w=300&h=200'
     }
   ];
 
-  const CourseCard = ({ course }: { course: typeof mockCourses[0]; key?: React.Key }) => (
-    <div className="flex flex-col border border-slate-200 rounded-lg overflow-hidden bg-white hover:shadow-md transition-shadow">
-      <div className="w-full h-[140px] shrink-0 bg-blue-50 relative">
-        <img src={course.cover} alt={course.title} className="absolute inset-0 w-full h-full object-cover" />
-      </div>
-      <div className="flex-1 p-4 flex flex-col justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-slate-800 line-clamp-1" title={course.title}>{course.title}</h3>
-          <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{course.courseName}</p>
-          
-          <div className="flex items-center space-x-2 mt-3">
-            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${course.progress}%` }}></div>
+  const mockCompletedTasks = [
+    {
+      id: 3,
+      title: '自然语言处理词向量与Word2Vec实验',
+      courseName: '自然语言处理技术与应用',
+      progress: 100,
+      lastProgress: '已全部完成并通过系统自动评测',
+      issueTime: '2026-09-01 08:30',
+      lastStudyTime: '2026-09-12 16:45',
+      score: '95分',
+      cover: 'https://images.unsplash.com/photo-1555949963-aa79dcee981c?auto=format&fit=crop&q=80&w=300&h=200'
+    },
+    {
+      id: 4,
+      title: '大数据流计算与Spark Streaming期末大作业',
+      courseName: '大数据实时计算实战',
+      progress: 100,
+      lastProgress: '已提交实验报告及运行脚本',
+      issueTime: '2026-08-25 10:00',
+      lastStudyTime: '2026-09-05 15:20',
+      score: '98分',
+      cover: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=300&h=200'
+    }
+  ];
+
+  const mockOngoingSelfStudy = [
+    {
+      id: 5,
+      title: 'Python高级网络编程与异步并发自学实战',
+      courseName: 'Python网络爬虫与高级编程',
+      progress: 28,
+      lastProgress: 'asyncio与aiohttp异步协程高并发爬取',
+      issueTime: '2026-09-05 14:00',
+      lastStudyTime: '2026-09-16 11:20',
+      cover: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&q=80&w=300&h=200'
+    },
+    {
+      id: 6,
+      title: 'PyTorch深度学习框架核心实践',
+      courseName: '深度学习原理与实训',
+      progress: 60,
+      lastProgress: 'ResNet图像分类模型搭建与调优',
+      issueTime: '2026-09-02 09:30',
+      lastStudyTime: '2026-09-15 19:10',
+      cover: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80&w=300&h=200'
+    }
+  ];
+
+  const mockCompletedSelfStudy = [
+    {
+      id: 7,
+      title: 'Linux系统运维与Shell脚本自动化编程',
+      courseName: 'Linux操作系统实训',
+      progress: 100,
+      lastProgress: '已通关全部自学测验及综合实训',
+      issueTime: '2026-08-20 14:00',
+      lastStudyTime: '2026-09-02 10:30',
+      score: '100分',
+      cover: 'https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&fit=crop&q=80&w=300&h=200'
+    },
+    {
+      id: 8,
+      title: '经典数据结构与算法LeetCode精讲',
+      courseName: '算法与数据结构',
+      progress: 100,
+      lastProgress: '已完成动态规划与图论全部自学章节',
+      issueTime: '2026-08-15 09:00',
+      lastStudyTime: '2026-08-30 17:50',
+      score: '96分',
+      cover: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&q=80&w=300&h=200'
+    }
+  ];
+
+  const CourseCard = ({
+    course,
+    isCompleted = false
+  }: {
+    course: any;
+    isCompleted?: boolean;
+    key?: React.Key
+  }) => {
+    const isDone = isCompleted || course.progress === 100;
+
+    return (
+      <div className="flex flex-col border border-slate-200/90 rounded-xl overflow-hidden bg-white hover:shadow-md transition-all group">
+        <div className="w-full h-[130px] shrink-0 bg-blue-50 relative overflow-hidden">
+          <img
+            src={course.cover}
+            alt={course.title}
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+          {isDone && (
+            <div className="absolute top-2.5 right-2.5 bg-emerald-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
+              已完成
             </div>
-            <span className="text-xs text-slate-500 w-8">{course.progress}%</span>
-          </div>
-          
-          <div className="text-xs text-slate-500 mt-2 line-clamp-1" title={`上次进度：${course.lastProgress}`}>
-            上次进度：{course.lastProgress}
-          </div>
-          
-          <div className="text-[10px] text-slate-400 mt-1.5 flex flex-col space-y-0.5">
-            <span>下发时间：{course.issueTime}</span>
-            <span>最近学习：{course.lastStudyTime}</span>
-          </div>
+          )}
         </div>
-        
-        <div className="flex justify-end mt-4">
-          <button 
-            onClick={() => onNavigate && onNavigate('course-learning')}
-            className="bg-[#4a8df8] hover:bg-blue-600 text-white text-xs px-5 py-2 rounded transition-colors"
-          >
-            继续学习
-          </button>
+        <div className="flex-1 p-4 flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 line-clamp-1" title={course.title}>{course.title}</h3>
+            <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{course.courseName}</p>
+
+            <div className="flex items-center space-x-2 mt-3">
+              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${isDone ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                  style={{ width: `${course.progress}%` }}
+                ></div>
+              </div>
+              <span className="text-xs text-slate-500 w-8">{course.progress}%</span>
+            </div>
+
+            <div className="text-xs text-slate-500 mt-2 line-clamp-1" title={`上次进度：${course.lastProgress}`}>
+              上次进度：{course.lastProgress}
+            </div>
+
+            <div className="text-[10px] text-slate-400 mt-1.5 flex flex-col space-y-0.5">
+              <span>下发时间：{course.issueTime}</span>
+              <span>最近学习：{course.lastStudyTime}</span>
+              {course.score && (
+                <span className="text-emerald-600 font-medium">考核成绩：{course.score}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-4">
+            {isDone ? (
+              <button
+                type="button"
+                onClick={() => handleOpenStudy({
+                  id: String(course.id),
+                  title: course.title,
+                  courseName: course.courseName,
+                  isCompleted: true
+                }, 'student-home')}
+                className="border border-blue-500 hover:border-blue-600 text-blue-600 hover:bg-blue-50 text-xs px-5 py-1.5 rounded-lg transition-colors font-medium"
+              >
+                查看
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleOpenStudy({
+                  id: String(course.id),
+                  title: course.title,
+                  courseName: course.courseName,
+                  isCompleted: false
+                }, 'student-home')}
+                className="bg-[#4a8df8] hover:bg-blue-600 text-white text-xs px-5 py-1.5 rounded-lg transition-colors font-medium shadow-sm"
+              >
+                继续学习
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // 1. 学生主页视图
   const renderStudentHome = () => (
@@ -682,7 +968,7 @@ export default function Personal({
           <h1 className="text-xl font-bold text-slate-800">
             Hi, <span className="mx-1">杨振邦</span> 同学 欢迎回来~
           </h1>
-          
+
           <div className="flex items-center space-x-10">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white">
@@ -693,7 +979,7 @@ export default function Personal({
                 <p className="text-sm font-medium text-slate-700 mt-0.5">人工智能2024级1班</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-full bg-orange-400 flex items-center justify-center text-white">
                 <Building2 className="w-5 h-5" />
@@ -703,7 +989,7 @@ export default function Personal({
                 <p className="text-sm font-medium text-slate-700 mt-0.5">信息与软件工程学院</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-full bg-cyan-400 flex items-center justify-center text-white">
                 <BookOpen className="w-5 h-5" />
@@ -715,7 +1001,7 @@ export default function Personal({
             </div>
           </div>
         </div>
-        
+
         <div className="absolute right-0 top-0 bottom-0 w-64 bg-gradient-to-l from-blue-50 to-transparent pointer-events-none flex items-center justify-end pr-8">
           <div className="relative w-32 h-32">
             <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -743,7 +1029,7 @@ export default function Personal({
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-5 rounded-xl shadow-sm flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-500 mb-1">已完成任务</p>
@@ -756,7 +1042,7 @@ export default function Personal({
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-5 rounded-xl shadow-sm flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-500 mb-1">已用时长</p>
@@ -769,7 +1055,7 @@ export default function Personal({
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-5 rounded-xl shadow-sm flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-500 mb-1">剩余时长</p>
@@ -782,7 +1068,7 @@ export default function Personal({
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-5 rounded-xl shadow-sm flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-500 mb-1">实验报告数</p>
@@ -805,27 +1091,30 @@ export default function Personal({
             <h2 className="text-lg font-bold text-slate-800">我的任务</h2>
             <CourseSearchDropdown placeholder="检索任务课程..." />
           </div>
-          
+
           <div className="flex space-x-3 mt-5">
             {['进行中', '已完成'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTeachingTab(tab)}
-                className={`px-5 py-1.5 rounded-md text-sm transition-colors ${
-                  activeTeachingTab === tab 
-                    ? 'bg-[#e6f0ff] text-blue-600 font-medium' 
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
+                className={`px-5 py-1.5 rounded-md text-sm transition-colors ${activeTeachingTab === tab
+                  ? 'bg-[#e6f0ff] text-blue-600 font-medium'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
               >
                 {tab}
               </button>
             ))}
           </div>
-          
+
           <div className="flex-1 mt-5 overflow-y-auto pr-2">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              {mockCourses.map(course => (
-                <CourseCard key={`left-${course.id}`} course={course} />
+              {(activeTeachingTab === '已完成' ? mockCompletedTasks : mockOngoingTasks).map(course => (
+                <CourseCard
+                  key={`task-${course.id}`}
+                  course={course}
+                  isCompleted={activeTeachingTab === '已完成'}
+                />
               ))}
             </div>
           </div>
@@ -837,27 +1126,30 @@ export default function Personal({
             <h2 className="text-lg font-bold text-slate-800">我的自学</h2>
             <CourseSearchDropdown placeholder="检索自学课程..." />
           </div>
-          
+
           <div className="flex space-x-3 mt-5">
             {['进行中', '已完成'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTaskListTab(tab)}
-                className={`px-5 py-1.5 rounded-md text-sm transition-colors ${
-                  activeTaskListTab === tab 
-                    ? 'bg-[#e6f0ff] text-blue-600 font-medium' 
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
+                className={`px-5 py-1.5 rounded-md text-sm transition-colors ${activeTaskListTab === tab
+                  ? 'bg-[#e6f0ff] text-blue-600 font-medium'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
               >
                 {tab}
               </button>
             ))}
           </div>
-          
+
           <div className="flex-1 mt-5 overflow-y-auto pr-2">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              {mockCourses.map(course => (
-                <CourseCard key={`task-${course.id}`} course={course} />
+              {(activeTaskListTab === '已完成' ? mockCompletedSelfStudy : mockOngoingSelfStudy).map(course => (
+                <CourseCard
+                  key={`self-${course.id}`}
+                  course={course}
+                  isCompleted={activeTaskListTab === '已完成'}
+                />
               ))}
             </div>
           </div>
@@ -932,7 +1224,7 @@ export default function Personal({
         <div className="col-span-2 bg-white rounded-xl p-6 border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800">我负责的授课班级</h3>
-            <button 
+            <button
               onClick={() => setActiveMenu('my-courses')}
               className="text-xs text-blue-600 hover:text-blue-700 flex items-center font-medium"
             >
@@ -1024,13 +1316,13 @@ export default function Personal({
       <h3 className="text-lg font-bold text-slate-800">{title}</h3>
       <p className="text-sm text-slate-500 mt-1.5 max-w-md">{subTitle}</p>
       <div className="mt-6 flex space-x-3">
-        <button 
+        <button
           onClick={() => setActiveMenu(currentRoleInfo.defaultMenu)}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
         >
           返回当前主页
         </button>
-        <button 
+        <button
           onClick={() => setIsRoleModalOpen(true)}
           className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium transition-colors"
         >
@@ -1045,8 +1337,8 @@ export default function Personal({
     // 若当前正在编辑自建课程，渲染教师端专属自建课程编辑器
     if (editingTeacherCourse) {
       return (
-        <TeacherCourseEditor 
-          course={editingTeacherCourse} 
+        <TeacherCourseEditor
+          course={editingTeacherCourse}
           onBack={() => setEditingTeacherCourse(null)}
           onUpdateCourse={(updatedCourse) => {
             setCustomCourses(prev => prev.map(c => c.id === updatedCourse.id ? { ...c, ...updatedCourse } : c));
@@ -1096,16 +1388,14 @@ export default function Personal({
                 setTeachingCourseTab('all');
                 setSelectedCourseIds([]);
               }}
-              className={`pb-3 text-sm font-semibold relative transition-colors flex items-center cursor-pointer ${
-                teachingCourseTab === 'all'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`pb-3 text-sm font-semibold relative transition-colors flex items-center cursor-pointer ${teachingCourseTab === 'all'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               全部
-              <span className={`ml-2 px-2 py-0.2 text-[11px] rounded-full font-medium ${
-                teachingCourseTab === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
-              }`}>
+              <span className={`ml-2 px-2 py-0.2 text-[11px] rounded-full font-medium ${teachingCourseTab === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
+                }`}>
                 {purchasedCourses.length + customCourses.length}
               </span>
             </button>
@@ -1115,16 +1405,14 @@ export default function Personal({
                 setTeachingCourseTab('purchased');
                 setSelectedCourseIds([]);
               }}
-              className={`pb-3 text-sm font-semibold relative transition-colors flex items-center cursor-pointer ${
-                teachingCourseTab === 'purchased'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`pb-3 text-sm font-semibold relative transition-colors flex items-center cursor-pointer ${teachingCourseTab === 'purchased'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               已购课程
-              <span className={`ml-2 px-2 py-0.2 text-[11px] rounded-full font-medium ${
-                teachingCourseTab === 'purchased' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
-              }`}>
+              <span className={`ml-2 px-2 py-0.2 text-[11px] rounded-full font-medium ${teachingCourseTab === 'purchased' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
+                }`}>
                 {purchasedCourses.length}
               </span>
             </button>
@@ -1134,16 +1422,14 @@ export default function Personal({
                 setTeachingCourseTab('custom');
                 setSelectedCourseIds([]);
               }}
-              className={`pb-3 text-sm font-semibold relative transition-colors flex items-center cursor-pointer ${
-                teachingCourseTab === 'custom'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`pb-3 text-sm font-semibold relative transition-colors flex items-center cursor-pointer ${teachingCourseTab === 'custom'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-slate-600 hover:text-slate-900'
+                }`}
             >
               自建课程
-              <span className={`ml-2 px-2 py-0.2 text-[11px] rounded-full font-medium ${
-                teachingCourseTab === 'custom' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
-              }`}>
+              <span className={`ml-2 px-2 py-0.2 text-[11px] rounded-full font-medium ${teachingCourseTab === 'custom' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                }`}>
                 {customCourses.length}
               </span>
             </button>
@@ -1179,11 +1465,10 @@ export default function Personal({
                 <button
                   key={t}
                   onClick={() => setSelectedCourseType(t)}
-                  className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${
-                    selectedCourseType === t
-                      ? 'bg-[#1890ff] text-white font-medium shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
+                  className={`px-2.5 py-1 rounded text-xs transition-colors cursor-pointer ${selectedCourseType === t
+                    ? 'bg-[#1890ff] text-white font-medium shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                    }`}
                 >
                   {t}
                 </button>
@@ -1207,19 +1492,16 @@ export default function Personal({
                 onClick={() => setIsCourseFilterExpanded(!isCourseFilterExpanded)}
                 className="text-xs text-slate-500 hover:text-blue-600 flex items-center shrink-0 cursor-pointer"
               >
-                <span>展开</span>
-                <ChevronDown className={`w-3.5 h-3.5 ml-0.5 transition-transform ${isCourseFilterExpanded ? 'rotate-180' : ''}`} />
               </button>
 
               {/* 卡片 / 列表展示模式切换按钮组（默认卡片） */}
               <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200/80 shadow-2xs">
                 <button
                   onClick={() => setCourseViewMode('card')}
-                  className={`px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1 transition-all cursor-pointer ${
-                    courseViewMode === 'card'
-                      ? 'bg-white text-blue-600 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                  className={`px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1 transition-all cursor-pointer ${courseViewMode === 'card'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                    }`}
                   title="卡片展示视图（默认）"
                 >
                   <LayoutGrid className="w-3.5 h-3.5" />
@@ -1227,11 +1509,10 @@ export default function Personal({
                 </button>
                 <button
                   onClick={() => setCourseViewMode('list')}
-                  className={`px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1 transition-all cursor-pointer ${
-                    courseViewMode === 'list'
-                      ? 'bg-white text-blue-600 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                  className={`px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1 transition-all cursor-pointer ${courseViewMode === 'list'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                    }`}
                   title="列表展示视图"
                 >
                   <List className="w-3.5 h-3.5" />
@@ -1244,13 +1525,12 @@ export default function Personal({
           {/* 排序与全选控制行 */}
           <div className="flex items-center justify-between pt-1.5 border-t border-slate-50 text-xs">
             <div className="flex items-center space-x-6">
-              {['默认排序', '最新', '引用最多'].map(s => (
+              {['默认排序', '最新创建', '最多下发'].map(s => (
                 <button
                   key={s}
                   onClick={() => setActiveCourseSort(s)}
-                  className={`transition-colors cursor-pointer ${
-                    activeCourseSort === s ? 'text-[#1890ff] font-semibold' : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                  className={`transition-colors cursor-pointer ${activeCourseSort === s ? 'text-[#1890ff] font-semibold' : 'text-slate-500 hover:text-slate-800'
+                    }`}
                 >
                   {s}
                 </button>
@@ -1274,7 +1554,7 @@ export default function Personal({
 
         {/* 批量操作浮动工具栏（当选中课程数 > 0 时动态弹出） */}
         {selectedCourseIds.length > 0 && (
-          <div className="mx-6 my-2.5 px-4 py-2 bg-blue-50/90 border border-blue-200 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-1 duration-150 shadow-2xs">
+          <div className="mx-6 my-2.5 px-4 py-2 bg-blue-50/90 border border-blue-200 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-1 duration-150 shadow-2xs flex-wrap gap-2">
             <div className="flex items-center space-x-3 text-xs text-slate-700">
               <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white text-[11px] font-bold">
                 {selectedCourseIds.length}
@@ -1291,24 +1571,50 @@ export default function Personal({
               </button>
             </div>
 
-            <div className="flex items-center space-x-2.5">
-              <span className="text-xs text-slate-600 font-medium">批量设置学生自学:</span>
-              <button
-                onClick={() => handleBatchSetSelfStudy(true)}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
-                title="批量允许学生自主学习"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>批量允许自学</span>
-              </button>
-              <button
-                onClick={() => handleBatchSetSelfStudy(false)}
-                className="px-3.5 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-md text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
-                title="批量禁止学生自学（仅排课教学可见）"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span>批量禁止自学</span>
-              </button>
+            <div className="flex items-center space-x-3">
+              {/* 自建课程批量发布/取消发布操作 */}
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-slate-600 font-medium">自建课程发布:</span>
+                <button
+                  onClick={() => handleBatchPublishCustomCourses(true)}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                  title="批量发布选中的自建课程（发布后可在课程大厅展示及下发任务）"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>批量发布</span>
+                </button>
+                <button
+                  onClick={() => handleBatchPublishCustomCourses(false)}
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                  title="批量取消发布选中的自建课程（从课程大厅与任务下发下架）"
+                >
+                  <EyeOff className="w-3.5 h-3.5" />
+                  <span>批量取消发布</span>
+                </button>
+              </div>
+
+              <div className="h-4 w-px bg-slate-300"></div>
+
+              {/* 学生自学权限批量设置 */}
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-slate-600 font-medium">学生自学:</span>
+                <button
+                  onClick={() => handleBatchSetSelfStudy(true)}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-semibold flex items-center space-x-1 transition-all shadow-xs cursor-pointer active:scale-95"
+                  title="批量允许学生自主学习"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>允许自学</span>
+                </button>
+                <button
+                  onClick={() => handleBatchSetSelfStudy(false)}
+                  className="px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-md text-xs font-semibold flex items-center space-x-1 transition-all shadow-xs cursor-pointer active:scale-95"
+                  title="批量禁止学生自学"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>禁止自学</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1327,24 +1633,32 @@ export default function Personal({
                 const isCustom = !!course.isCustom;
                 const isSelected = selectedCourseIds.includes(course.id);
                 const allowStudy = course.allowSelfStudy !== false;
+                const isPublished = isCustom ? (course.status === '已发布') : true;
 
                 return (
                   <div
                     key={course.id}
-                    className={`rounded-lg overflow-hidden transition-all flex flex-col justify-between group relative ${
-                      isSelected
-                        ? 'ring-2 ring-blue-500 shadow-md bg-white'
-                        : isCustom
+                    className={`rounded-lg overflow-hidden transition-all flex flex-col justify-between group relative ${isSelected
+                      ? 'ring-2 ring-blue-500 shadow-md bg-white'
+                      : isCustom
                         ? 'bg-white border-2 border-emerald-400/90 hover:border-emerald-500 hover:shadow-lg shadow-emerald-500/5'
                         : 'bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md'
-                    }`}
+                      }`}
                   >
-                    {/* 左上角角色/性质标签 */}
-                    <div className="absolute left-0 top-0 z-20">
+                    {/* 左上角角色/性质与发布状态标签 */}
+                    <div className="absolute left-0 top-0 z-20 flex items-center">
                       {isCustom ? (
-                        <div className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-md shadow-xs flex items-center">
-                          <Edit3 className="w-2.5 h-2.5 mr-1 stroke-[2.5]" />
-                          自建课程
+                        <div className="flex items-center shadow-xs">
+                          <div className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-none flex items-center">
+                            <Edit3 className="w-2.5 h-2.5 mr-1 stroke-[2.5]" />
+                            自建
+                          </div>
+                          <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded-br-md flex items-center ${
+                            isPublished ? 'bg-emerald-500 text-white' : 'bg-slate-600/90 text-slate-100'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full mr-1 ${isPublished ? 'bg-white animate-pulse' : 'bg-slate-300'}`} />
+                            {isPublished ? '已发布' : '未发布'}
+                          </div>
                         </div>
                       ) : (
                         <div className="bg-[#1677ff] text-white text-[10px] font-bold px-2 py-0.5 rounded-br-md shadow-xs flex items-center">
@@ -1355,13 +1669,12 @@ export default function Personal({
                     </div>
 
                     {/* 右上角多选 Checkbox */}
-                    <div 
+                    <div
                       className="absolute right-2 top-2 z-20"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className={`p-1 rounded-md cursor-pointer transition-all ${
-                        isSelected ? 'bg-white shadow-sm' : 'bg-black/25 hover:bg-white/90 group-hover:bg-white/90'
-                      }`}>
+                      <div className={`p-1 rounded-md cursor-pointer transition-all ${isSelected ? 'bg-white shadow-sm' : 'bg-black/25 hover:bg-white/90 group-hover:bg-white/90'
+                        }`}>
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -1423,9 +1736,8 @@ export default function Personal({
                       )}
 
                       {/* 右下角炫彩徽章 */}
-                      <div className={`absolute right-2 bottom-2 z-10 w-5 h-5 rounded-full flex items-center justify-center shadow-sm ${
-                        isCustom ? 'bg-gradient-to-tr from-emerald-400 to-teal-200 text-emerald-900' : 'bg-gradient-to-tr from-purple-500 to-pink-400 text-white'
-                      }`}>
+                      <div className={`absolute right-2 bottom-2 z-10 w-5 h-5 rounded-full flex items-center justify-center shadow-sm ${isCustom ? 'bg-gradient-to-tr from-emerald-400 to-teal-200 text-emerald-900' : 'bg-gradient-to-tr from-purple-500 to-pink-400 text-white'
+                        }`}>
                         <Sparkles className="w-3 h-3" />
                       </div>
                     </div>
@@ -1434,22 +1746,22 @@ export default function Personal({
                     <div className="p-3 flex-1 flex flex-col justify-between">
                       <div>
                         {/* 标题 */}
-                        <h4 
-                          className="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-blue-600 transition-colors" 
+                        <h4
+                          className="text-xs font-bold text-slate-800 line-clamp-1 group-hover:text-blue-600 transition-colors"
                           title={course.title}
                         >
                           {course.title}
                         </h4>
 
-                        {/* 分类、标签与时间 */}
+                        {/* 分类、标签、状态与时间 */}
                         <div className="flex items-center text-[10px] mt-1.5 truncate">
-                          {isCustom ? (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold mr-1 shrink-0">
-                              自建
-                            </span>
-                          ) : (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold mr-1 shrink-0">
-                              已购
+                          {isCustom && (
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold mr-1 shrink-0 ${
+                              isPublished
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}>
+                              {isPublished ? '已发布' : '未发布'}
                             </span>
                           )}
                           <span className="text-slate-600 truncate">{course.category}</span>
@@ -1463,7 +1775,7 @@ export default function Personal({
                         </p>
 
                         {/* 学生自学权限状态控制条（支持一键开关） */}
-                        <div 
+                        <div
                           className="mt-2.5 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 flex items-center justify-between"
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -1485,14 +1797,12 @@ export default function Personal({
                             type="button"
                             onClick={(e) => handleToggleCourseSelfStudy(course.id, e)}
                             title={allowStudy ? "点击切换为禁止自学" : "点击切换为允许自学"}
-                            className={`relative inline-flex h-3.5 w-6.5 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                              allowStudy ? 'bg-emerald-500' : 'bg-slate-300'
-                            }`}
+                            className={`relative inline-flex h-3.5 w-6.5 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${allowStudy ? 'bg-emerald-500' : 'bg-slate-300'
+                              }`}
                           >
                             <span
-                              className={`pointer-events-none inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out mt-0.5 ${
-                                allowStudy ? 'translate-x-3' : 'translate-x-0.5'
-                              }`}
+                              className={`pointer-events-none inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out mt-0.5 ${allowStudy ? 'translate-x-3' : 'translate-x-0.5'
+                                }`}
                             />
                           </button>
                         </div>
@@ -1510,36 +1820,76 @@ export default function Personal({
                           </div>
                         </div>
 
-                        <div className="flex items-center space-x-1.5">
+                        <div className="flex items-center space-x-1">
+                          {/* 自建课程专属：发布 / 取消发布快捷操作 */}
+                          {isCustom && (
+                            <button
+                              onClick={(e) => handleTogglePublishCourse(course.id, e)}
+                              className={`px-1.5 py-0.5 rounded border text-[10px] font-medium transition-colors cursor-pointer flex items-center shadow-2xs ${
+                                isPublished
+                                  ? 'border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700'
+                                  : 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold'
+                              }`}
+                              title={isPublished ? "点击取消发布（将从课程大厅与任务下发下架）" : "点击发布该课程（发布后可在课程大厅展示及下发任务）"}
+                            >
+                              {isPublished ? (
+                                <>
+                                  <EyeOff className="w-2.5 h-2.5 mr-0.5" />
+                                  下架
+                                </>
+                              ) : (
+                                <>
+                                  <Globe className="w-2.5 h-2.5 mr-0.5" />
+                                  发布
+                                </>
+                              )}
+                            </button>
+                          )}
+
                           {isCustom && (
                             <button
                               onClick={() => {
                                 setEditingTeacherCourse(course);
                               }}
-                              className="px-2 py-0.5 rounded border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-semibold transition-colors cursor-pointer flex items-center shadow-2xs"
+                              className="px-1.5 py-0.5 rounded border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-semibold transition-colors cursor-pointer flex items-center shadow-2xs"
                               title="编辑自建课程教学大纲与步骤"
                             >
                               <Edit3 className="w-2.5 h-2.5 mr-0.5" />
                               编辑
                             </button>
                           )}
-                          {/* 下发任务按钮 */}
-                          <button
-                            onClick={() => {
-                              setSelectedCourseForDispatch(course);
-                              setDispatchTaskName(`${course.title}-实训任务`);
-                              setIsDispatchModalOpen(true);
-                            }}
-                            className={`px-2 py-0.5 rounded border text-[11px] font-medium transition-colors flex items-center cursor-pointer ${
-                              isCustom
+
+                          {/* 下发任务按钮：自建课程若未发布，则置灰拦截提示 */}
+                          {isCustom && !isPublished ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDispatchSuccessToast(`自建课程《${course.title}》尚未发布，发布后方可下发任务！`);
+                                setTimeout(() => setDispatchSuccessToast(''), 3000);
+                              }}
+                              className="px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-slate-400 text-[10px] font-medium transition-colors flex items-center cursor-not-allowed opacity-75"
+                              title="自建课程未发布，发布后方可下发任务"
+                            >
+                              <UploadCloud className="w-2.5 h-2.5 mr-0.5" />
+                              下发
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setSelectedCourseForDispatch(course);
+                                setDispatchTaskName(`${course.title}-实训任务`);
+                                setIsDispatchModalOpen(true);
+                              }}
+                              className={`px-1.5 py-0.5 rounded border text-[10px] font-medium transition-colors flex items-center cursor-pointer ${isCustom
                                 ? 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
                                 : 'border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-600'
-                            }`}
-                            title="下发任务到班级"
-                          >
-                            <UploadCloud className="w-3 h-3 mr-1" />
-                            下发
-                          </button>
+                                }`}
+                              title="下发任务到班级"
+                            >
+                              <UploadCloud className="w-2.5 h-2.5 mr-0.5" />
+                              下发
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1562,12 +1912,13 @@ export default function Personal({
                           className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
                         />
                       </th>
-                      <th className="py-3 px-4 min-w-[260px]">课程名称与简介</th>
-                      <th className="py-3 px-4 w-32">所属分类</th>
-                      <th className="py-3 px-4 w-32">课程类型</th>
-                      <th className="py-3 px-4 w-36">更新时间</th>
-                      <th className="py-3 px-4 w-44 text-center">学生自学权限</th>
-                      <th className="py-3 px-4 w-36 text-right">操作</th>
+                      <th className="py-3 px-4 min-w-[240px]">课程名称与简介</th>
+                      <th className="py-3 px-4 w-28">所属分类</th>
+                      <th className="py-3 px-4 w-28">课程类型</th>
+                      <th className="py-3 px-4 w-32">更新时间</th>
+                      <th className="py-3 px-4 w-32 text-center">状态</th>
+                      <th className="py-3 px-4 w-40 text-center">学生自学权限</th>
+                      <th className="py-3 px-4 w-44 text-right">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs">
@@ -1575,14 +1926,14 @@ export default function Personal({
                       const isCustom = !!course.isCustom;
                       const isSelected = selectedCourseIds.includes(course.id);
                       const allowStudy = course.allowSelfStudy !== false;
+                      const isPublished = isCustom ? (course.status === '已发布') : true;
 
                       return (
                         <tr
                           key={course.id}
                           onClick={() => handleToggleSelectCourse(course.id)}
-                          className={`transition-colors cursor-pointer ${
-                            isSelected ? 'bg-blue-50/50 hover:bg-blue-50/80' : 'hover:bg-slate-50/80'
-                          }`}
+                          className={`transition-colors cursor-pointer ${isSelected ? 'bg-blue-50/50 hover:bg-blue-50/80' : 'hover:bg-slate-50/80'
+                            }`}
                         >
                           {/* 复选框 */}
                           <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
@@ -1597,13 +1948,12 @@ export default function Personal({
                           {/* 封面缩略图与课程信息 */}
                           <td className="py-3.5 px-4">
                             <div className="flex items-center space-x-3">
-                              <div className={`w-12 h-8 rounded-md shrink-0 flex items-center justify-center text-white text-[10px] font-bold shadow-2xs overflow-hidden ${
-                                isCustom
-                                  ? 'bg-gradient-to-br from-emerald-500 to-teal-700'
-                                  : course.theme === 'deep-blue'
+                              <div className={`w-12 h-8 rounded-md shrink-0 flex items-center justify-center text-white text-[10px] font-bold shadow-2xs overflow-hidden ${isCustom
+                                ? 'bg-gradient-to-br from-emerald-500 to-teal-700'
+                                : course.theme === 'deep-blue'
                                   ? 'bg-gradient-to-br from-blue-600 to-indigo-800'
                                   : 'bg-gradient-to-br from-sky-400 to-blue-600'
-                              }`}>
+                                }`}>
                                 <BookOpen className="w-4 h-4 opacity-90" />
                               </div>
                               <div className="min-w-0 flex-1">
@@ -1645,6 +1995,27 @@ export default function Personal({
                             {course.time}
                           </td>
 
+                          {/* 课程状态（已发布 / 未发布） */}
+                          <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                            {isCustom ? (
+                              <div className="inline-flex items-center space-x-1.5">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                                  isPublished
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full mr-1 ${isPublished ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+                                  {isPublished ? '已发布' : '未发布'}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                                <span className="w-1.5 h-1.5 rounded-full mr-1 bg-blue-500" />
+                                已购有效
+                              </span>
+                            )}
+                          </td>
+
                           {/* 学生自学权限 Switch 与徽章 */}
                           <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full border shadow-2xs transition-all bg-white border-slate-200">
@@ -1663,14 +2034,12 @@ export default function Personal({
                                 type="button"
                                 onClick={(e) => handleToggleCourseSelfStudy(course.id, e)}
                                 title={allowStudy ? "点击切换为禁止学生自学" : "点击切换为允许学生自学"}
-                                className={`relative inline-flex h-4 w-7.5 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                                  allowStudy ? 'bg-emerald-500' : 'bg-slate-300'
-                                }`}
+                                className={`relative inline-flex h-4 w-7.5 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${allowStudy ? 'bg-emerald-500' : 'bg-slate-300'
+                                  }`}
                               >
                                 <span
-                                  className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out mt-0.5 ${
-                                    allowStudy ? 'translate-x-4' : 'translate-x-0.5'
-                                  }`}
+                                  className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out mt-0.5 ${allowStudy ? 'translate-x-4' : 'translate-x-0.5'
+                                    }`}
                                 />
                               </button>
                             </div>
@@ -1678,33 +2047,74 @@ export default function Personal({
 
                           {/* 操作 */}
                           <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-end space-x-2">
+                            <div className="flex items-center justify-end space-x-1.5">
+                              {/* 自建课程发布/取消发布操作 */}
+                              {isCustom && (
+                                <button
+                                  onClick={(e) => handleTogglePublishCourse(course.id, e)}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-colors cursor-pointer flex items-center shadow-2xs ${
+                                    isPublished
+                                      ? 'border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700'
+                                      : 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold'
+                                  }`}
+                                  title={isPublished ? "点击取消发布（从课程大厅与任务下发下架）" : "点击发布课程（可在课程大厅展示及下发任务）"}
+                                >
+                                  {isPublished ? (
+                                    <>
+                                      <EyeOff className="w-3 h-3 mr-1" />
+                                      下架
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Globe className="w-3 h-3 mr-1" />
+                                      发布
+                                    </>
+                                  )}
+                                </button>
+                              )}
+
                               {isCustom && (
                                 <button
                                   onClick={() => setEditingTeacherCourse(course)}
-                                  className="px-2.5 py-1 rounded border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-medium transition-colors cursor-pointer flex items-center shadow-2xs"
+                                  className="px-2 py-1 rounded border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-medium transition-colors cursor-pointer flex items-center shadow-2xs"
                                   title="编辑自建课程教学大纲与步骤"
                                 >
                                   <Edit3 className="w-3 h-3 mr-1" />
                                   编辑
                                 </button>
                               )}
-                              <button
-                                onClick={() => {
-                                  setSelectedCourseForDispatch(course);
-                                  setDispatchTaskName(`${course.title}-实训任务`);
-                                  setIsDispatchModalOpen(true);
-                                }}
-                                className={`px-2.5 py-1 rounded border text-xs font-medium transition-colors flex items-center cursor-pointer shadow-2xs ${
-                                  isCustom
+
+                              {/* 下发任务按钮：自建课程若未发布则置灰拦截 */}
+                              {isCustom && !isPublished ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDispatchSuccessToast(`自建课程《${course.title}》尚未发布，发布后方可下发任务！`);
+                                    setTimeout(() => setDispatchSuccessToast(''), 3000);
+                                  }}
+                                  className="px-2 py-1 rounded border border-slate-200 bg-slate-100 text-slate-400 text-xs font-medium transition-colors flex items-center cursor-not-allowed opacity-75 shadow-2xs"
+                                  title="自建课程未发布，发布后方可下发任务"
+                                >
+                                  <UploadCloud className="w-3 h-3 mr-1" />
+                                  下发
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setSelectedCourseForDispatch(course);
+                                    setDispatchTaskName(`${course.title}-实训任务`);
+                                    setIsDispatchModalOpen(true);
+                                  }}
+                                  className={`px-2.5 py-1 rounded border text-xs font-medium transition-colors flex items-center cursor-pointer shadow-2xs ${isCustom
                                     ? 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
                                     : 'border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-600'
-                                }`}
-                                title="下发任务到班级"
-                              >
-                                <UploadCloud className="w-3 h-3 mr-1" />
-                                下发
-                              </button>
+                                    }`}
+                                  title="下发任务到班级"
+                                >
+                                  <UploadCloud className="w-3 h-3 mr-1" />
+                                  下发
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1744,10 +2154,10 @@ export default function Personal({
               &gt;
             </button>
             <span className="ml-2">前往</span>
-            <input 
-              type="text" 
-              defaultValue="1" 
-              className="w-10 text-center border border-slate-200 rounded py-0.5 text-xs outline-none focus:border-blue-500" 
+            <input
+              type="text"
+              defaultValue="1"
+              className="w-10 text-center border border-slate-200 rounded py-0.5 text-xs outline-none focus:border-blue-500"
             />
             <span>页</span>
           </div>
@@ -1802,7 +2212,7 @@ export default function Personal({
             <h2 className="text-base font-bold text-slate-800">我的教学任务与作业管理</h2>
             <p className="text-xs text-slate-500 mt-1">集中管理班级任务发布、实训代码评测、实验报告批改与学情进度</p>
           </div>
-          <button 
+          <button
             onClick={() => setActiveMenu('my-courses')}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center cursor-pointer shadow-xs"
           >
@@ -1844,10 +2254,9 @@ export default function Personal({
                 <div>
                   <div className="flex items-center space-x-2">
                     <h4 className="text-sm font-semibold text-slate-800">{t.title}</h4>
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                      t.status === '进行中' ? 'bg-blue-100 text-blue-700' :
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${t.status === '进行中' ? 'bg-blue-100 text-blue-700' :
                       t.status === '待批改' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
-                    }`}>
+                      }`}>
                       {t.status}
                     </span>
                   </div>
@@ -1865,7 +2274,7 @@ export default function Personal({
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    <button 
+                    <button
                       onClick={() => {
                         setDispatchSuccessToast(`正在打开《${t.title}》批改界面...`);
                         setTimeout(() => setDispatchSuccessToast(''), 2500);
@@ -1874,7 +2283,7 @@ export default function Personal({
                     >
                       批改报告 ({t.toGrade})
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         setDispatchSuccessToast(`已向未提交学生发送催交提醒！`);
                         setTimeout(() => setDispatchSuccessToast(''), 2500);
@@ -1911,6 +2320,14 @@ export default function Personal({
     if (activeMenu === 'course-list' || activeMenu === 'course-management') {
       return <CourseManagement />;
     }
+    // 4.0 超级管理员-自建课程管理
+    if (activeMenu === 'custom-courses-admin') {
+      return (
+        <CustomCourseManagement
+          onNavigateToCourseList={() => setActiveMenu('course-list')}
+        />
+      );
+    }
     // 4.1 题库管理 / 试题管理 (参考截图 1:1 实现)
     if (activeMenu === 'questions' || activeMenu === 'question-list') {
       return <QuestionManagement />;
@@ -1933,11 +2350,35 @@ export default function Personal({
     }
     // 8. 我的学习（参考截图1:1高保真界面）
     if (activeMenu === 'my-studies') {
-      return <StudentStudies onNavigate={onNavigate} />;
+      return (
+        <StudentStudies
+          onNavigate={onNavigate}
+          onStartStudy={(taskInfo) => handleOpenStudy(taskInfo, 'my-studies')}
+        />
+      );
+    }
+    // 8.1 课程学习/任务研学（当前页面内跳转，右侧内容改变即可）
+    if (activeMenu === 'course-learning') {
+      return (
+        <CourseLearning
+          embedded={true}
+          onBack={() => {
+            setActiveMenu(previousMenu || 'student-home');
+          }}
+          onNavigate={onNavigate}
+          taskTitle={learningTaskInfo?.title}
+          courseName={learningTaskInfo?.courseName}
+          isCompleted={learningTaskInfo?.isCompleted}
+        />
+      );
     }
     // 9. 我的教学 / 教学管理（参考截图1:1高保真教学任务中心）
     if (activeMenu === 'teaching' || activeMenu === 'my-teaching') {
       return <TeacherTeaching />;
+    }
+    // 10. 运维管理 - 实验管理 - 实验列表（参考截图1:1复刻）
+    if (activeMenu === 'lab-list' || activeMenu === 'lab-management' || activeMenu === 'ops-management') {
+      return <LabManagement />;
     }
     // 其他超级管理员二级子菜单占位
     return renderSimplePlaceholder(
@@ -1952,8 +2393,8 @@ export default function Personal({
       <header className="bg-white px-6 py-3 flex items-center justify-between border-b border-slate-100 shrink-0 z-40 sticky top-0 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div className="flex items-center space-x-10">
           {/* Logo */}
-          <div 
-            className="flex items-center space-x-2.5 cursor-pointer" 
+          <div
+            className="flex items-center space-x-2.5 cursor-pointer"
             onClick={() => onNavigate && onNavigate('course-hall')}
             title="智慧教学实验平台"
           >
@@ -1981,28 +2422,12 @@ export default function Personal({
 
         {/* Right Actions */}
         <div className="flex items-center space-x-4 text-sm">
-          {/* 角色切换胶囊徽标 */}
-          <button 
-            onClick={() => setIsRoleModalOpen(true)}
-            className="flex items-center space-x-2 px-3 py-1.5 rounded-full border bg-white hover:bg-blue-50/50 border-blue-200 text-slate-700 shadow-sm hover:border-blue-400 transition-all group"
-            title="点击切换身份角色"
-          >
-            <span className={`w-2 h-2 rounded-full ${currentRoleInfo.badgeText} animate-pulse`}></span>
-            <span className="text-xs text-slate-500">当前角色：</span>
-            <span className="text-xs font-bold text-blue-600 flex items-center">
-              {currentRoleInfo.name}
-            </span>
-            <span className="text-[11px] text-blue-500 font-medium bg-blue-50 px-1.5 py-0.5 rounded group-hover:bg-blue-100 transition-colors">
-              切换角色
-            </span>
-          </button>
-
           <button className="flex items-center text-slate-600 hover:text-blue-600 transition-colors px-2 py-1">
             <Languages className="w-4 h-4 mr-1" />
             En
           </button>
 
-          <button 
+          <button
             onClick={() => {
               setActiveMenu(currentRoleInfo.defaultMenu);
             }}
@@ -2013,7 +2438,7 @@ export default function Personal({
 
           {/* User Profile Dropdown Component */}
           <div className="relative">
-            <button 
+            <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className="flex items-center space-x-2 cursor-pointer focus:outline-none hover:opacity-80 transition-opacity"
             >
@@ -2023,7 +2448,7 @@ export default function Personal({
               <span className="text-slate-700 font-medium text-sm">杨振邦<span className="text-slate-400 font-normal text-xs">(15396005420)</span></span>
               <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
             </button>
-            
+
             {isUserMenuOpen && (
               <div className="absolute right-0 mt-3 w-60 bg-white rounded-lg shadow-xl border border-slate-100 z-50 overflow-hidden transform origin-top-right animate-in fade-in zoom-in-95 duration-100">
                 <div className="relative h-12 bg-gradient-to-r from-blue-50 to-indigo-50">
@@ -2042,8 +2467,8 @@ export default function Personal({
                     </div>
                   </div>
                   <div className="h-px bg-slate-100 my-2 mx-2"></div>
-                  
-                  <button 
+
+                  <button
                     onClick={() => { setIsUserMenuOpen(false); setIsRoleModalOpen(true); }}
                     className="w-full flex items-center justify-between px-4 py-2 text-[13px] text-blue-600 hover:bg-blue-50 transition-colors font-medium"
                   >
@@ -2054,28 +2479,28 @@ export default function Personal({
                     <ChevronRight className="w-3.5 h-3.5 text-blue-400" />
                   </button>
 
-                  <button 
+                  <button
                     onClick={() => onNavigate && onNavigate('personal')}
                     className="w-full flex items-center px-4 py-2 text-[13px] text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-colors"
                   >
                     <UserCircle className="w-4 h-4 mr-2" />
                     个人设置
                   </button>
-                  <button 
+                  <button
                     onClick={() => onNavigate && onNavigate('config')}
                     className="w-full flex items-center px-4 py-2 text-[13px] text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-colors"
                   >
                     <Settings className="w-4 h-4 mr-2" />
                     系统管理
                   </button>
-                  <button 
+                  <button
                     onClick={() => onNavigate && onNavigate('platform-operation')}
                     className="w-full flex items-center px-4 py-2 text-[13px] text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-colors"
                   >
                     <Activity className="w-4 h-4 mr-2" />
                     平台运营
                   </button>
-                  <button 
+                  <button
                     onClick={() => onNavigate && onNavigate('login')}
                     className="w-full flex items-center px-4 py-2 text-[13px] text-red-500 hover:bg-red-50 transition-colors"
                   >
@@ -2092,7 +2517,7 @@ export default function Personal({
                       </div>
                       <span className="text-[12px] text-slate-700 truncate font-medium">{activeTenant.name}</span>
                     </div>
-                    <button 
+                    <button
                       onClick={() => { setIsUserMenuOpen(false); setIsTenantOpen(true); }}
                       className="text-[11px] text-blue-600 hover:underline flex items-center shrink-0"
                     >
@@ -2117,7 +2542,7 @@ export default function Personal({
                 <span className={`text-xs px-2.5 py-0.5 rounded-md font-semibold truncate ${currentRoleInfo.badgeBg}`}>
                   {currentRoleInfo.name}
                 </span>
-                <button 
+                <button
                   onClick={() => setIsRoleModalOpen(true)}
                   className="text-xs text-blue-600 hover:text-blue-700 hover:underline flex items-center shrink-0 font-medium cursor-pointer"
                 >
@@ -2126,7 +2551,7 @@ export default function Personal({
               </div>
             ) : (
               <div className="w-full flex justify-center">
-                <button 
+                <button
                   onClick={() => setIsRoleModalOpen(true)}
                   className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold hover:bg-blue-100 transition-colors"
                   title={`当前角色：${currentRoleInfo.name}，点击更换角色`}
@@ -2149,74 +2574,78 @@ export default function Personal({
             {sidebarItems.map((item) => {
               const Icon = item.icon;
               const hasChildren = !!item.children && item.children.length > 0;
-              
+
+              // 当在学习页面时，侧边栏保持当前所属上一级菜单的高亮
+              const effectiveActiveMenu = activeMenu === 'course-learning' ? previousMenu : activeMenu;
+
               // 递归判断当前菜单或任意后代子菜单是否激活
               const isDescendantActive = (children?: MenuItem[]): boolean => {
                 if (!children) return false;
-                return children.some(c => c.id === activeMenu || isDescendantActive(c.children));
+                return children.some(c => c.id === effectiveActiveMenu || isDescendantActive(c.children));
               };
 
               const isChildActive = hasChildren && isDescendantActive(item.children);
-              const isActive = activeMenu === item.id || isChildActive;
+              const isActive = effectiveActiveMenu === item.id || isChildActive;
 
               if (hasChildren) {
+                const isMenuExpanded = openMenuIds[item.id] ?? true;
                 return (
                   <div key={item.id} className="space-y-0.5">
                     <button
                       onClick={() => {
                         if (!isSidebarOpen) setIsSidebarOpen(true);
-                        setIsCourseManagementOpen(!isCourseManagementOpen);
+                        toggleMenuOpen(item.id);
                       }}
-                      className={`w-full flex items-center ${isSidebarOpen ? 'justify-between px-3' : 'justify-center px-0'} py-2.5 text-sm rounded-lg font-medium transition-colors ${
-                        isActive ? 'text-blue-600 bg-blue-50/50' : 'text-slate-700 hover:bg-slate-100/80'
-                      }`}
+                      className={`w-full flex items-center ${isSidebarOpen ? 'justify-between px-3' : 'justify-center px-0'} py-2.5 text-sm rounded-lg font-medium transition-colors ${isActive ? 'text-blue-600 bg-blue-50/50' : 'text-slate-700 hover:bg-slate-100/80'
+                        }`}
                       title={!isSidebarOpen ? item.label : undefined}
                     >
                       <div className="flex items-center">
-                        <div className={`w-6 h-6 rounded flex items-center justify-center ${isSidebarOpen ? 'mr-2.5' : ''} ${
-                          isActive ? 'text-blue-600 bg-blue-100' : 'text-slate-500 bg-slate-100'
-                        }`}>
+                        <div className={`w-6 h-6 rounded flex items-center justify-center ${isSidebarOpen ? 'mr-2.5' : ''} ${isActive ? 'text-blue-600 bg-blue-100' : 'text-slate-500 bg-slate-100'
+                          }`}>
                           <Icon className="w-4 h-4" />
                         </div>
                         {isSidebarOpen && <span className="text-sm">{item.label}</span>}
                       </div>
                       {isSidebarOpen && (
-                        isCourseManagementOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />
+                        isMenuExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />
                       )}
                     </button>
 
-                    {isCourseManagementOpen && isSidebarOpen && (
+                    {isMenuExpanded && isSidebarOpen && (
                       <div className="pl-6 space-y-0.5">
                         {item.children?.map(child => {
                           const ChildIcon = child.icon;
                           const hasSubChildren = !!child.children && child.children.length > 0;
                           const isSubChildActive = hasSubChildren && child.children?.some(sc => sc.id === activeMenu);
                           const isCurrentActive = activeMenu === child.id || isSubChildActive;
+                          const isSubMenuExpanded = openMenuIds[child.id] ?? true;
 
-                          // 若二级菜单含有三级子菜单（如题库管理 -> 试题管理）
+                          // 若二级菜单含有三级子菜单（如题库管理 -> 试题管理、实验管理 -> 实验列表）
                           if (hasSubChildren) {
                             return (
                               <div key={child.id} className="space-y-0.5">
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setIsQuestionBankOpen(!isQuestionBankOpen);
-                                    // 点击题库管理时默认进入试题管理
-                                    if (activeMenu !== 'question-list' && activeMenu !== 'questions') {
-                                      setActiveMenu('question-list');
+                                    toggleMenuOpen(child.id);
+                                    if (child.children && child.children.length > 0) {
+                                      const defaultSubId = child.children[0].id;
+                                      if (activeMenu !== defaultSubId) {
+                                        setActiveMenu(defaultSubId);
+                                      }
                                     }
                                   }}
-                                  className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-md font-medium transition-colors ${
-                                    isCurrentActive
-                                      ? 'bg-blue-50 text-blue-600 font-semibold'
-                                      : 'text-slate-600 hover:bg-slate-100'
-                                  }`}
+                                  className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-md font-medium transition-colors ${isCurrentActive
+                                    ? 'bg-blue-50 text-blue-600 font-semibold'
+                                    : 'text-slate-600 hover:bg-slate-100'
+                                    }`}
                                 >
                                   <div className="flex items-center">
                                     <ChildIcon className="w-3.5 h-3.5 mr-2" />
                                     <span>{child.label}</span>
                                   </div>
-                                  {isQuestionBankOpen ? (
+                                  {isSubMenuExpanded ? (
                                     <ChevronUp className="w-3 h-3 text-slate-400" />
                                   ) : (
                                     <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -2224,7 +2653,7 @@ export default function Personal({
                                 </button>
 
                                 {/* 三级子菜单列表 */}
-                                {isQuestionBankOpen && (
+                                {isSubMenuExpanded && (
                                   <div className="pl-5 space-y-0.5 border-l border-slate-200/60 ml-3 my-0.5">
                                     {child.children?.map(subChild => {
                                       const SubIcon = subChild.icon;
@@ -2237,11 +2666,10 @@ export default function Personal({
                                             setActiveMenu(subChild.id);
                                             setEditingTeacherCourse(null);
                                           }}
-                                          className={`w-full flex items-center px-2.5 py-1.5 text-[11px] rounded-md transition-colors ${
-                                            isSubActive
-                                              ? 'bg-blue-100/70 text-blue-700 font-semibold'
-                                              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-                                          }`}
+                                          className={`w-full flex items-center px-2.5 py-1.5 text-[11px] rounded-md transition-colors ${isSubActive
+                                            ? 'bg-blue-100/70 text-blue-700 font-semibold'
+                                            : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                                            }`}
                                         >
                                           <SubIcon className="w-3 h-3 mr-1.5 text-slate-400" />
                                           <span>{subChild.label}</span>
@@ -2263,11 +2691,10 @@ export default function Personal({
                                 setActiveMenu(child.id);
                                 setEditingTeacherCourse(null);
                               }}
-                              className={`w-full flex items-center px-3 py-2 text-xs rounded-md font-medium transition-colors ${
-                                isSubActive
-                                  ? 'bg-blue-50 text-blue-600 font-semibold'
-                                  : 'text-slate-600 hover:bg-slate-100'
-                              }`}
+                              className={`w-full flex items-center px-3 py-2 text-xs rounded-md font-medium transition-colors ${isSubActive
+                                ? 'bg-blue-50 text-blue-600 font-semibold'
+                                : 'text-slate-600 hover:bg-slate-100'
+                                }`}
                             >
                               <ChildIcon className="w-3.5 h-3.5 mr-2" />
                               <span>{child.label}</span>
@@ -2287,16 +2714,14 @@ export default function Personal({
                     setActiveMenu(item.id);
                     setEditingTeacherCourse(null);
                   }}
-                  className={`w-full flex items-center ${isSidebarOpen ? 'px-3 justify-start' : 'px-0 justify-center'} py-2.5 text-sm rounded-lg font-medium transition-colors ${
-                    activeMenu === item.id
-                      ? 'bg-blue-50 text-blue-600 font-semibold shadow-xs'
-                      : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-900'
-                  }`}
+                  className={`w-full flex items-center ${isSidebarOpen ? 'px-3 justify-start' : 'px-0 justify-center'} py-2.5 text-sm rounded-lg font-medium transition-colors ${effectiveActiveMenu === item.id
+                    ? 'bg-blue-50 text-blue-600 font-semibold shadow-xs'
+                    : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-900'
+                    }`}
                   title={!isSidebarOpen ? item.label : undefined}
                 >
-                  <div className={`w-6 h-6 rounded flex items-center justify-center ${isSidebarOpen ? 'mr-2.5' : ''} ${
-                    activeMenu === item.id ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'
-                  }`}>
+                  <div className={`w-6 h-6 rounded flex items-center justify-center ${isSidebarOpen ? 'mr-2.5' : ''} ${effectiveActiveMenu === item.id ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'
+                    }`}>
                     <Icon className="w-4 h-4" />
                   </div>
                   {isSidebarOpen && <span>{item.label}</span>}
@@ -2315,16 +2740,16 @@ export default function Personal({
       {/* 角色选择弹窗 (RoleSelectionModal) */}
       {isRoleModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div 
+          <div
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
             onClick={() => setIsRoleModalOpen(false)}
           />
-          
+
           <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-sm overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
             {/* 弹窗 Header */}
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-800">切换角色</h3>
-              <button 
+              <button
                 onClick={() => setIsRoleModalOpen(false)}
                 className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               >
@@ -2341,16 +2766,14 @@ export default function Personal({
                   <div
                     key={role.id}
                     onClick={() => handleSelectRole(role.id)}
-                    className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all cursor-pointer ${
-                      isSelected 
-                        ? 'border-blue-500 bg-blue-50/60 text-blue-700 shadow-xs' 
-                        : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50/80 text-slate-700'
-                    }`}
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all cursor-pointer ${isSelected
+                      ? 'border-blue-500 bg-blue-50/60 text-blue-700 shadow-xs'
+                      : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50/80 text-slate-700'
+                      }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        isSelected ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-500'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-500'
+                        }`}>
                         <Icon className="w-4 h-4" />
                       </div>
                       <span className="text-sm font-semibold">{role.name}</span>
@@ -2383,7 +2806,7 @@ export default function Personal({
       {isCreateCourseModalOpen && (() => {
         // 汇集全部可选课程（包含已购与自建课程）
         const allAvailableCourses = [...TEACHER_PURCHASED_COURSES, ...customCourses];
-        
+
         // 搜索过滤
         const filteredDropdownCourses = allAvailableCourses.filter(c => {
           if (!dropdownSearchKeyword.trim()) return true;
@@ -2431,7 +2854,7 @@ export default function Personal({
 
         return (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <div 
+            <div
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
               onClick={() => {
                 setIsCreateCourseModalOpen(false);
@@ -2450,7 +2873,7 @@ export default function Personal({
                     <p className="text-xs text-slate-400">快速创建专属于您的校本特色课程或实训任务</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => {
                     setIsCreateCourseModalOpen(false);
                     setIsCourseDropdownOpen(false);
@@ -2488,9 +2911,8 @@ export default function Personal({
                 <div className="rounded-2xl border border-slate-200/90 bg-slate-50/80 p-4 transition-all space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
-                        isCopyFromExisting ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-200 text-slate-500'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${isCopyFromExisting ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-200 text-slate-500'
+                        }`}>
                         <Copy className="w-4 h-4 stroke-[2.2]" />
                       </div>
                       <div>
@@ -2523,14 +2945,12 @@ export default function Personal({
                           setIsCourseDropdownOpen(true);
                         }
                       }}
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        isCopyFromExisting ? 'bg-blue-600' : 'bg-slate-300'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isCopyFromExisting ? 'bg-blue-600' : 'bg-slate-300'
+                        }`}
                     >
                       <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                          isCopyFromExisting ? 'translate-x-5' : 'translate-x-0'
-                        }`}
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${isCopyFromExisting ? 'translate-x-5' : 'translate-x-0'
+                          }`}
                       />
                     </button>
                   </div>
@@ -2608,11 +3028,10 @@ export default function Personal({
                                       setNewCourseName(`${course.title} (副本)`);
                                     }
                                   }}
-                                  className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-center space-x-3 select-none ${
-                                    isSelected
-                                      ? 'border-blue-500 bg-blue-50/70 shadow-xs ring-2 ring-blue-100'
-                                      : 'border-slate-150 hover:border-blue-300 hover:bg-slate-50/80'
-                                  }`}
+                                  className={`p-2.5 rounded-xl border cursor-pointer transition-all flex items-center space-x-3 select-none ${isSelected
+                                    ? 'border-blue-500 bg-blue-50/70 shadow-xs ring-2 ring-blue-100'
+                                    : 'border-slate-150 hover:border-blue-300 hover:bg-slate-50/80'
+                                    }`}
                                 >
                                   {/* 大号高清晰封面图 */}
                                   <div className="w-16 h-11 rounded-lg overflow-hidden shrink-0 shadow-2xs relative">
@@ -2706,7 +3125,7 @@ export default function Personal({
                           return;
                         }
 
-                        const newCourse = {
+                        const newCourse: CustomCourseItem = {
                           id: Date.now(),
                           title: newCourseName.trim(),
                           category: selectedSourceCourse ? selectedSourceCourse.category : '校本自建课',
@@ -2716,15 +3135,17 @@ export default function Personal({
                           bannerText: newCourseName.trim(),
                           bannerSub: selectedSourceCourse ? `来源: ${selectedSourceCourse.title.slice(0, 10)}` : '校本自建',
                           theme: selectedSourceCourse ? selectedSourceCourse.theme : undefined,
-                          isCustom: true
+                          isCustom: true,
+                          allowSelfStudy: false,
+                          status: '未发布'
                         };
 
                         setCustomCourses([newCourse, ...customCourses]);
                         setIsCreateCourseModalOpen(false);
                         setIsCourseDropdownOpen(false);
                         setTeachingCourseTab('custom');
-                        setDispatchSuccessToast(`自建课程《${newCourseName.trim()}》创建成功！`);
-                        setTimeout(() => setDispatchSuccessToast(''), 3000);
+                        setDispatchSuccessToast(`自建课程《${newCourseName.trim()}》创建成功（初始状态：未发布），发布后方可显示在课程大厅并支持下发！`);
+                        setTimeout(() => setDispatchSuccessToast(''), 4000);
                       }}
                       className="px-6 py-2.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center animate-in fade-in zoom-in-95 duration-150"
                     >
@@ -2739,117 +3160,30 @@ export default function Personal({
         );
       })()}
 
-      {/* 下发任务弹窗 (DispatchTaskModal) */}
-      {isDispatchModalOpen && selectedCourseForDispatch && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div 
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
-            onClick={() => setIsDispatchModalOpen(false)}
-          />
-          <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-blue-50/40">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center">
-                  <UploadCloud className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800">下发教学实训任务</h3>
-                  <p className="text-[11px] text-slate-500">将选定课程的实验与作业一键发布至授课班级</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsDispatchModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-400 block">所选下发课程</span>
-                  <span className="text-xs font-bold text-slate-800">{selectedCourseForDispatch.title}</span>
-                </div>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
-                  {selectedCourseForDispatch.category}
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  下发目标班级 <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={dispatchSelectedClass}
-                  onChange={(e) => setDispatchSelectedClass(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:border-blue-500 bg-white"
-                >
-                  <option value="计算机2101班">计算机2101班 (48人)</option>
-                  <option value="人工智能2203班">人工智能2203班 (45人)</option>
-                  <option value="软件工程2201班">软件工程2201班 (50人)</option>
-                  <option value="大数据应用2202班">大数据应用2202班 (43人)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  任务名称
-                </label>
-                <input
-                  type="text"
-                  value={dispatchTaskName}
-                  onChange={(e) => setDispatchTaskName(e.target.value)}
-                  placeholder="例如：第3周自然语言分词与模型实训任务"
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    完成截止时间
-                  </label>
-                  <input
-                    type="date"
-                    defaultValue="2026-10-15"
-                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:border-blue-500 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    评分方式
-                  </label>
-                  <select className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:border-blue-500 bg-white">
-                    <option value="auto">系统自动评分 + 报告审核</option>
-                    <option value="manual">教师手动批改</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-end space-x-3">
-              <button
-                onClick={() => setIsDispatchModalOpen(false)}
-                className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => {
-                  setIsDispatchModalOpen(false);
-                  setDispatchSuccessToast(`任务《${dispatchTaskName || selectedCourseForDispatch.title}》已成功下发至 ${dispatchSelectedClass}！`);
-                  setTimeout(() => setDispatchSuccessToast(''), 3500);
-                }}
-                className="px-5 py-2 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors flex items-center space-x-1 cursor-pointer"
-              >
-                <Send className="w-3.5 h-3.5 mr-1" />
-                <span>立即下发</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 下发任务弹窗 (与我的教学完全一致，默认选中当前点击课程，仅支持已发布的课程) */}
+      <TeacherTaskDispatchModal
+        isOpen={isDispatchModalOpen && !!selectedCourseForDispatch}
+        onClose={() => {
+          setIsDispatchModalOpen(false);
+          setSelectedCourseForDispatch(null);
+        }}
+        initialCourseTitle={
+          selectedCourseForDispatch
+            ? (selectedCourseForDispatch.title.includes('（')
+                ? selectedCourseForDispatch.title
+                : `${selectedCourseForDispatch.title}（${selectedCourseForDispatch.isCustom ? '自建课程' : selectedCourseForDispatch.category || '通识课程'}）`)
+            : undefined
+        }
+        availableCourseTitles={[
+          ...customCourses.filter(c => c.status === '已发布').map(c => `${c.title}（自建课程）`),
+          ...purchasedCourses.map(c => `${c.title}（${c.category}）`),
+          ...BASE_COURSE_SELECT_OPTIONS
+        ]}
+        onDispatchSuccess={({ taskName, targetClass, chaptersCount }) => {
+          setDispatchSuccessToast(`任务《${taskName}》已成功下发至 ${targetClass}！已授权 ${chaptersCount} 节教学小节。`);
+          setTimeout(() => setDispatchSuccessToast(''), 3500);
+        }}
+      />
 
       {/* 成功反馈 Toast */}
       {dispatchSuccessToast && (

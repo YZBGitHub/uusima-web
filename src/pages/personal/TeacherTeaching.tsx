@@ -29,6 +29,7 @@ import {
   FolderTree,
   Sparkles
 } from 'lucide-react';
+import TeacherTaskDispatchModal from './TeacherTaskDispatchModal';
 
 export interface TaskItem {
   id: string;
@@ -1042,409 +1043,41 @@ export default function TeacherTeaching() {
         </div>
       )}
 
-      {/* 弹窗1：下发教学任务模态框（1:1严格高保真复刻用户截图设计） */}
-      {isDispatchModalOpen && (
-        <div className="fixed inset-0 bg-black/45 backdrop-blur-2xs flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden border border-slate-200/80 flex flex-col my-auto max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
-            {/* 弹窗顶部标头 */}
-            <div className="px-8 pt-5 pb-4 border-b border-slate-100 flex items-start justify-between bg-white shrink-0">
-              <div className="flex items-start space-x-3">
-                <span className="w-1.5 h-6 bg-blue-600 rounded-full inline-block mt-0.5" />
-                <div>
-                  <h3 className="font-bold text-base text-slate-900 tracking-tight">下发教学任务</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">面向指定班级一键配置教学实验与任务，支持章节粒度精细化智能体授权</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsDispatchModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer p-1.5 rounded-lg transition-colors"
-                title="关闭"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* 弹窗1：下发教学任务模态框（统一复用高保真组件） */}
+      <TeacherTaskDispatchModal
+        isOpen={isDispatchModalOpen}
+        onClose={() => setIsDispatchModalOpen(false)}
+        initialCourseTitle={selectedCourseResource}
+        availableCourseTitles={COURSE_SELECT_OPTIONS}
+        onDispatchSuccess={({ taskName, targetClass, chaptersCount, courseTitle, taskType, duration, studentGroup }) => {
+          const newTask: TaskItem = {
+            id: Date.now().toString(),
+            name: taskName,
+            type: taskType || '实训任务',
+            status: '进行中',
+            auditStatus: '审核通过',
+            dispatchTime: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
+            product: courseTitle.includes('智慧水务')
+              ? '智慧水务系统'
+              : courseTitle.includes('智慧园区')
+              ? '智慧园区云部'
+              : courseTitle.includes('硬件')
+              ? '硬件开发平台'
+              : 'AI学伴产品',
+            duration: duration || 1000,
+            submittedCount: 0,
+            totalCount: studentGroup.includes('28人')
+              ? 28
+              : studentGroup.includes('32人')
+              ? 32
+              : 30
+          };
 
-            {/* 左右分栏主体区域 */}
-            <div className="flex-1 overflow-y-auto px-8 py-5 grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white">
-              {/* 左侧一栏：基础信息配置（占比 5 列） */}
-              <div className="lg:col-span-5 space-y-4 pr-1">
-                {/* 标头 */}
-                <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
-                  <div className="flex items-center space-x-2 text-slate-800 font-semibold text-xs">
-                    <SlidersHorizontal className="w-4 h-4 text-blue-600" />
-                    <span>基础信息配置</span>
-                  </div>
-                  <span className="text-[11px] text-slate-400">带 * 为必填项</span>
-                </div>
-
-                {/* 实验环境 */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                    <span className="text-red-500 mr-1">*</span>实验环境:
-                  </label>
-                  <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-lg border-2 border-blue-500 bg-blue-50/60 text-blue-600 text-xs font-medium cursor-pointer shadow-2xs">
-                    <div className="w-3.5 h-3.5 rounded-full border-2 border-blue-600 flex items-center justify-center">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                    </div>
-                    <span className="font-semibold text-blue-700">云实验环境</span>
-                  </div>
-                </div>
-
-                {/* 班级 与 学生 并排网格 */}
-                <div className="grid grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                      <span className="text-red-500 mr-1">*</span>班级:
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedClass}
-                        onChange={(e) => setSelectedClass(e.target.value)}
-                        className="w-full h-9 pl-3 pr-8 text-xs border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer shadow-2xs"
-                      >
-                        {CLASS_OPTIONS.map((cls) => (
-                          <option key={cls} value={cls}>{cls}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                      <span className="text-red-500 mr-1">*</span>学生:
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedStudentGroup}
-                        onChange={(e) => setSelectedStudentGroup(e.target.value)}
-                        className="w-full h-9 pl-3 pr-8 text-xs border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer truncate shadow-2xs"
-                      >
-                        {STUDENT_SELECT_OPTIONS.map((stu) => (
-                          <option key={stu} value={stu}>{stu}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 课程 */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                    <span className="text-red-500 mr-1">*</span>课程:
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={selectedCourseResource}
-                      onChange={(e) => handleSelectCourse(e.target.value)}
-                      className="w-full h-9 pl-3 pr-8 text-xs border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer shadow-2xs"
-                    >
-                      {COURSE_SELECT_OPTIONS.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* 时间类型 */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1.5">时间类型:</label>
-                  <div className="flex items-center space-x-6 h-8">
-                    <label className="inline-flex items-center space-x-2 text-xs text-slate-700 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="timeType"
-                        checked={timeType === 'duration'}
-                        onChange={() => setTimeType('duration')}
-                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
-                      />
-                      <span>设置任务时长</span>
-                    </label>
-                    <label className="inline-flex items-center space-x-2 text-xs text-slate-700 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="timeType"
-                        checked={timeType === 'deadline'}
-                        onChange={() => setTimeType('deadline')}
-                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
-                      />
-                      <span>设置任务截止时间</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* 任务时长（分钟） */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-medium text-slate-700">
-                      <span className="text-red-500 mr-1">*</span>
-                      {timeType === 'duration' ? '任务时长 (分钟):' : '任务截止时间:'}
-                    </label>
-                    {timeType === 'duration' && (
-                      <span className="text-[11px] text-slate-500">
-                        预计消耗时长: <span className="text-blue-600 font-bold">{taskDuration || 0} 分钟</span>
-                      </span>
-                    )}
-                  </div>
-                  {timeType === 'duration' ? (
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min="1"
-                        value={taskDuration}
-                        onChange={(e) => setTaskDuration(e.target.value)}
-                        className="w-full h-9 pl-3 pr-12 text-xs border border-slate-300 rounded-lg bg-white text-slate-800 focus:outline-none focus:border-blue-500 shadow-2xs font-medium"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
-                        分钟
-                      </span>
-                    </div>
-                  ) : (
-                    <input
-                      type="datetime-local"
-                      value={taskDeadline}
-                      onChange={(e) => setTaskDeadline(e.target.value)}
-                      className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-800 focus:outline-none focus:border-blue-500 shadow-2xs"
-                    />
-                  )}
-                </div>
-
-                {/* 任务名称 */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                    <span className="text-red-500 mr-1">*</span>任务名称:
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={dispatchTaskName}
-                    onChange={(e) => setDispatchTaskName(e.target.value)}
-                    placeholder="请输入任务名称"
-                    className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs font-medium"
-                  />
-                </div>
-
-                {/* 任务类型 */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1.5">
-                    <span className="text-red-500 mr-1">*</span>任务类型:
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={dispatchTaskType}
-                      onChange={(e) => setDispatchTaskType(e.target.value as any)}
-                      required
-                      className="w-full h-9 pl-3 pr-8 text-xs border border-slate-300 rounded-lg bg-white text-slate-700 focus:outline-none focus:border-blue-500 appearance-none cursor-pointer shadow-2xs"
-                    >
-                      <option value="实训任务">实训任务</option>
-                      <option value="练习任务">练习任务</option>
-                      <option value="考试任务">考试任务</option>
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              {/* 右侧一栏：教学章节树形列表（占比 7 列） */}
-              <div className="lg:col-span-7 flex flex-col space-y-3">
-                {/* 标头区域 */}
-                <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
-                  <div className="flex items-center space-x-2">
-                    <FolderTree className="w-4 h-4 text-blue-600" />
-                    <span className="text-xs font-semibold text-slate-800">
-                      <span className="text-red-500 mr-1">*</span>教学章节树形列表
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-200/60">
-                      已选 {selectedChaptersCount} / {totalChaptersCount} 节
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      type="button"
-                      onClick={handleToggleSelectAllChapters}
-                      className="px-2.5 py-1 rounded border border-slate-200 hover:border-blue-300 text-[11px] font-medium text-slate-600 hover:text-blue-600 bg-white hover:bg-blue-50/30 transition-colors cursor-pointer shadow-2xs"
-                    >
-                      {isAllChaptersSelected ? '取消全选' : '全选'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleToggleCollapseAll}
-                      className="px-2.5 py-1 rounded border border-slate-200 hover:border-blue-300 text-[11px] font-medium text-slate-600 hover:text-blue-600 bg-white hover:bg-blue-50/30 transition-colors cursor-pointer shadow-2xs"
-                    >
-                      {isAllProjectsCollapsed ? '全部展开' : '全部折叠'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* 树形卡片滚动列表容器 */}
-                <div className="flex-1 max-h-[410px] overflow-y-auto space-y-3.5 pr-1.5 scrollbar-thin scrollbar-thumb-slate-200">
-                  {chapterProjects.map((project) => {
-                    const projectTotal = project.tasks.length;
-                    const projectSelected = project.tasks.filter(t => t.selected).length;
-                    const isProjectAllSelected = projectTotal > 0 && projectSelected === projectTotal;
-                    const isProjectPartial = projectSelected > 0 && projectSelected < projectTotal;
-
-                    return (
-                      <div
-                        key={project.id}
-                        className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-2xs hover:border-slate-300 transition-all"
-                      >
-                        {/* 项目父节点头部 */}
-                        <div className="px-3.5 py-2.5 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between select-none">
-                          <div className="flex items-center space-x-2.5">
-                            {/* 展开/折叠箭头 */}
-                            <button
-                              type="button"
-                              onClick={() => handleToggleProjectCollapse(project.id)}
-                              className="p-1 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-200/50 transition-colors cursor-pointer"
-                            >
-                              <ChevronDown
-                                className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                                  project.collapsed ? '-rotate-90' : ''
-                                }`}
-                              />
-                            </button>
-
-                            {/* 项目级全选复选框 */}
-                            <input
-                              type="checkbox"
-                              checked={isProjectAllSelected}
-                              ref={(el) => {
-                                if (el) el.indeterminate = isProjectPartial;
-                              }}
-                              onChange={() => handleToggleProjectSelect(project.id)}
-                              className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
-                            />
-
-                            {/* 项目名称 */}
-                            <span
-                              onClick={() => handleToggleProjectCollapse(project.id)}
-                              className="text-xs font-semibold text-slate-800 cursor-pointer hover:text-blue-600"
-                            >
-                              {project.title}
-                            </span>
-                          </div>
-
-                          {/* 项目内小节数统计 */}
-                          <span className="text-[11px] text-slate-400 font-medium">
-                            {projectSelected}/{projectTotal} 节
-                          </span>
-                        </div>
-
-                        {/* 项目子任务列表 */}
-                        {!project.collapsed && (
-                          <div className="divide-y divide-slate-100 bg-white">
-                            {project.tasks.map((task) => (
-                              <div
-                                key={task.id}
-                                className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50/60 transition-colors"
-                              >
-                                {/* 左侧：复选框 + 任务标题 + 类型标签 */}
-                                <div className="flex items-center space-x-2.5 flex-1 min-w-0 pr-3">
-                                  <input
-                                    type="checkbox"
-                                    checked={task.selected}
-                                    onChange={() => handleToggleTaskSelect(project.id, task.id)}
-                                    className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer shrink-0"
-                                  />
-                                  <span
-                                    onClick={() => handleToggleTaskSelect(project.id, task.id)}
-                                    className="text-xs text-slate-700 truncate cursor-pointer select-none"
-                                    title={`${task.code}: ${task.name}`}
-                                  >
-                                    <span className="font-semibold text-slate-800 mr-1">{task.code}:</span>
-                                    {task.name}
-                                  </span>
-
-                                  {/* 类型 Badge */}
-                                  {task.type === 'experiment' ? (
-                                    <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0">
-                                      <FlaskConical className="w-3 h-3 text-emerald-600" />
-                                      <span>实验</span>
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200 shrink-0">
-                                      <BookOpen className="w-3 h-3 text-slate-500" />
-                                      <span>理论</span>
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* 右侧：智能体授权开关（每个实验步骤均可单独设置显示隐藏） */}
-                                {task.type === 'experiment' && (
-                                  <div className="flex items-center space-x-1.5 px-2 py-1 rounded-md bg-blue-50/70 border border-blue-100/80 text-blue-600 shrink-0 shadow-2xs">
-                                    <Bot className="w-3.5 h-3.5 text-blue-600" />
-                                    <span className="text-[11px] font-medium text-blue-700 select-none">智能体</span>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => handleToggleAgent(project.id, task.id, e)}
-                                      title={task.agentEnabled ? '已开启智能体（点击关闭）' : '已隐藏智能体（点击开启）'}
-                                      className={`relative inline-flex h-4 w-7.5 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                                        task.agentEnabled ? 'bg-blue-600' : 'bg-slate-300'
-                                      }`}
-                                    >
-                                      <span
-                                        className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out mt-0.5 ${
-                                          task.agentEnabled ? 'translate-x-4' : 'translate-x-0.5'
-                                        }`}
-                                      />
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* 底部温馨提示条 */}
-                <div className="flex items-center space-x-2 px-3.5 py-2.5 rounded-lg bg-blue-50/70 border border-blue-200/80 text-blue-700 text-xs shadow-2xs">
-                  <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="font-normal text-[11px] leading-tight">
-                    提示：实验步骤类型默认开启实验智能体，支持单独关闭
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* 底部汇总栏与操作按钮（Footer） */}
-            <div className="px-8 py-3.5 bg-slate-50/80 border-t border-slate-200 shrink-0 flex items-center justify-between">
-              {/* 左侧实时摘要信息 */}
-              <div className="flex items-center space-x-2 text-xs text-slate-500">
-                <span>目标班级：<strong className="font-semibold text-slate-800">{selectedClass}</strong></span>
-                <span className="text-slate-300">｜</span>
-                <span>已选章节：<strong className="font-bold text-blue-600">{selectedChaptersCount} 节</strong></span>
-                <span className="text-slate-300">｜</span>
-                <span>任务类型：<strong className="font-semibold text-slate-800">{dispatchTaskType}</strong></span>
-              </div>
-
-              {/* 右侧操作按钮 */}
-              <div className="flex items-center space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setIsDispatchModalOpen(false)}
-                  className="px-5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium cursor-pointer transition-colors shadow-2xs"
-                >
-                  取消
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCreateTask()}
-                  className="inline-flex items-center space-x-1.5 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-sm hover:shadow-md active:scale-95"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>创建并下发任务</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+          setTasks([newTask, ...tasks]);
+          setToastMessage(`任务《${taskName}》创建并下发成功！已授权 ${chaptersCount} 节教学小节。`);
+          setTimeout(() => setToastMessage(''), 3500);
+        }}
+      />
 
       {/* 弹窗2：批改作业模态框 */}
       {gradingTask && (
