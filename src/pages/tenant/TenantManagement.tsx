@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, ChevronDown, Edit, Trash2, Users, Network, X, Upload, Download , FileText} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import TenantOrgManagementModal from '../../components/tenant/organization/TenantOrgManagementModal';
 
 export default function TenantManagement() {
   const [tenantType, setTenantType] = useState('请选择租户类型');
@@ -15,6 +16,9 @@ export default function TenantManagement() {
   const [schoolSearchQuery, setSchoolSearchQuery] = useState('');
   const [logModalOpen, setLogModalOpen] = useState(false);
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
+  const [orgModalOpen, setOrgModalOpen] = useState(false);
+  const [currentOrgTenantName, setCurrentOrgTenantName] = useState('二级学院');
+  const [currentOrgTenantType, setCurrentOrgTenantType] = useState('机构');
 
   const mockLogs = React.useMemo(() => {
 
@@ -253,7 +257,14 @@ export default function TenantManagement() {
                 <td className="px-6 py-4 text-slate-600 text-center">{tenant.type}</td>
                 <td className="px-6 py-4 text-slate-500 text-center">{tenant.updateTime}</td>
                 <td className="px-6 py-4 flex items-center justify-center space-x-4">
-                  <button className="flex items-center text-blue-500 hover:text-blue-700 font-medium">
+                  <button 
+                    onClick={() => {
+                      setCurrentOrgTenantName(tenant.name);
+                      setCurrentOrgTenantType(tenant.type);
+                      setOrgModalOpen(true);
+                    }}
+                    className="flex items-center text-blue-500 hover:text-blue-700 font-medium"
+                  >
                     <Network className="w-4 h-4 mr-1" />
                     组织管理
                   </button>
@@ -969,6 +980,14 @@ export default function TenantManagement() {
           </>
         )}
       </AnimatePresence>
+
+      {/* 组织管理 Modal (截图 1) */}
+      <TenantOrgManagementModal
+        isOpen={orgModalOpen}
+        tenantName={currentOrgTenantName}
+        tenantType={currentOrgTenantType}
+        onClose={() => setOrgModalOpen(false)}
+      />
     </div>
   );
 }

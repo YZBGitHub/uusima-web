@@ -32,13 +32,24 @@ function Header({ onNavigate }: { onNavigate?: (view: string) => void }) {
   );
 }
 
+import { getSchoolList } from '../../data/schools';
+
 export default function SchoolLibrary({ onNavigate }: { onNavigate?: (view: string) => void }) {
-  const tableData = [
-    { id: 1, name: '清华大学', code: '12100000400000624D', level: '本科', status: true },
-    { id: 2, name: '复旦大学', code: '1210000042500615X0', level: '本科', status: true },
-    { id: 3, name: '深圳职业技术大学', code: '124403004558588048', level: '专科', status: false },
-    { id: 4, name: '演示高中', code: '121000004000329000', level: '高中', status: true },
-  ];
+  const [schools, setSchools] = React.useState(() => getSchoolList());
+
+  // 每次进入页面时刷新学校数据
+  React.useEffect(() => {
+    setSchools(getSchoolList());
+  }, []);
+
+  const tableData = schools.map((s, idx) => ({
+    id: s.id,
+    name: s.name,
+    code: s.code,
+    level: s.level,
+    status: true,
+    isCustom: s.isCustom
+  }));
 
   return (
     <div className="absolute inset-0 bg-[#eef1f6] flex flex-col font-sans">
@@ -164,7 +175,14 @@ export default function SchoolLibrary({ onNavigate }: { onNavigate?: (view: stri
                           <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                         </td>
                         <td className="px-4 py-3">{idx + 1}</td>
-                        <td className="px-4 py-3 text-blue-600 hover:underline cursor-pointer">{row.name}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-blue-600 hover:underline cursor-pointer">{row.name}</span>
+                          {row.isCustom && (
+                            <span className="ml-2 text-xs px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded border border-amber-200">
+                              新增库
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3">{row.code}</td>
                         <td className="px-4 py-3">{row.level}</td>
                         <td className="px-4 py-3 text-center">
@@ -189,7 +207,7 @@ export default function SchoolLibrary({ onNavigate }: { onNavigate?: (view: stri
               {/* Pagination */}
               <div className="bg-white px-4 py-3 border-t border-slate-200 flex items-center justify-between">
                  <div className="text-sm text-slate-500">
-                   共 4 条
+                   共 {tableData.length} 条
                  </div>
                  <div className="flex items-center space-x-1">
                    <select className="border border-slate-300 rounded text-sm px-2 py-1 bg-white outline-none text-slate-700 mr-2">

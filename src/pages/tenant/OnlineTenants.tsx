@@ -7,12 +7,17 @@ import TenantResourceOverview from './TenantResourceOverview';
 import OrdersManagement from '../operation/OrdersManagement';
 import UsersManagement from '../system/UsersManagement';
 import PortalConfigModal from '../../components/PortalConfigModal';
+import TenantFormModal, { TenantFormData } from '../../components/tenant/TenantFormModal';
+import TenantOrgManagementModal from '../../components/tenant/organization/TenantOrgManagementModal';
 
 interface Tenant {
   id: string;
   createTime: string;
   name: string;
   type: string;
+  category?: string;
+  orgName?: string;
+  orgCode?: string;
   city: string;
   updateTime: string;
   status: 'enabled' | 'disabled';
@@ -217,9 +222,12 @@ export default function OnlineTenants() {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<TenantFormData>({
     name: '',
     type: '学校',
+    category: '正式',
+    orgName: '',
+    orgCode: '',
     city: '',
     schoolLevel: '本科',
     subCollege: '',
@@ -230,7 +238,18 @@ export default function OnlineTenants() {
   const handleAddClick = () => {
     setFormMode('add');
     setEditingId(null);
-    setFormData({ name: '', type: '学校', city: '', schoolLevel: '本科', subCollege: '', adminAccount: '', adminPassword: '' });
+    setFormData({
+      name: '',
+      type: '学校',
+      category: '正式',
+      orgName: '',
+      orgCode: '',
+      city: '',
+      schoolLevel: '本科',
+      subCollege: '',
+      adminAccount: '',
+      adminPassword: ''
+    });
     setIsFormModalOpen(true);
   };
 
@@ -240,37 +259,48 @@ export default function OnlineTenants() {
     setFormData({
       name: tenant.name,
       type: tenant.type,
+      category: tenant.category || '正式',
+      orgName: tenant.orgName || '',
+      orgCode: tenant.orgCode || '',
       city: tenant.city || '',
       schoolLevel: tenant.schoolLevel || '本科',
-      subCollege: tenant.subCollege || ''
+      subCollege: tenant.subCollege || '',
+      adminAccount: 'admin',
+      adminPassword: ''
     });
     setIsFormModalOpen(true);
   };
 
-  const handleAddTenant = () => {
+  const handleFormSubmit = (data: TenantFormData) => {
     if (formMode === 'add') {
       const t: Tenant = {
         id: Math.random().toString(36).substr(2, 9),
         createTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        name: formData.name,
-        type: formData.type as '企业' | '学校',
-        city: formData.city,
+        name: data.name,
+        type: data.type,
+        category: data.category,
+        orgName: data.orgName,
+        orgCode: data.orgCode,
+        city: data.city,
         updateTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
         status: 'enabled',
-        schoolLevel: formData.type === '学校' ? formData.schoolLevel : undefined,
-        subCollege: formData.type === '学校' ? formData.subCollege : undefined
+        schoolLevel: data.type === '学校' ? data.schoolLevel : undefined,
+        subCollege: data.subCollege || undefined
       };
       setTenants([t, ...tenants]);
     } else {
       setTenants(prev => prev.map(t => 
         t.id === editingId ? {
           ...t,
-          name: formData.name,
-          type: formData.type as '企业' | '学校',
-          city: formData.city,
+          name: data.name,
+          type: data.type,
+          category: data.category,
+          orgName: data.orgName,
+          orgCode: data.orgCode,
+          city: data.city,
           updateTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
-          schoolLevel: formData.type === '学校' ? formData.schoolLevel : undefined,
-          subCollege: formData.type === '学校' ? formData.subCollege : undefined
+          schoolLevel: data.type === '学校' ? data.schoolLevel : undefined,
+          subCollege: data.subCollege || undefined
         } : t
       ));
     }
@@ -602,139 +632,28 @@ export default function OnlineTenants() {
         </div>
       </div>
 
-      {/* Add Modal */}
-      <AnimatePresence>
-        {isFormModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-            <div 
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" 
-              onClick={() => setIsFormModalOpen(false)}
-            ></div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden relative z-10"
-            >
-              <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200">
-                <h3 className="text-lg font-semibold text-slate-800">{formMode === 'add' ? '新增租户' : '编辑租户'}</h3>
-                <button onClick={() => setIsFormModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">租户名称 <span className="text-red-500">*</span></label>
-                  <input 
-                    type="text" 
-                    value={formData.name}
-                    onChange={e => setFormData({...formData, name: e.target.value})}
-                    placeholder="请输入租户名称" 
-                    className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" 
-                  />
-                </div>
-                
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">租户类型 <span className="text-red-500">*</span></label>
-                  <select 
-                    value={formData.type}
-                    onChange={e => setFormData({...formData, type: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="学校">学校</option>
-                    <option value="机构">机构</option>
-                  </select>
-                </div>
-                
-                {formMode === 'add' && (
-                  <>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-slate-700">管理员账号 <span className="text-red-500">*</span></label>
-                      <input 
-                        type="text" 
-                        value={formData.adminAccount}
-                        onChange={e => setFormData({...formData, adminAccount: e.target.value})}
-                        placeholder="请输入管理员账号" 
-                        className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-slate-700">管理员密码 <span className="text-red-500">*</span></label>
-                      <input 
-                        type="password" 
-                        value={formData.adminPassword}
-                        onChange={e => setFormData({...formData, adminPassword: e.target.value})}
-                        placeholder="请输入管理员密码" 
-                        className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" 
-                      />
-                    </div>
-                  </>
-                )}
-                
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-slate-700">所在城市 (省市区) <span className="text-red-500">*</span></label>
-                  <input 
-                    type="text" 
-                    value={formData.city}
-                    onChange={e => setFormData({...formData, city: e.target.value})}
-                    placeholder="例：浙江省杭州市西湖区" 
-                    className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" 
-                  />
-                </div>
+      {/* Add / Edit Tenant Modal */}
+      <TenantFormModal
+        isOpen={isFormModalOpen}
+        mode={formMode}
+        initialData={formData}
+        onClose={() => setIsFormModalOpen(false)}
+        onSubmit={handleFormSubmit}
+      />
 
-                {formData.type === '学校' && (
-                  <>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-slate-700">学校层次 <span className="text-red-500">*</span></label>
-                      <select 
-                        value={formData.schoolLevel}
-                        onChange={e => setFormData({...formData, schoolLevel: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="本科">本科</option>
-                        <option value="高职">高职</option>
-                        <option value="独立学院">独立学院</option>
-                        <option value="中职中专">中职中专</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-slate-700">二级学院名称 (非必填)</label>
-                      <input 
-                        type="text" 
-                        value={formData.subCollege}
-                        onChange={e => setFormData({...formData, subCollege: e.target.value})}
-                        placeholder="请输入二级学院名称" 
-                        className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500" 
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-              
-              <div className="flex items-center justify-end px-6 py-4 bg-slate-50 border-t border-slate-200 space-x-3">
-                <button 
-                  onClick={() => setIsFormModalOpen(false)}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-md text-sm hover:bg-slate-100 transition-colors"
-                >
-                  取消
-                </button>
-                <button 
-                  onClick={handleAddTenant}
-                  disabled={!formData.name || !formData.city || (formMode === 'add' && (!formData.adminAccount || !formData.adminPassword))}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  确定
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* 组织管理 Modal (截图 1) */}
+      {modalState.tenant && (
+        <TenantOrgManagementModal
+          isOpen={modalState.isOpen && modalState.type === 'organization'}
+          tenantName={modalState.tenant.name}
+          tenantType={modalState.tenant.type}
+          onClose={closeModal}
+        />
+      )}
 
       {/* Modal */}
       <AnimatePresence>
-        {modalState.isOpen && (
+        {modalState.isOpen && modalState.type !== 'organization' && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
             <div 
               className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" 
