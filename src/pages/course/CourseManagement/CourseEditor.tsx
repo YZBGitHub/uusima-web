@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Eye, X, Book, Layout, BarChart, Tag as TagIcon, Edit3, Plus, Settings, Cpu, ChevronDown, ChevronRight,
-  CheckSquare, Image as ImageIcon, Video, Target, Edit, Sparkles, CheckCircle2, GitFork, Network, PieChart, Trash2
+  CheckSquare, Image as ImageIcon, Video, Target, Edit, Sparkles, CheckCircle2, GitFork, Network, PieChart, Trash2, FolderOpen
 } from 'lucide-react';
 import StepEditorModal from './StepEditorModal';
+import CourseAiAssistantSection from './CourseAiAssistantSection';
+import CourseResourcesSection from './CourseResourcesSection';
 import SkillGraphImportModals, { SkillCategory, ImportType } from '../TeacherCourseManagement/SkillGraphImportModal';
 
 interface CourseEditorProps {
@@ -25,6 +27,7 @@ export default function CourseEditor({ onBack, courseId }: CourseEditorProps) {
     { id: 'info', label: '基本信息', icon: Book },
     { id: 'settings', label: '课程设置', icon: Settings },
     { id: 'chapters', label: '课程章节', icon: Layout },
+    { id: 'resources', label: '课程资源', icon: FolderOpen },
     { id: 'ai', label: 'AI技能助手', icon: Cpu },
     { id: 'graph', label: '技能图谱', icon: Target },
   ];
@@ -200,18 +203,18 @@ export default function CourseEditor({ onBack, courseId }: CourseEditorProps) {
   const courseTitle = '数据标注与处理（中职）';
 
   return (
-    <div className="flex-1 flex flex-col bg-white overflow-hidden relative select-none">
+    <div className="flex-1 min-h-0 flex flex-col bg-white overflow-hidden relative select-none">
       {/* 顶部轻量 Toast 提示 */}
       {toastMsg && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-800/90 text-white text-xs px-4 py-2 rounded-full shadow-lg flex items-center space-x-1.5 animate-in fade-in zoom-in-95">
+        <div role="status" className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-800/90 text-white text-xs px-4 py-2 rounded-full shadow-lg flex items-center space-x-1.5 animate-in fade-in zoom-in-95">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{toastMsg}</span>
         </div>
       )}
 
       {/* Top Header */}
-      <div className="h-28 border-b border-slate-200 bg-white flex items-center px-6 shrink-0 shadow-sm relative z-10">
-        <div className="w-48 h-20 bg-blue-100 rounded-lg overflow-hidden mr-6 shrink-0 relative">
+      <div className={`${activeMenu === 'ai' ? 'min-h-[200px] border-b-[10px] border-[#f0f2f5] px-[15px] py-5 gap-y-4 flex-wrap xl:flex-nowrap' : 'h-28 border-b border-slate-200 px-6 shadow-sm'} bg-white flex items-center shrink-0 relative z-10`}>
+        <div className={`${activeMenu === 'ai' ? 'w-[280px] h-[150px] mr-7 rounded-md' : 'w-48 h-20 mr-6 rounded-lg'} bg-blue-100 overflow-hidden shrink-0 relative`}>
           <img src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80&w=400" alt="cover" className="w-full h-full object-cover mix-blend-multiply opacity-80" />
           <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-lg drop-shadow-md">
             数据标注与处理
@@ -223,15 +226,15 @@ export default function CourseEditor({ onBack, courseId }: CourseEditorProps) {
             <h2 className="text-xl font-bold text-slate-800 mr-2">{courseTitle}</h2>
             <button className="text-[#1890ff] hover:bg-blue-50 p-1 rounded transition-colors"><Edit3 className="w-4 h-4" /></button>
           </div>
-          <div className="flex items-center space-x-8 text-sm text-slate-600">
+          <div className={`flex items-center text-sm text-slate-600 ${activeMenu === 'ai' ? 'flex-wrap gap-x-12 gap-y-5' : 'space-x-8'}`}>
             <div className="flex items-center"><Book className="w-4 h-4 mr-1.5 text-slate-400" /> 专业：<span className="font-medium ml-1">基础</span> <Edit3 className="w-3.5 h-3.5 ml-1 text-[#1890ff] cursor-pointer" /></div>
             <div className="flex items-center"><Layout className="w-4 h-4 mr-1.5 text-slate-400" /> 课程类型：<span className="font-medium ml-1">技能课程</span> <Edit3 className="w-3.5 h-3.5 ml-1 text-[#1890ff] cursor-pointer" /></div>
             <div className="flex items-center"><BarChart className="w-4 h-4 mr-1.5 text-slate-400" /> 层次：<span className="font-medium ml-1">中职</span> <Edit3 className="w-3.5 h-3.5 ml-1 text-[#1890ff] cursor-pointer" /></div>
-            <div className="flex items-center"><TagIcon className="w-4 h-4 mr-1.5 text-slate-400" /> 课程标签：<span className="font-medium ml-1">暂无标签</span> <Edit3 className="w-3.5 h-3.5 ml-1 text-[#1890ff] cursor-pointer" /></div>
+            <div className={`flex items-center ${activeMenu === 'ai' ? 'basis-full' : ''}`}><TagIcon className="w-4 h-4 mr-1.5 text-slate-400" /> 课程标签：<span className="font-medium ml-1">暂无标签</span> <Edit3 className="w-3.5 h-3.5 ml-1 text-[#1890ff] cursor-pointer" /></div>
           </div>
         </div>
         
-        <div className="flex items-center space-x-3 ml-4 shrink-0">
+        <div className={`flex items-center space-x-3 ml-4 shrink-0 ${activeMenu === 'ai' ? 'self-start' : ''}`}>
           <button onClick={onBack} className="px-4 py-2 bg-white border border-blue-200 text-[#1890ff] rounded text-sm hover:bg-blue-50 transition-colors flex items-center cursor-pointer">
             <ArrowLeft className="w-4 h-4 mr-1" /> 返回
           </button>
@@ -247,15 +250,16 @@ export default function CourseEditor({ onBack, courseId }: CourseEditorProps) {
       {/* Main Edit Area */}
       <div className="flex-1 flex overflow-hidden bg-slate-50">
         {/* Left Sidebar */}
-        <div className="w-48 bg-white border-r border-slate-200 py-4 shrink-0">
-          <div className="space-y-1 px-3">
+        <div className={`${activeMenu === 'ai' ? 'w-[210px] border-r-[10px] border-[#f5f7fa] py-3' : 'w-48 border-r border-slate-200 py-4'} bg-white shrink-0`}>
+          <div className={`space-y-1 ${activeMenu === 'ai' ? 'pl-3 pr-0' : 'px-3'}`}>
             {sidebarMenu.map(item => (
               <button
                 key={item.id}
                 onClick={() => setActiveMenu(item.id)}
-                className={`w-full flex items-center px-4 py-3 rounded-lg text-sm transition-colors cursor-pointer relative ${
+                aria-current={activeMenu === item.id ? 'page' : undefined}
+                className={`w-full flex items-center px-4 ${activeMenu === 'ai' ? 'h-10' : 'py-3'} rounded-lg text-sm transition-colors cursor-pointer relative ${
                   activeMenu === item.id 
-                    ? 'bg-blue-50 text-[#1890ff] font-medium' 
+                    ? 'bg-[#e1eeff] text-[#409eff] font-medium'
                     : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
@@ -268,7 +272,13 @@ export default function CourseEditor({ onBack, courseId }: CourseEditorProps) {
         </div>
 
         {/* Right Content */}
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className={`flex-1 min-w-0 overflow-y-auto ${activeMenu === 'ai' ? 'bg-white px-4 py-1.5' : 'p-6'}`}>
+          {activeMenu === 'ai' && (
+            <CourseAiAssistantSection courseId={courseId} onSaved={showToast} />
+          )}
+          {activeMenu === 'resources' && (
+            <CourseResourcesSection courseId={courseId} showToast={showToast} />
+          )}
           {activeMenu === 'chapters' && (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               {/* Actions */}
